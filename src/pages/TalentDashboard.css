@@ -1,0 +1,736 @@
+/* ── Talent Dashboard Layout ── */
+.talent-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f9f9fc;
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-image:
+    linear-gradient(to right, rgba(0, 88, 188, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 88, 188, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* ── Sidebar ── */
+.talent-sidebar {
+  width: 260px;
+  background: #fff;
+  border-right: 1px solid rgba(194, 198, 213, 0.3);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  transition: width 0.3s ease;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.talent-sidebar.collapsed {
+  width: 72px;
+}
+
+.sidebar-header {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(194, 198, 213, 0.3);
+}
+
+.sidebar-logo {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #00418f;
+}
+
+.talent-sidebar.collapsed .sidebar-logo {
+  display: none;
+}
+
+.sidebar-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  color: #727784;
+  transition: background 0.2s, color 0.2s;
+}
+
+.sidebar-toggle:hover {
+  background: #f3f3f6;
+  color: #00418f;
+}
+
+.sidebar-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── Navigation ── */
+.sidebar-nav {
+  flex: 1;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #424753;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  text-align: left;
+  width: 100%;
+  font-family: 'Manrope', sans-serif;
+}
+
+.nav-item:hover {
+  background: #f3f3f6;
+  color: #00418f;
+}
+
+.nav-item.active {
+  background: rgba(0, 65, 143, 0.08);
+  color: #00418f;
+  font-weight: 600;
+}
+
+.nav-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.nav-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.talent-sidebar.collapsed .nav-label {
+  display: none;
+}
+
+.sidebar-footer {
+  padding: 12px 8px;
+  border-top: 1px solid rgba(194, 198, 213, 0.3);
+}
+
+.nav-item.logout {
+  color: #b3272d;
+}
+
+.nav-item.logout:hover {
+  background: rgba(179, 39, 45, 0.08);
+  color: #b3272d;
+}
+
+/* ── Main Content ── */
+.talent-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.talent-page-content {
+  padding: 32px 40px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.talent-content-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 24px;
+  padding: 32px 40px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* ── Left Sidebar Cards ── */
+.talent-left {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── Welcome Card ── */
+.welcome-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.welcome-name {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 40px;
+  color: #00418f;
+  margin: 0 0 4px;
+}
+
+.welcome-role {
+  font-size: 14px;
+  line-height: 20px;
+  color: #424753;
+  margin: 0;
+}
+
+.welcome-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.stat-box {
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid rgba(194, 198, 213, 0.3);
+  text-align: center;
+}
+
+.stat-value {
+  display: block;
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #00418f;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #424753;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Profile Integrity Card ── */
+.profile-integrity-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-glow {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 128px;
+  height: 128px;
+  background: rgba(0, 88, 188, 0.2);
+  border-radius: 50%;
+  filter: blur(48px);
+  pointer-events: none;
+}
+
+.card-title {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 28px;
+  color: #1a1c1e;
+  margin: 0 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-icon {
+  width: 24px;
+  height: 24px;
+  color: #00418f;
+}
+
+.profile-strength {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.strength-ring {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
+}
+
+.strength-ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.ring-bg {
+  color: #e2e2e5;
+}
+
+.ring-progress {
+  color: #00418f;
+  transition: stroke-dashoffset 1s ease-in-out;
+}
+
+.ring-value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  font-weight: 700;
+  color: #00418f;
+}
+
+.strength-text {
+  font-size: 14px;
+  line-height: 20px;
+  color: #424753;
+  margin: 0;
+}
+
+.strength-text strong {
+  color: #1a1c1e;
+}
+
+.certification-btn {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: #00418f;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+  font-family: 'Manrope', sans-serif;
+}
+
+.certification-btn:hover {
+  background: #0058bc;
+  box-shadow: 0 4px 12px rgba(0, 65, 143, 0.25);
+}
+
+.certification-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── Events Card ── */
+.events-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.event-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.event-date {
+  background: #f3f3f6;
+  padding: 8px;
+  text-align: center;
+  border-radius: 6px;
+  border: 1px solid rgba(194, 198, 213, 0.3);
+  min-width: 50px;
+}
+
+.event-month {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #00418f;
+  text-transform: uppercase;
+}
+
+.event-day {
+  display: block;
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1c1e;
+}
+
+.event-details h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1c1e;
+  margin: 0 0 4px;
+}
+
+.event-details p {
+  font-size: 14px;
+  color: #424753;
+  margin: 0;
+}
+
+.event-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: #505e67;
+  margin-top: 4px;
+  display: block;
+}
+
+/* ── Right Main Content ── */
+.talent-right {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── Matches Header ── */
+.matches-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.matches-title {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 40px;
+  color: #00418f;
+  margin: 0;
+}
+
+.matches-subtitle {
+  font-size: 16px;
+  line-height: 24px;
+  color: #424753;
+  margin: 4px 0 0;
+}
+
+.view-all {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #00418f;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.view-all:hover {
+  text-decoration: underline;
+}
+
+.view-all svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ── Job Cards ── */
+.jobs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.job-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  padding: 24px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.job-card:hover {
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 12px rgba(0, 88, 188, 0.08);
+  transform: translateY(-2px);
+}
+
+.job-fit {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid rgba(194, 198, 213, 0.5);
+  border-radius: 20px;
+  padding: 4px 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.fit-icon {
+  width: 14px;
+  height: 14px;
+  color: #00418f;
+}
+
+.fit-score {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.fit-score.high {
+  color: #00418f;
+}
+
+.fit-score.medium {
+  color: #0058bc;
+}
+
+.fit-score.low {
+  color: #727784;
+}
+
+.job-content {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.job-image-placeholder {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  background: #eeeef0;
+  border: 1px solid rgba(194, 198, 213, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #727784;
+  flex-shrink: 0;
+}
+
+.job-image-placeholder svg {
+  width: 32px;
+  height: 32px;
+}
+
+.job-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.job-details h3 {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 28px;
+  color: #1a1c1e;
+  margin: 0 0 4px;
+}
+
+.job-company {
+  font-size: 14px;
+  color: #424753;
+  margin: 0 0 12px;
+}
+
+.job-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.skill-tag {
+  background: #f3f3f6;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: #505e67;
+  border: 1px solid rgba(194, 198, 213, 0.3);
+}
+
+.job-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-apply {
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: #00418f;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Manrope', sans-serif;
+}
+
+.btn-apply:hover {
+  background: #0058bc;
+}
+
+.btn-save {
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a1c1e;
+  background: #fff;
+  border: 1px solid rgba(194, 198, 213, 0.5);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Manrope', sans-serif;
+}
+
+.btn-save:hover {
+  background: #f3f3f6;
+}
+
+/* ── Activity Section ── */
+.activity-section {
+  margin-top: 8px;
+}
+
+.activity-title {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 28px;
+  color: #1a1c1e;
+  margin: 0 0 24px;
+}
+
+.activity-timeline {
+  position: relative;
+  border-left: 2px solid #e2e2e5;
+  margin-left: 8px;
+  padding-left: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.timeline-item {
+  position: relative;
+}
+
+.timeline-dot {
+  position: absolute;
+  left: -33px;
+  top: 16px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #e2e2e5;
+  border: 4px solid #f9f9fc;
+}
+
+.timeline-dot.active {
+  background: #00418f;
+}
+
+.timeline-content {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.timeline-content.inactive {
+  opacity: 0.8;
+}
+
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 4px;
+}
+
+.timeline-header h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1c1e;
+  margin: 0;
+}
+
+.timeline-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: #424753;
+  white-space: nowrap;
+}
+
+.timeline-content p {
+  font-size: 14px;
+  color: #424753;
+  margin: 0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .talent-content-grid {
+    grid-template-columns: 1fr;
+    padding: 24px 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .talent-sidebar {
+    width: 72px;
+  }
+
+  .sidebar-logo,
+  .nav-label {
+    display: none;
+  }
+
+  .sidebar-toggle {
+    display: none;
+  }
+
+  .welcome-name {
+    font-size: 24px;
+    line-height: 32px;
+  }
+
+  .matches-title {
+    font-size: 24px;
+    line-height: 32px;
+  }
+
+  .matches-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+}

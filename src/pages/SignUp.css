@@ -1,0 +1,486 @@
+/* ── Sign Up Page ── */
+.signup-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: row;
+  background: #f9f9fc;
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  position: relative;
+}
+
+@media (max-width: 768px) {
+  .signup-page {
+    flex-direction: column;
+  }
+}
+
+/* ── Blueprint Grid Background ── */
+.blueprint-grid {
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(0, 88, 188, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 88, 188, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Sidebar (Left) ── */
+.signup-sidebar {
+  width: 38%;
+  background: #00418f;
+  color: #fff;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+  flex-shrink: 0;
+}
+
+.sidebar-glow {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom left, rgba(0, 88, 188, 0.5), transparent);
+  pointer-events: none;
+}
+
+.sidebar-content {
+  position: relative;
+  z-index: 1;
+}
+
+.sidebar-brand {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: -0.5px;
+  margin-bottom: 32px;
+}
+
+.sidebar-heading {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 56px;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+}
+
+.sidebar-description {
+  font-size: 16px;
+  line-height: 24px;
+  color: rgba(255, 255, 255, 0.8);
+  max-width: 380px;
+  margin-top: 16px;
+}
+
+.sidebar-illustration {
+  position: relative;
+  z-index: 1;
+  margin-top: 32px;
+  flex-grow: 1;
+  display: flex;
+  align-items: flex-end;
+}
+
+.illustration-container {
+  width: 100%;
+  height: 280px;
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.illustration-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.8;
+  mix-blend-mode: screen;
+}
+
+.illustration-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, #00418f, transparent);
+}
+
+/* ── Main Content (Right) ── */
+.signup-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+}
+
+.signup-glow {
+  position: absolute;
+  top: 50%;
+  left: 75%;
+  transform: translate(-50%, -50%);
+  width: 384px;
+  height: 384px;
+  background: #0058bc;
+  opacity: 0.15;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Signup Card ── */
+.signup-card {
+  width: 100%;
+  max-width: 480px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  padding: 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.card-highlight {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.5), transparent);
+}
+
+.card-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.card-title {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 40px;
+  color: #00418f;
+  margin: 0 0 8px;
+}
+
+.card-subtitle {
+  font-size: 14px;
+  line-height: 20px;
+  color: #727784;
+  margin: 0;
+}
+
+/* ── Persona Toggle ── */
+.persona-toggle {
+  display: flex;
+  padding: 4px;
+  background: #e8e8ea;
+  border-radius: 8px;
+  margin-bottom: 32px;
+  position: relative;
+}
+
+.persona-slider {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  background: #fff;
+  border-radius: 6px;
+  border: 1px solid rgba(194, 198, 213, 0.3);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s ease-out;
+}
+
+.persona-btn {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  padding: 8px 0;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #424753;
+  transition: color 0.2s;
+}
+
+.persona-btn.active {
+  color: #00418f;
+}
+
+/* ── Form ── */
+.signup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+  color: #424753;
+  text-transform: uppercase;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 12px;
+  width: 20px;
+  height: 20px;
+  color: #727784;
+  pointer-events: none;
+}
+
+.input-wrapper input {
+  width: 100%;
+  padding: 10px 14px 10px 40px;
+  font-size: 14px;
+  line-height: 20px;
+  border: 1px solid rgba(194, 198, 213, 0.5);
+  border-radius: 8px;
+  background: #fff;
+  color: #1a1c1e;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+  font-family: 'Manrope', sans-serif;
+}
+
+.input-wrapper input::placeholder {
+  color: #727784;
+}
+
+.input-wrapper input:focus {
+  border-color: #00418f;
+  box-shadow: 0 0 0 1px #00418f;
+}
+
+/* ── Password Toggle ── */
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #727784;
+  transition: color 0.2s;
+}
+
+.password-toggle:hover {
+  color: #00418f;
+}
+
+.password-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ── Password Strength ── */
+.password-strength {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+  height: 4px;
+  width: 100%;
+}
+
+.strength-segment {
+  flex: 1;
+  height: 100%;
+  background: #e8e8ea;
+  border-radius: 2px;
+  transition: background 0.3s ease;
+}
+
+.strength-segment:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.strength-segment:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+/* ── Primary Button ── */
+.signup-btn {
+  width: 100%;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(to right, #00418f, #0058bc);
+  border: 1px solid rgba(0, 88, 188, 0.5);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Manrope', sans-serif;
+}
+
+.signup-btn:hover {
+  box-shadow: 0 4px 12px rgba(0, 65, 143, 0.25);
+}
+
+.signup-btn:active {
+  transform: scale(0.98);
+}
+
+.signup-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── Divider ── */
+.signup-divider {
+  display: flex;
+  align-items: center;
+  margin: 24px 0;
+  gap: 16px;
+}
+
+.signup-divider::before,
+.signup-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(194, 198, 213, 0.3);
+}
+
+.signup-divider span {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: #727784;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ── Social Grid ── */
+.social-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a1c1e;
+  background: #fff;
+  border: 1px solid rgba(194, 198, 213, 0.5);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  font-family: 'Manrope', sans-serif;
+}
+
+.social-btn:hover {
+  background: #f3f3f6;
+  border-color: #9ca3af;
+}
+
+.social-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* ── Footer ── */
+.signup-footer {
+  text-align: center;
+}
+
+.signup-footer p {
+  font-size: 14px;
+  line-height: 24px;
+  color: #727784;
+  margin: 0;
+}
+
+.signup-footer a {
+  color: #00418f;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.signup-footer a:hover {
+  text-decoration: underline;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .signup-sidebar {
+    width: 100%;
+    min-height: auto;
+    padding: 32px 20px;
+  }
+
+  .sidebar-heading {
+    font-size: 36px;
+    line-height: 44px;
+  }
+
+  .illustration-container {
+    height: 200px;
+  }
+
+  .signup-main {
+    padding: 32px 20px;
+    min-height: auto;
+  }
+
+  .signup-glow {
+    display: none;
+  }
+}
