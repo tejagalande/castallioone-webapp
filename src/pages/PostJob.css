@@ -1,0 +1,891 @@
+/* ── Post an AEC Technical Requisition Page Styling ── */
+.post-job-page {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #1a1c1e;
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Toast Notification ── */
+.pj-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #00418f;
+  color: #ffffff;
+  padding: 12px 20px;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 65, 143, 0.35);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 1000;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pj-toast svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── 1. Top Telemetry Ribbon ── */
+.pj-telemetry-ribbon {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(194, 198, 213, 0.5);
+  border-radius: 12px;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.pj-telemetry-left,
+.pj-telemetry-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pulse-dot-pj {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00418f;
+  display: inline-block;
+  animation: pulseAnim 1.8s infinite;
+}
+
+@keyframes pulseAnim {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 65, 143, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(0, 65, 143, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 65, 143, 0);
+  }
+}
+
+.req-engine-tag {
+  background: #eeeef0;
+  padding: 3px 8px;
+  border-radius: 6px;
+  color: #00418f;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── 2. Header & Action Ribbon ── */
+.pj-header-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pj-title-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pj-stage-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #00418f;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pj-main-heading {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 34px;
+  color: #1a1c1e;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.pj-lead-description {
+  font-size: 14.5px;
+  line-height: 22px;
+  color: #424753;
+  margin: 0;
+}
+
+.pj-action-cluster {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-pj-light {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  color: #1a1c1e;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid rgba(194, 198, 213, 0.6);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Manrope', sans-serif;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.btn-pj-light:hover {
+  background: #f3f3f6;
+  border-color: #00418f;
+  color: #00418f;
+}
+
+.btn-pj-light svg {
+  width: 16px;
+  height: 16px;
+}
+
+.btn-pj-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #00418f;
+  color: #ffffff;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(0, 65, 143, 0.25);
+  transition: all 0.2s ease;
+  font-family: 'Manrope', sans-serif;
+}
+
+.btn-pj-primary:hover {
+  background: #0058bc;
+}
+
+.btn-pj-primary svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── 3. Stepper Indicator ── */
+.pj-stepper-box {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(194, 198, 213, 0.5);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.pj-stepper-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.step-box-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f3f3f6;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.step-box-item.active {
+  background: #d8e2ff;
+  border: 1px solid rgba(0, 65, 143, 0.3);
+}
+
+.step-num-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: #eeeef0;
+  color: #727784;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.step-num-badge.done {
+  background: #00418f;
+  color: #ffffff;
+}
+
+.step-num-badge.active {
+  background: #00418f;
+  color: #ffffff;
+}
+
+.step-meta-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.step-sub-lbl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #727784;
+  letter-spacing: 0.04em;
+}
+
+.step-main-lbl {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1a1c1e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.step-box-item.active .step-sub-lbl {
+  color: #00418f;
+  font-weight: 700;
+}
+
+.step-box-item.active .step-main-lbl {
+  color: #001a41;
+}
+
+.segmented-progress-track {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.track-segment {
+  height: 4px;
+  border-radius: 2px;
+  background: #eeeef0;
+}
+
+.track-segment.filled {
+  background: #00418f;
+}
+
+/* ── 4. Main Grid: 8 Cols Form / 4 Cols Sidebar ── */
+.pj-main-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.pj-form-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pj-sidebar-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Form Section Cards ── */
+.pj-section-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(194, 198, 213, 0.5);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.pj-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(194, 198, 213, 0.35);
+}
+
+.pj-section-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pj-section-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(0, 65, 143, 0.1);
+  color: #00418f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pj-section-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.pj-section-title {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1a1c1e;
+  margin: 0;
+}
+
+.pj-section-subline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: #727784;
+}
+
+/* Form Inputs & Controls */
+.pj-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pj-field-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1a1c1e;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pj-text-input {
+  background: #f3f3f6;
+  border: 1px solid rgba(194, 198, 213, 0.5);
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 14px;
+  color: #1a1c1e;
+  font-family: 'Manrope', sans-serif;
+  outline: none;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+
+.pj-text-input:focus {
+  border-color: #00418f;
+  background: #ffffff;
+}
+
+.pj-select-input {
+  background: #f3f3f6;
+  border: 1px solid rgba(194, 198, 213, 0.5);
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 13.5px;
+  color: #1a1c1e;
+  font-family: 'Manrope', sans-serif;
+  outline: none;
+  cursor: pointer;
+  width: 100%;
+}
+
+.pj-chips-cloud {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pj-quick-chip {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #eeeef0;
+  border: 1px solid transparent;
+  color: #00418f;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pj-quick-chip:hover {
+  background: #d8e2ff;
+}
+
+/* Workplace Model Toggle Segmented Bar */
+.segmented-pill-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  background: #f3f3f6;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.segmented-pill-btn {
+  border: none;
+  background: transparent;
+  padding: 6px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #424753;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.segmented-pill-btn.active {
+  background: #ffffff;
+  color: #00418f;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* BIM Maturity Multi-Select Grid */
+.bim-levels-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.bim-level-btn {
+  border: 1px solid rgba(194, 198, 213, 0.5);
+  background: #f3f3f6;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1c1e;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.15s;
+}
+
+.bim-level-btn.selected {
+  background: #00418f;
+  color: #ffffff;
+  border-color: #00418f;
+}
+
+/* Governance Protocols Checklist */
+.governance-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.governance-check-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f3f3f6;
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.governance-check-label:hover {
+  background: #eeeef0;
+}
+
+.governance-check-label input[type='checkbox'] {
+  accent-color: #00418f;
+  width: 16px;
+  height: 16px;
+}
+
+/* Toolchain Cards */
+.tools-stack-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tool-row-card {
+  background: #f3f3f6;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tool-avatar-code {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: #d8e2ff;
+  color: #00418f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* 3D WebGL Sandbox Toggle Card */
+.sandbox-attach-card {
+  background: linear-gradient(90deg, rgba(0, 65, 143, 0.08), #f3f3f6);
+  border: 1px solid rgba(0, 65, 143, 0.2);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Markdown Toolbar */
+.markdown-toolbar-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(243, 243, 246, 0.7);
+  padding: 6px 10px;
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.md-tool-btn {
+  border: none;
+  background: transparent;
+  color: #727784;
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.15s;
+}
+
+.md-tool-btn:hover {
+  background: #eeeef0;
+  color: #1a1c1e;
+}
+
+.md-tool-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Benchmark Indicator Box */
+.benchmark-display-box {
+  background: #f3f3f6;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.benchmark-progress-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: #eeeef0;
+  overflow: hidden;
+}
+
+.benchmark-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: #00418f;
+}
+
+/* ── 5. Sidebar Live Intelligence Cards ── */
+.pj-sidebar-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(194, 198, 213, 0.5);
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.pj-sidebar-title {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1c1e;
+  margin: 0;
+}
+
+.counter-2col-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.counter-sub-box {
+  background: #f3f3f6;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.counter-sub-box.primary {
+  background: #00418f;
+  color: #ffffff;
+}
+
+.candidate-preview-row {
+  background: #f3f3f6;
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  transition: background 0.15s;
+}
+
+.candidate-preview-row:hover {
+  background: #eeeef0;
+}
+
+.candidate-avatar-init {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #0058bc;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ── 6. Sticky Bottom Deployment Bar ── */
+.pj-bottom-launch-bar {
+  position: sticky;
+  bottom: 16px;
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(194, 198, 213, 0.6);
+  border-radius: 14px;
+  padding: 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+/* ── Modal Dialogs ── */
+.pj-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 29, 37, 0.65);
+  backdrop-filter: blur(6px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.pj-modal-dialog {
+  background: #ffffff;
+  border: 1px solid rgba(194, 198, 213, 0.5);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 620px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.pj-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(194, 198, 213, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pj-modal-header h2 {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0;
+  color: #1a1c1e;
+}
+
+.pj-modal-close {
+  background: none;
+  border: none;
+  color: #727784;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.pj-modal-close:hover {
+  background: #f3f3f6;
+  color: #1a1c1e;
+}
+
+.pj-modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: 13px;
+  line-height: 19px;
+  color: #424753;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.pj-modal-footer {
+  padding: 14px 20px;
+  border-top: 1px solid rgba(194, 198, 213, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  background: #f9f9fc;
+}
+
+/* ── Responsive Min-Width Media Queries ── */
+@media (min-width: 640px) {
+  .pj-stepper-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .bim-levels-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .governance-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tool-row-card {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .pj-bottom-launch-bar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+@media (min-width: 768px) {
+  .pj-telemetry-ribbon {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .pj-header-section {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+
+  .bim-levels-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .pj-stepper-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .pj-main-grid {
+    grid-template-columns: 8fr 4fr;
+  }
+}

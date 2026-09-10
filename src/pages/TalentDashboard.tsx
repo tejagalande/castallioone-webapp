@@ -2,6 +2,15 @@ import { useState } from 'react'
 import './TalentDashboard.css'
 import FindJobs from './FindJobs'
 import Applications from './Applications'
+import SavedJobs from './SavedJobs'
+import MyProfile from './MyProfile'
+import Resume from './Resume'
+import Portfolio from './Portfolio'
+import Certifications from './Certifications'
+import Messages from './Messages'
+import Interviews from './Interviews'
+import JobAlerts from './JobAlerts'
+import Training from './Training'
 
 type MenuItem =
   | 'dashboard'
@@ -133,9 +142,48 @@ function TalentDashboard({ onLogout }: TalentDashboardProps) {
           <div className="talent-page-content">
             <FindJobs />
           </div>
+        ) : activeMenu === 'saved-jobs' ? (
+          <div className="talent-page-content">
+            <SavedJobs onNavigateToFindJobs={() => setActiveMenu('find-jobs')} />
+          </div>
         ) : activeMenu === 'applications' ? (
           <div className="talent-page-content">
             <Applications />
+          </div>
+        ) : activeMenu === 'my-profile' ? (
+          <div className="talent-page-content">
+            <MyProfile onNavigateToPortfolio={() => setActiveMenu('portfolio')} />
+          </div>
+        ) : activeMenu === 'resume' ? (
+          <div className="talent-page-content">
+            <Resume
+              onNavigateToPortfolio={() => setActiveMenu('portfolio')}
+              onNavigateToCertifications={() => setActiveMenu('certifications')}
+            />
+          </div>
+        ) : activeMenu === 'portfolio' ? (
+          <div className="talent-page-content">
+            <Portfolio onNavigateToFindJobs={() => setActiveMenu('find-jobs')} />
+          </div>
+        ) : activeMenu === 'certifications' ? (
+          <div className="talent-page-content">
+            <Certifications onNavigateToPortfolio={() => setActiveMenu('portfolio')} />
+          </div>
+        ) : activeMenu === 'messages' ? (
+          <div className="talent-page-content">
+            <Messages onNavigateToFindJobs={() => setActiveMenu('find-jobs')} />
+          </div>
+        ) : activeMenu === 'interviews' ? (
+          <div className="talent-page-content">
+            <Interviews onNavigateToFindJobs={() => setActiveMenu('find-jobs')} />
+          </div>
+        ) : activeMenu === 'job-alerts' ? (
+          <div className="talent-page-content">
+            <JobAlerts onNavigateToFindJobs={() => setActiveMenu('find-jobs')} />
+          </div>
+        ) : activeMenu === 'training' ? (
+          <div className="talent-page-content">
+            <Training onNavigateToFindJobs={() => setActiveMenu('find-jobs')} />
           </div>
         ) : (
         <div className="talent-content-grid">

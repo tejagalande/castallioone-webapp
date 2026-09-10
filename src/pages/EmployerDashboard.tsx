@@ -1,4 +1,14 @@
 import { useState } from 'react'
+import PostJob from './PostJob'
+import MyJobs from './MyJobs'
+import {
+  ApplicantsPage,
+  TalentSearchPage,
+  ShortlistedPage,
+  InterviewsPage,
+  MessagesPage,
+  CompanyProfilePage
+} from './EmployerPages'
 import './EmployerDashboard.css'
 
 type MenuItem =
@@ -135,7 +145,7 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
               </svg>
               Talent Search
             </button>
-            <button className="btn-primary">
+            <button className="btn-primary" onClick={() => setActiveMenu('post-job')}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 5v14M5 12h14" />
               </svg>
@@ -145,108 +155,138 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
         </header>
 
         <div className="dashboard-content">
-          <div className="metrics-grid">
-            <div className="metric-card">
-              <div className="metric-glow blue" />
-              <div className="metric-header">
-                <span className="metric-label">Active Job Posts</span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="metric-icon">
-                  <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16" />
-                </svg>
-              </div>
-              <span className="metric-value">12</span>
-              <div className="metric-trend positive">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M23 6l-9.5 9.5-5-5L1 18" />
-                  <path d="M17 6h6v6" />
-                </svg>
-                +2 this week
-              </div>
-            </div>
+          {activeMenu === 'post-job' && (
+            <PostJob 
+              onCancel={() => setActiveMenu('dashboard')} 
+              onSuccess={() => setActiveMenu('my-jobs')}
+            />
+          )}
 
-            <div className="metric-card">
-              <div className="metric-glow pink" />
-              <div className="metric-header">
-                <span className="metric-label">Total Applicants</span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="metric-icon">
-                  <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2 M9 11a4 4 0 100-8 4 4 0 000 8z M23 21v-2a4 4 0 00-3-3.87 M16 3.13a4 4 0 010 7.75" />
-                </svg>
-              </div>
-              <span className="metric-value">348</span>
-              <div className="metric-trend positive">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M23 6l-9.5 9.5-5-5L1 18" />
-                  <path d="M17 6h6v6" />
-                </svg>
-                +45 this month
-              </div>
-            </div>
+          {activeMenu === 'my-jobs' && (
+            <MyJobs onPostNewJob={() => setActiveMenu('post-job')} />
+          )}
 
-            <div className="metric-card">
-              <div className="metric-glow gray" />
-              <div className="metric-header">
-                <span className="metric-label">Hires this Month</span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="metric-icon">
-                  <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
-                </svg>
-              </div>
-              <span className="metric-value">4</span>
-              <div className="metric-trend neutral">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M5 12h14" />
-                </svg>
-                Same as last month
-              </div>
-            </div>
-          </div>
+          {activeMenu === 'applicants' && <ApplicantsPage />}
+          {activeMenu === 'talent-search' && <TalentSearchPage />}
+          {activeMenu === 'shortlisted' && <ShortlistedPage />}
+          {activeMenu === 'interviews' && <InterviewsPage />}
+          {activeMenu === 'messages' && <MessagesPage />}
+          {activeMenu === 'company-profile' && <CompanyProfilePage />}
 
-          <div className="applicants-section">
-            <div className="section-header">
-              <h2>Recent Applicants</h2>
-              <a href="#" className="view-all">View All</a>
-            </div>
-
-            <div className="applicants-grid">
-              {recentApplicants.map((applicant, index) => (
-                <div className="applicant-card" key={index}>
-                  <div className="applicant-top">
-                    <div className="applicant-info">
-                      {applicant.avatar ? (
-                        <img src={applicant.avatar} alt={applicant.name} className="applicant-avatar" />
-                      ) : (
-                        <div className="applicant-avatar placeholder">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8z" />
-                          </svg>
-                        </div>
-                      )}
-                      <div>
-                        <h3>{applicant.name}</h3>
-                        <p>{applicant.role}</p>
-                      </div>
-                    </div>
-                    <div className="fit-score">
-                      <span className="fit-label">FIT SCORE</span>
-                      <div className={`score-circle ${getScoreColor(applicant.fitScore)}`}>
-                        {applicant.fitScore}
-                      </div>
-                    </div>
+          {activeMenu === 'dashboard' && (
+            <>
+              <div className="metrics-grid">
+                <div className="metric-card">
+                  <div className="metric-glow blue" />
+                  <div className="metric-header">
+                    <span className="metric-label">Active Job Posts</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="metric-icon">
+                      <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16" />
+                    </svg>
                   </div>
-
-                  <div className="applicant-position">
-                    <span className="position-label">APPLIED FOR</span>
-                    <span className="position-title">{applicant.appliedFor}</span>
-                  </div>
-
-                  <div className="applicant-skills">
-                    {applicant.skills.map((skill, i) => (
-                      <span className="skill-tag" key={i}>{skill}</span>
-                    ))}
+                  <span className="metric-value">12</span>
+                  <div className="metric-trend positive">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M23 6l-9.5 9.5-5-5L1 18" />
+                      <path d="M17 6h6v6" />
+                    </svg>
+                    +2 this week
                   </div>
                 </div>
-              ))}
+
+                <div className="metric-card">
+                  <div className="metric-glow pink" />
+                  <div className="metric-header">
+                    <span className="metric-label">Total Applicants</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="metric-icon">
+                      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2 M9 11a4 4 0 100-8 4 4 0 000 8z M23 21v-2a4 4 0 00-3-3.87 M16 3.13a4 4 0 010 7.75" />
+                    </svg>
+                  </div>
+                  <span className="metric-value">348</span>
+                  <div className="metric-trend positive">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M23 6l-9.5 9.5-5-5L1 18" />
+                      <path d="M17 6h6v6" />
+                    </svg>
+                    +45 this month
+                  </div>
+                </div>
+
+                <div className="metric-card">
+                  <div className="metric-glow gray" />
+                  <div className="metric-header">
+                    <span className="metric-label">Hires this Month</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="metric-icon">
+                      <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+                    </svg>
+                  </div>
+                  <span className="metric-value">4</span>
+                  <div className="metric-trend neutral">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M5 12h14" />
+                    </svg>
+                    Same as last month
+                  </div>
+                </div>
+              </div>
+
+              <div className="applicants-section">
+                <div className="section-header">
+                  <h2>Recent Applicants</h2>
+                  <a href="#" className="view-all" onClick={(e) => { e.preventDefault(); setActiveMenu('applicants'); }}>View All</a>
+                </div>
+
+                <div className="applicants-grid">
+                  {recentApplicants.map((applicant, index) => (
+                    <div className="applicant-card" key={index}>
+                      <div className="applicant-top">
+                        <div className="applicant-info">
+                          {applicant.avatar ? (
+                            <img src={applicant.avatar} alt={applicant.name} className="applicant-avatar" />
+                          ) : (
+                            <div className="applicant-avatar placeholder">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8z" />
+                              </svg>
+                            </div>
+                          )}
+                          <div>
+                            <h3>{applicant.name}</h3>
+                            <p>{applicant.role}</p>
+                          </div>
+                        </div>
+                        <div className="fit-score">
+                          <span className="fit-label">FIT SCORE</span>
+                          <div className={`score-circle ${getScoreColor(applicant.fitScore)}`}>
+                            {applicant.fitScore}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="applicant-position">
+                        <span className="position-label">APPLIED FOR</span>
+                        <span className="position-title">{applicant.appliedFor}</span>
+                      </div>
+
+                      <div className="applicant-skills">
+                        {applicant.skills.map((skill, i) => (
+                          <span className="skill-tag" key={i}>{skill}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Placeholder for remaining menus */}
+          {!['dashboard', 'post-job', 'my-jobs', 'applicants', 'talent-search', 'shortlisted', 'interviews', 'messages', 'company-profile'].includes(activeMenu) && (
+            <div className="placeholder-view">
+              <h2>{activeMenu.replace('-', ' ').toUpperCase()}</h2>
+              <p>This module is actively synced with your employer workspace.</p>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,0 +1,1034 @@
+/* ── Certifications & Licenses Technical Vault Styling ── */
+.certifications-page {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #1a1c1e;
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Toast Alert ── */
+.cert-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #00418f;
+  color: #ffffff;
+  padding: 12px 20px;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 65, 143, 0.35);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 1000;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cert-toast svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Subheader Telemetry Ribbon ── */
+.telemetry-ribbon-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(194, 198, 213, 0.5);
+  border-radius: 12px;
+  padding: 10px 18px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.ribbon-left,
+.ribbon-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ribbon-crumb-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #00418f;
+  font-weight: 600;
+}
+
+.hash-code-box {
+  background: #f3f3f6;
+  border: 1px solid rgba(194, 198, 213, 0.5);
+  border-radius: 6px;
+  padding: 2px 8px;
+  color: #00418f;
+  font-weight: 700;
+}
+
+.btn-icon-copy {
+  background: none;
+  border: none;
+  color: #727784;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  transition: color 0.15s;
+}
+
+.btn-icon-copy:hover {
+  color: #00418f;
+}
+
+.btn-icon-copy svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* ── Header Title Area ── */
+.cert-header-area {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.header-text-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 800px;
+}
+
+.header-tags-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vault-tag-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: #d8e2ff;
+  color: #001a41;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.cert-main-title {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 36px;
+  color: #1a1c1e;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.cert-main-desc {
+  font-size: 14px;
+  line-height: 22px;
+  color: #424753;
+  margin: 0;
+}
+
+.header-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-cert-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #00418f;
+  color: #ffffff;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  border: none;
+  box-shadow: 0 3px 10px rgba(0, 65, 143, 0.25);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Manrope', sans-serif;
+}
+
+.btn-cert-primary:hover {
+  background: #0058bc;
+}
+
+.btn-cert-primary svg {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-cert-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  color: #00418f;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid rgba(194, 198, 213, 0.6);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Manrope', sans-serif;
+}
+
+.btn-cert-secondary:hover {
+  background: #f3f3f6;
+}
+
+.btn-cert-secondary svg {
+  width: 16px;
+  height: 16px;
+}
+
+.btn-cert-neutral {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #eeeef0;
+  color: #424753;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid rgba(194, 198, 213, 0.5);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Manrope', sans-serif;
+}
+
+.btn-cert-neutral:hover {
+  background: #e2e2e5;
+  color: #1a1c1e;
+}
+
+.btn-cert-neutral svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ── 4 Telemetry Glass Cards ── */
+.cert-telemetry-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.telemetry-glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(194, 198, 213, 0.5);
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  transition: all 0.2s;
+  overflow: hidden;
+}
+
+.telemetry-glass-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 65, 143, 0.08);
+}
+
+.card-kpi-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kpi-title-small {
+  font-family: 'Manrope', sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: #727784;
+}
+
+.kpi-icon-pill {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(0, 65, 143, 0.1);
+  color: #00418f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kpi-icon-pill svg {
+  width: 18px;
+  height: 18px;
+}
+
+.card-kpi-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kpi-stat-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.kpi-stat-large {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: #1a1c1e;
+  line-height: 1;
+}
+
+.kpi-stat-large.accent {
+  color: #00418f;
+}
+
+.kpi-sub-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #727784;
+}
+
+.kpi-progress-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #e2e2e5;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.kpi-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: #00418f;
+}
+
+.kpi-footer-strip {
+  background: #f3f3f6;
+  margin: 0 -18px -18px;
+  padding: 8px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #727784;
+  border-top: 1px solid rgba(194, 198, 213, 0.4);
+}
+
+.kpi-footer-strip strong {
+  color: #00418f;
+}
+
+/* ── Filter & Search Console ── */
+.cert-filter-console {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(194, 198, 213, 0.5);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.filter-pills-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.cert-filter-btn {
+  border: none;
+  background: #eeeef0;
+  color: #424753;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  font-family: 'Manrope', sans-serif;
+}
+
+.cert-filter-btn:hover {
+  background: #e2e2e5;
+  color: #1a1c1e;
+}
+
+.cert-filter-btn.active {
+  background: #00418f;
+  color: #ffffff;
+}
+
+.cert-filter-btn.alert {
+  color: #b3272d;
+}
+
+.cert-filter-btn.alert.active {
+  background: #b3272d;
+  color: #ffffff;
+}
+
+.filter-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cert-search-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f3f3f6;
+  border: 1px solid rgba(194, 198, 213, 0.5);
+  border-radius: 8px;
+  padding: 6px 12px;
+  flex: 1;
+}
+
+.cert-search-input svg {
+  width: 16px;
+  height: 16px;
+  color: #727784;
+}
+
+.cert-search-input input {
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  color: #1a1c1e;
+  outline: none;
+  width: 100%;
+  font-family: 'Manrope', sans-serif;
+}
+
+/* ── Work Surface 12-Cols ── */
+.cert-work-surface {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.cert-main-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.cert-sidebar-col {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── Credential Article Card ── */
+.credential-vault-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(194, 198, 213, 0.6);
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.credential-vault-card:hover {
+  box-shadow: 0 4px 14px rgba(0, 65, 143, 0.08);
+}
+
+.credential-vault-card.expiring {
+  border-color: rgba(179, 39, 45, 0.3);
+}
+
+.cert-card-top-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.cert-logo-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: rgba(0, 65, 143, 0.08);
+  color: #00418f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.cert-logo-avatar svg {
+  width: 28px;
+  height: 28px;
+}
+
+.cert-logo-avatar.expiring {
+  background: rgba(179, 39, 45, 0.1);
+  color: #b3272d;
+}
+
+.cert-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cert-tag-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tier-label-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  background: #00418f;
+  color: #ffffff;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.status-active-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: #d8e2ff;
+  color: #00418f;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-active-badge.expiring {
+  background: #ffdad6;
+  color: #ba1a1a;
+}
+
+.cert-heading-title {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1c1e;
+  margin: 0;
+}
+
+.cert-meta-sub {
+  font-size: 13px;
+  color: #424753;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cert-meta-sub strong {
+  color: #00418f;
+}
+
+/* ── Metadata Grid ── */
+.cert-meta-grid-4col {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  background: #f3f3f6;
+  border-radius: 8px;
+  padding: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+}
+
+.meta-grid-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cell-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #727784;
+}
+
+.cell-val {
+  color: #1a1c1e;
+  font-weight: 600;
+}
+
+.cell-val.accent {
+  color: #00418f;
+}
+
+/* ── Competencies Tags ── */
+.cert-competencies-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.competencies-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.comp-chip-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #eeeef0;
+  color: #39464f;
+  border: 1px solid rgba(194, 198, 213, 0.4);
+}
+
+/* ── Renewal Warning Alert Box ── */
+.renewal-alert-card {
+  background: rgba(179, 39, 45, 0.08);
+  border: 1px solid rgba(179, 39, 45, 0.25);
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.renewal-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #ba1a1a;
+}
+
+.renewal-desc-text {
+  font-size: 12.5px;
+  line-height: 17px;
+  color: #424753;
+  margin: 0;
+}
+
+.btn-renew-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ba1a1a;
+  color: #ffffff;
+  padding: 7px 14px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  align-self: flex-start;
+}
+
+.btn-renew-action:hover {
+  background: #93000a;
+}
+
+/* ── Card Footer Actions ── */
+.cert-card-footer {
+  padding-top: 12px;
+  border-top: 1px solid rgba(194, 198, 213, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.footer-sync-note {
+  font-size: 12.5px;
+  color: #424753;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.footer-sync-note svg {
+  width: 16px;
+  height: 16px;
+  color: #00418f;
+}
+
+.footer-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-card-util {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: #f3f3f6;
+  color: #1a1c1e;
+  border: 1px solid rgba(194, 198, 213, 0.5);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'Manrope', sans-serif;
+}
+
+.btn-card-util:hover {
+  background: #e2e2e5;
+  color: #00418f;
+}
+
+.btn-card-util.accent {
+  background: #d8e2ff;
+  color: #00418f;
+  font-weight: 700;
+}
+
+/* ── Sidebar Panels ── */
+.cert-side-card {
+  background: #ffffff;
+  border: 1px solid rgba(194, 198, 213, 0.6);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.side-card-top-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.side-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.side-title-wrap svg {
+  width: 20px;
+  height: 20px;
+  color: #00418f;
+}
+
+.side-title-text {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1c1e;
+  margin: 0;
+}
+
+.side-score-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #00418f;
+  background: #d8e2ff;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ── Trust Gauge Graphic ── */
+.trust-gauge-box {
+  background: #f3f3f6;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.trust-gauge-visual {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+}
+
+.trust-gauge-visual svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.trust-gauge-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #00418f;
+}
+
+.trust-gauge-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.trust-bold-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a1c1e;
+}
+
+.trust-sub-desc {
+  font-size: 11.5px;
+  color: #424753;
+  margin: 0;
+  line-height: 15px;
+}
+
+/* ── CPD Breakdown Bar ── */
+.cpd-segmented-bar {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: #e2e2e5;
+  display: flex;
+  overflow: hidden;
+  gap: 1px;
+}
+
+.cpd-seg-fill {
+  height: 100%;
+}
+
+.cpd-seg-fill.bim {
+  background: #00418f;
+}
+
+.cpd-seg-fill.comp {
+  background: #0058bc;
+}
+
+.cpd-seg-fill.legal {
+  background: #39464f;
+}
+
+.cpd-breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.cpd-breakdown-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cpd-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #424753;
+}
+
+.cpd-legend-item .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.cpd-legend-item .dot.bim {
+  background: #00418f;
+}
+
+.cpd-legend-item .dot.comp {
+  background: #0058bc;
+}
+
+.cpd-legend-item .dot.legal {
+  background: #39464f;
+}
+
+/* ── Recommended Pathway Cards ── */
+.pathway-item-box {
+  background: #f3f3f6;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: background 0.15s;
+}
+
+.pathway-item-box:hover {
+  background: #e8e8ea;
+}
+
+.pathway-top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pathway-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a1c1e;
+}
+
+.pathway-vis-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: #00418f;
+  background: #d8e2ff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.pathway-desc {
+  font-size: 11.5px;
+  line-height: 16px;
+  color: #424753;
+  margin: 0;
+}
+
+.pathway-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  padding-top: 4px;
+}
+
+.pathway-link {
+  color: #00418f;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pathway-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Responsive Min-Width (Mobile-First) ── */
+@media (min-width: 640px) {
+  .cert-telemetry-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .cert-meta-grid-4col {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .renewal-alert-card {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .btn-renew-action {
+    align-self: auto;
+  }
+}
+
+@media (min-width: 768px) {
+  .cert-header-area {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+
+  .cert-filter-console {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+@media (min-width: 1024px) {
+  .cert-telemetry-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .cert-work-surface {
+    grid-template-columns: 8fr 4fr;
+  }
+}
