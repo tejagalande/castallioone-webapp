@@ -1,0 +1,252 @@
+/* ── CandidateStatusDropdown Component Styles ── */
+
+.status-dropdown-root {
+  position: relative;
+  display: inline-block;
+  user-select: none;
+}
+
+/* Trigger Button */
+.status-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #c2c6d5;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1c1e;
+  cursor: pointer;
+  outline: none;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.status-dropdown-trigger:hover:not(:disabled) {
+  border-color: #0058bc;
+  background: #f8faff;
+  box-shadow: 0 2px 6px rgba(0, 88, 188, 0.08);
+}
+
+.status-dropdown-trigger.active,
+.status-dropdown-trigger:focus-visible {
+  border-color: #0058bc;
+  box-shadow: 0 0 0 3px rgba(0, 88, 188, 0.16), 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.status-dropdown-trigger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #f1f5f9;
+}
+
+/* Status Dot */
+.status-dot-indicator {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 0 3px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.status-dropdown-trigger:hover .status-dot-indicator {
+  transform: scale(1.15);
+}
+
+/* Label & Prefix */
+.status-trigger-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #334155;
+}
+
+.status-label-prefix {
+  font-weight: 500;
+  color: #64748b;
+  font-size: 12.5px;
+}
+
+.status-label-value {
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+/* Chevron */
+.status-trigger-chevron {
+  font-size: 18px;
+  color: #64748b;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s ease;
+  margin-left: 2px;
+}
+
+.status-dropdown-trigger:hover .status-trigger-chevron {
+  color: #0058bc;
+}
+
+.status-trigger-chevron.rotated {
+  transform: rotate(180deg);
+  color: #0058bc;
+}
+
+/* ── Popover Menu ── */
+.status-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 270px;
+  max-width: 90vw;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid rgba(194, 198, 213, 0.6);
+  box-shadow: 
+    0 10px 28px -4px rgba(15, 23, 42, 0.12),
+    0 4px 12px -2px rgba(15, 23, 42, 0.06),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
+  padding: 6px;
+  z-index: 1050;
+  animation: statusMenuSlideIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top right;
+}
+
+@keyframes statusMenuSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Menu Header */
+.status-menu-header {
+  padding: 6px 10px 5px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 4px;
+}
+
+.status-menu-header span {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+/* Menu Item List */
+.status-menu-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Single Option Button */
+.status-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  outline: none;
+}
+
+.status-menu-item:hover,
+.status-menu-item:focus-visible {
+  background: #f8fafc;
+  border-color: rgba(226, 232, 240, 0.8);
+}
+
+.status-menu-item.selected {
+  background: rgba(0, 88, 188, 0.05);
+  border-color: rgba(0, 88, 188, 0.15);
+}
+
+.status-menu-item.selected:hover {
+  background: rgba(0, 88, 188, 0.08);
+}
+
+/* Icon Box */
+.status-item-icon-box {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.status-menu-item:hover .status-item-icon-box {
+  transform: scale(1.08);
+}
+
+.status-item-icon-box .material-symbols-outlined {
+  font-size: 16px;
+}
+
+/* Text Meta */
+.status-item-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.status-item-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.status-item-title {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.3;
+}
+
+.status-menu-item.selected .status-item-title {
+  color: #00418f;
+  font-weight: 700;
+}
+
+.status-item-check {
+  font-size: 16px;
+  color: #00418f;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.status-item-desc {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.status-menu-item.selected .status-item-desc {
+  color: #475569;
+}

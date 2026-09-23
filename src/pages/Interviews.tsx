@@ -1,1333 +1,1445 @@
-import type { FC } from 'react'
-import './Interviews.css'
+import { useState, useMemo, type FC, type ChangeEvent, type FormEvent } from 'react'
 import {
   useInterviews,
-  type CompletedInterview,
+  type InterviewSession,
 } from './useInterviews'
+import { CustomSortDropdown, type SortOptionItem } from '../components/CustomSortDropdown'
+import './Interviews.css'
 
-interface InterviewsProps {
+export interface InterviewsProps {
   onNavigateToFindJobs?: () => void
 }
 
-const Interviews: FC<InterviewsProps> = () => {
+const FORMAT_OPTIONS: SortOptionItem<string>[] = [
+  { value: 'all', label: 'All Formats', icon: 'devices' },
+  { value: 'Google Meet', label: 'Google Meet', icon: 'videocam' },
+  { value: 'Microsoft Teams', label: 'Microsoft Teams', icon: 'groups' },
+  { value: 'Zoom', label: 'Zoom', icon: 'video_call' },
+  { value: 'In-Person', label: 'In-Person', icon: 'apartment' },
+]
+
+function formatTimeTo12Hour(time24: string): string {
+  if (!time24) return ''
+  const trimmed = time24.trim()
+  if (/AM|PM/i.test(trimmed)) return trimmed
+  const parts = trimmed.split(':')
+  if (parts.length < 2) return time24
+  let hours = parseInt(parts[0], 10)
+  const minutes = parts[1].slice(0, 2)
+  if (isNaN(hours)) return time24
+  const ampm = hours >= 12 ? 'PM' : 'AM'
+  hours = hours % 12
+  if (hours === 0) hours = 12
+  return `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`
+}
+
+function parseTimeTo24Hour(timeStr: string): string {
+  if (!timeStr) return '11:00'
+  const trimmed = timeStr.trim()
+  if (/^\d{2}:\d{2}$/.test(trimmed)) return trimmed
+  const match = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i)
+  if (!match) return '11:00'
+  let hours = parseInt(match[1], 10)
+  const minutes = match[2]
+  const ampm = match[3]?.toUpperCase()
+  if (ampm === 'PM' && hours < 12) hours += 12
+  if (ampm === 'AM' && hours === 12) hours = 0
+  return `${String(hours).padStart(2, '0')}:${minutes}`
+}
+
+const QUICK_TIME_SLOTS = [
+  { label: '09:00 AM', time24: '09:00' },
+  { label: '10:30 AM', time24: '10:30' },
+  { label: '11:30 AM', time24: '11:30' },
+  { label: '02:00 PM', time24: '14:00' },
+  { label: '03:30 PM', time24: '15:30' },
+  { label: '05:00 PM', time24: '17:00' },
+]
+
+export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
   const {
+    interviews,
+    filteredInterviews,
+    loading,
     activeTab,
     setActiveTab,
+    searchQuery,
+    setSearchQuery,
     formatFilter,
     setFormatFilter,
-    selectedZhaSlot,
-    setSelectedZhaSlot,
-    isZhaConfirmed,
-    selectedTimezone,
-    setSelectedTimezone,
-    zhaSlots,
-    completedInterviews,
-    isMockModalOpen,
-    setIsMockModalOpen,
-    isDiagnosticsModalOpen,
-    setIsDiagnosticsModalOpen,
-    isAvailabilityModalOpen,
-    setIsAvailabilityModalOpen,
-    isFeedbackModalOpen,
-    setIsFeedbackModalOpen,
-    selectedFeedbackItem,
-    setSelectedFeedbackItem,
-    diagStep,
-    isTestingDiag,
+    roleFilter,
+    setRoleFilter,
+    uniqueRoles,
+    kpis,
+    availableCandidates,
+    selectedSessionForFeedback,
+    setSelectedSessionForFeedback,
+    selectedSessionForReschedule,
+    setSelectedSessionForReschedule,
+    isScheduleNewModalOpen,
+    setIsScheduleNewModalOpen,
     toastMessage,
     showToast,
-    handleConfirmZhaSlot,
+    handleScheduleNewInterview,
+    handleReschedule,
+    handleSaveEvaluation,
+    handleCancelInterview,
     handleSyncCalendar,
-    handleDownloadIcs,
-    runFullDiagnostics,
   } = useInterviews()
 
+  const todayStr = useMemo(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }, [])
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [prevFilterKey, setPrevFilterKey] = useState<string>('')
+  const itemsPerPage = 5
+
+  // Reset pagination to page 1 whenever search query or filters change
+  const currentFilterKey = `${searchQuery}_${formatFilter}_${roleFilter}_${activeTab}`
+  if (currentFilterKey !== prevFilterKey) {
+    setPrevFilterKey(currentFilterKey)
+    setCurrentPage(1)
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filteredInterviews.length / itemsPerPage))
+  const safeCurrentPage = Math.min(currentPage, totalPages)
+  const startIndex = (safeCurrentPage - 1) * itemsPerPage
+  const paginatedInterviews = useMemo(() => {
+    return filteredInterviews.slice(startIndex, startIndex + itemsPerPage)
+  }, [filteredInterviews, startIndex, itemsPerPage])
+
+  // Reschedule Form State
+  const [rescheduleDate, setRescheduleDate] = useState<string>('')
+  const [rescheduleTime, setRescheduleTime] = useState<string>('11:00')
+  const [rescheduleReason, setRescheduleReason] = useState<string>('Candidate requested alternate slot')
+
+  // Real-time Reschedule Validation
+  const rescheduleValidation = useMemo(() => {
+    if (!selectedSessionForReschedule) return { valid: false, error: null, warning: null }
+    if (!rescheduleDate) {
+      return { valid: false, error: 'Please choose a rescheduled interview date.', warning: null }
+    }
+    if (!rescheduleTime) {
+      return { valid: false, error: 'Please select a valid time slot.', warning: null }
+    }
+
+    if (rescheduleDate < todayStr) {
+      return {
+        valid: false,
+        error: 'The rescheduled date cannot be in the past. Please select today or an upcoming date.',
+        warning: null,
+      }
+    }
+
+    if (rescheduleDate === todayStr) {
+      const now = new Date()
+      const parts = rescheduleTime.split(':')
+      const hours = parseInt(parts[0], 10)
+      const minutes = parseInt(parts[1], 10) || 0
+      const currentMinutes = now.getHours() * 60 + now.getMinutes()
+      const selectedMinutes = hours * 60 + minutes
+      if (selectedMinutes <= currentMinutes + 10) {
+        return {
+          valid: false,
+          error: "For today's sessions, please select a time slot at least 15 minutes ahead of current time.",
+          warning: null,
+        }
+      }
+    }
+
+    const formatted12h = formatTimeTo12Hour(rescheduleTime)
+    const originalTime24 = parseTimeTo24Hour(selectedSessionForReschedule.interviewTime)
+    if (
+      rescheduleDate === selectedSessionForReschedule.interviewDate &&
+      (formatted12h === selectedSessionForReschedule.interviewTime ||
+        rescheduleTime === originalTime24)
+    ) {
+      return {
+        valid: false,
+        error: 'The selected date and time slot match the current schedule. Please choose a different date or time.',
+        warning: null,
+      }
+    }
+
+    // Warnings (non-blocking)
+    let warning: string | null = null
+    const [hStr] = rescheduleTime.split(':')
+    const h = parseInt(hStr, 10)
+    if (h < 8 || h >= 20) {
+      warning = 'Note: The selected time is outside standard business hours (8:00 AM – 8:00 PM).'
+    } else {
+      const d = new Date(rescheduleDate + 'T12:00:00')
+      const day = d.getDay()
+      if (day === 0 || day === 6) {
+        warning = 'Note: The selected date falls on a weekend.'
+      }
+    }
+
+    return { valid: true, error: null, warning }
+  }, [selectedSessionForReschedule, rescheduleDate, rescheduleTime, todayStr])
+
+  // Scorecard Form State
+  const [evalScore, setEvalScore] = useState<number>(90)
+  const [evalRecommendation, setEvalRecommendation] = useState<InterviewSession['recommendation']>('Hire')
+  const [evalNotes, setEvalNotes] = useState<string>('')
+
+  // New Interview Form State
+  const [newCandidateName, setNewCandidateName] = useState<string>('')
+  const [newCandidateRole, setNewCandidateRole] = useState<string>('Structural Engineer')
+  const [newDate, setNewDate] = useState<string>(() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 2)
+    return d.toISOString().slice(0, 10)
+  })
+  const [newTime, setNewTime] = useState<string>('11:00')
+  const [newType, setNewType] = useState<InterviewSession['interviewType']>('Technical Review')
+  const [newLocationType, setNewLocationType] = useState<InterviewSession['locationType']>('Google Meet')
+  const [newLocationVal, setNewLocationVal] = useState<string>('https://meet.google.com/cas-interview')
+  const [isSubmittingSchedule, setIsSubmittingSchedule] = useState<boolean>(false)
+
+  const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value)
+  }
+
+  // Open Reschedule Modal
+  const openRescheduleModal = (session: InterviewSession) => {
+    setSelectedSessionForReschedule(session)
+    const initialDate = session.interviewDate >= todayStr ? session.interviewDate : todayStr
+    setRescheduleDate(initialDate)
+    setRescheduleTime(parseTimeTo24Hour(session.interviewTime))
+    setRescheduleReason('Candidate requested alternate slot')
+  }
+
+  // Open Feedback Modal
+  const openFeedbackModal = (session: InterviewSession) => {
+    setSelectedSessionForFeedback(session)
+    setEvalScore(session.score || 90)
+    setEvalRecommendation(session.recommendation || 'Hire')
+    setEvalNotes(session.interviewerNotes || '')
+  }
+
+  const roleOptions: SortOptionItem<string>[] = [
+    { value: 'all', label: 'All Roles', icon: 'work' },
+    ...uniqueRoles.map((r) => ({
+      value: r,
+      label: r,
+      icon: 'badge',
+    })),
+  ]
+
+  // Submit Reschedule
+  const onSubmitReschedule = (e: FormEvent) => {
+    e.preventDefault()
+    if (!selectedSessionForReschedule || !rescheduleValidation.valid) return
+    const formatted12h = formatTimeTo12Hour(rescheduleTime)
+    handleReschedule(
+      selectedSessionForReschedule.id,
+      rescheduleDate,
+      formatted12h,
+      rescheduleReason.trim() || undefined
+    )
+  }
+
+  // Submit Evaluation Scorecard
+  const onSubmitEvaluation = (e: FormEvent) => {
+    e.preventDefault()
+    if (!selectedSessionForFeedback) return
+    handleSaveEvaluation(
+      selectedSessionForFeedback.id,
+      evalScore,
+      evalRecommendation,
+      evalNotes
+    )
+  }
+
   return (
-    <div className="interviews-page">
-      {/* Toast Alert */}
+    <main className="interviews-page" aria-label="Interviews and Technical Assessments">
+      {/* Toast Notification */}
       {toastMessage && (
-        <aside className="int-toast" role="status" aria-live="polite">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-            <polyline points="22 4 12 14.01 9 11.01" />
-          </svg>
+        <div className="int-toast" role="alert">
+          <span className="material-symbols-outlined" aria-hidden="true">
+            check_circle
+          </span>
           <span>{toastMessage}</span>
-        </aside>
+        </div>
       )}
 
-      {/* 1. Telemetry & Breadcrumb Sub-bar */}
-      <section className="int-telemetry-bar" aria-label="AEC Interview Telemetry">
-        <div className="telemetry-row-left">
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#00418f', fontWeight: 600 }}>
-            <span className="pulse-dot-primary" aria-hidden="true" />
-            TALENT_WORKSPACE
-          </span>
-          <span style={{ color: '#727784' }}>/</span>
-          <span style={{ color: '#1a1c1e', fontWeight: 600 }}>INTERVIEWS-SCHEDULE-V2.1</span>
-          <span style={{ color: '#727784' }}>/</span>
-          <span style={{ color: '#727784' }}>CALENDAR ENGINE: GOOGLE &amp; OUTLOOK SYNCED</span>
-        </div>
-
-        <div className="telemetry-row-right">
-          <span className="telemetry-tag-pill">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '13px', height: '13px' }} aria-hidden="true">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-            TIMEZONE: <strong style={{ color: '#1a1c1e' }}>GMT (LONDON / UTC+0)</strong>
-          </span>
-
-          <span className="telemetry-tag-pill active-rounds">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '13px', height: '13px' }} aria-hidden="true">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-              <line x1="16" y1="2" x2="16" y2="6" />
-              <line x1="8" y1="2" x2="8" y2="6" />
-              <line x1="3" y1="10" x2="21" y2="10" />
-            </svg>
-            STATUS: 2 UPCOMING ROUNDS
-          </span>
-        </div>
-      </section>
-
-      {/* 2. Page Header & Action Bar */}
-      <header className="int-header-section">
-        <div className="int-title-wrapper">
-          <div className="int-meta-tags">
-            <span className="int-verified-badge">Verified Talent Pipeline</span>
-            <span className="int-session-id">SESSION ID: #TLN-8842-INT</span>
+      {/* ── 1. Header Area ── */}
+      <section className="int-header-area">
+        <div>
+          <div className="int-overline-badge">
+            <span className="material-symbols-outlined" style={{ fontSize: '15px' }} aria-hidden="true">
+              event_available
+            </span>
+            <span>INTERVIEW OPERATIONS &amp; CANDIDATE EVALUATIONS</span>
           </div>
-          <h1 className="int-main-heading">Interviews &amp; Technical Assessments</h1>
-          <p className="int-lead-description">
-            Manage scheduled technical panels, algorithmic code defenses, BIM model audits, and recruiter debriefs with leading AEC practices.
+          <h1 className="int-header-title">Interviews &amp; Technical Rounds</h1>
+          <p className="int-header-desc">
+            Coordinate upcoming candidate rounds, manage video meeting links, and submit reviewer evaluation scorecards
+            across all active requisitions.
           </p>
         </div>
 
-        <div className="int-action-cluster">
+        <div className="int-header-actions">
           <button
             type="button"
-            className="btn-int-light"
+            className="btn-int-secondary"
             onClick={handleSyncCalendar}
+            title="Export Calendar (.ics)"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" aria-hidden="true">
-              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
-            </svg>
-            <span>Sync Calendar</span>
-            <span style={{ display: 'inline-flex', gap: '3px', marginLeft: '4px' }}>
-              <span style={{ background: '#eeeef0', padding: '1px 5px', borderRadius: '4px', fontSize: '10px', fontFamily: 'JetBrains Mono' }}>G</span>
-              <span style={{ background: '#eeeef0', padding: '1px 5px', borderRadius: '4px', fontSize: '10px', fontFamily: 'JetBrains Mono' }}>O</span>
+            <span className="material-symbols-outlined text-primary" aria-hidden="true">
+              calendar_month
             </span>
-          </button>
-
-          <button
-            type="button"
-            className="btn-int-light"
-            onClick={() => setIsAvailabilityModalOpen(true)}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="#39464f" strokeWidth="2" aria-hidden="true">
-              <line x1="4" y1="21" x2="4" y2="14" />
-              <line x1="4" y1="10" x2="4" y2="3" />
-              <line x1="12" y1="21" x2="12" y2="12" />
-              <line x1="12" y1="8" x2="12" y2="3" />
-              <line x1="20" y1="21" x2="20" y2="16" />
-              <line x1="20" y1="12" x2="20" y2="3" />
-            </svg>
-            <span>Availability Windows</span>
+            <span>Sync Calendar (.ics)</span>
           </button>
 
           <button
             type="button"
             className="btn-int-primary"
-            onClick={() => {
-              setIsDiagnosticsModalOpen(true)
-              runFullDiagnostics()
-            }}
+            onClick={() => setIsScheduleNewModalOpen(true)}
+            title="Schedule a New Interview Round"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <polygon points="12 2 2 7 12 12 22 7 12 2" />
-              <polyline points="2 17 12 22 22 17" />
-              <polyline points="2 12 12 17 22 12" />
-            </svg>
-            <span>Practice 3D Sandbox</span>
+            <span className="material-symbols-outlined" aria-hidden="true">
+              add_circle
+            </span>
+            <span>Schedule New Interview</span>
           </button>
         </div>
-      </header>
+      </section>
 
-      {/* 3. Metrics Summary Strip (4 Cards) */}
-      <section className="int-metrics-grid" aria-label="Assessment Metrics">
-        {/* Metric 1 */}
+      {/* ── 2. 4 KPI Metrics Cards ── */}
+      <section className="int-metrics-grid" aria-label="Interview Metrics">
+        {/* KPI 1 */}
         <article className="int-metric-card">
-          <div className="metric-top-row">
-            <div>
-              <span className="metric-lbl-text">Upcoming Sessions</span>
-              <div className="metric-val-group">
-                <span className="metric-huge-num">2</span>
-                <span className="metric-sub-label">Scheduled</span>
-              </div>
-            </div>
-            <div className="metric-icon-box" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polygon points="23 7 16 12 23 17 23 7" />
-                <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-              </svg>
+          <div className="int-metric-top">
+            <span className="int-metric-label">Upcoming Rounds</span>
+            <div className="int-metric-icon-box">
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }} aria-hidden="true">
+                event_upcoming
+              </span>
             </div>
           </div>
-          <div className="metric-bottom-meta">
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Foster + Partners, Grimshaw</span>
-            <span style={{ color: '#00418f', fontWeight: 700 }}>Next: 48h</span>
+          <div className="int-metric-val-row">
+            <span className="int-metric-num">{kpis.upcomingCount}</span>
+            <span className="int-metric-subtext">Active Scheduled</span>
+          </div>
+          <p className="int-metric-desc">Candidates awaiting technical evaluation</p>
+          <div className="int-metric-footer-pill">
+            <span>STATUS:</span>
+            <span style={{ color: '#00418f', fontWeight: 700 }}>PIPELINE ACTIVE</span>
           </div>
         </article>
 
-        {/* Metric 2 */}
+        {/* KPI 2 */}
         <article className="int-metric-card">
-          <div className="metric-top-row">
-            <div>
-              <span className="metric-lbl-text">Completed Rounds</span>
-              <div className="metric-val-group">
-                <span className="metric-huge-num">5</span>
-                <span className="metric-sub-label" style={{ color: '#00418f' }}>Passed</span>
-              </div>
-            </div>
-            <div className="metric-icon-box" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                <polyline points="22 4 12 14.01 9 11.01" />
-              </svg>
+          <div className="int-metric-top">
+            <span className="int-metric-label">Today's Sessions</span>
+            <div className="int-metric-icon-box" style={{ background: '#eff6ff', color: '#1d4ed8' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }} aria-hidden="true">
+                today
+              </span>
             </div>
           </div>
-          <div className="metric-bottom-meta">
-            <span>Clearance Rate</span>
-            <span style={{ color: '#1a1c1e', fontWeight: 700 }}>100% Technical</span>
-          </div>
-        </article>
-
-        {/* Metric 3 */}
-        <article className="int-metric-card">
-          <div className="metric-top-row">
-            <div>
-              <span className="metric-lbl-text">Avg. Panel Score</span>
-              <div className="metric-val-group">
-                <span className="metric-huge-num">
-                  94.8<span style={{ fontSize: '18px', color: '#727784', fontWeight: 400 }}>%</span>
-                </span>
-              </div>
-            </div>
-            <div className="metric-icon-box" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="18" y1="20" x2="18" y2="10" />
-                <line x1="12" y1="20" x2="12" y2="4" />
-                <line x1="6" y1="20" x2="6" y2="14" />
-              </svg>
-            </div>
-          </div>
-          <div className="metric-bottom-meta">
-            <span style={{ background: 'rgba(0, 65, 143, 0.1)', color: '#00418f', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>
-              Top 5% Computational Pool
+          <div className="int-metric-val-row">
+            <span className="int-metric-num" style={{ color: '#1d4ed8' }}>
+              {kpis.todayCount}
             </span>
-            <span style={{ color: '#727784' }}>LOD 400+</span>
+            <span className="int-metric-subtext">Scheduled Today</span>
+          </div>
+          <p className="int-metric-desc">Live rounds scheduled on current date</p>
+          <div className="int-metric-footer-pill">
+            <span>AGENDA:</span>
+            <span style={{ color: '#1d4ed8', fontWeight: 700 }}>
+              {kpis.todayCount > 0 ? `${kpis.todayCount} PANELS READY` : 'NO SESSIONS TODAY'}
+            </span>
           </div>
         </article>
 
-        {/* Metric 4 */}
+        {/* KPI 3 */}
         <article className="int-metric-card">
-          <div className="metric-top-row">
-            <div>
-              <span className="metric-lbl-text" style={{ color: '#b3272d' }}>Pending Invites</span>
-              <div className="metric-val-group">
-                <span className="metric-huge-num" style={{ color: '#b3272d' }}>
-                  {isZhaConfirmed ? '0' : '1'}
-                </span>
-                <span className="metric-sub-label" style={{ color: isZhaConfirmed ? '#00418f' : '#b3272d' }}>
-                  {isZhaConfirmed ? 'All Confirmed' : 'Action Required'}
-                </span>
-              </div>
-            </div>
-            <div className="metric-icon-box secondary" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
+          <div className="int-metric-top">
+            <span className="int-metric-label">Pending Feedback</span>
+            <div className="int-metric-icon-box" style={{ background: '#fffbeb', color: '#b45309' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }} aria-hidden="true">
+                rate_review
+              </span>
             </div>
           </div>
-          <div className="metric-bottom-meta">
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Zaha Hadid Architects</span>
-            <span style={{ color: isZhaConfirmed ? '#00418f' : '#b3272d', fontWeight: 700 }}>
-              {isZhaConfirmed ? 'Slot Synced' : 'Slot Selection'}
+          <div className="int-metric-val-row">
+            <span className="int-metric-num" style={{ color: '#b45309' }}>
+              {kpis.needsFeedbackCount}
             </span>
+            <span className="int-metric-subtext">Needs Review</span>
+          </div>
+          <p className="int-metric-desc">Completed sessions awaiting scorecard</p>
+          <div className="int-metric-footer-pill">
+            <span>SCORECARDS:</span>
+            <span style={{ color: '#b45309', fontWeight: 700 }}>AWAITING INPUT</span>
+          </div>
+        </article>
+
+        {/* KPI 4 */}
+        <article className="int-metric-card">
+          <div className="int-metric-top">
+            <span className="int-metric-label">Completed Rounds</span>
+            <div className="int-metric-icon-box" style={{ background: '#f0fdf4', color: '#15803d' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }} aria-hidden="true">
+                verified
+              </span>
+            </div>
+          </div>
+          <div className="int-metric-val-row">
+            <span className="int-metric-num" style={{ color: '#15803d' }}>
+              {kpis.completedCount}
+            </span>
+            <span className="int-metric-subtext">Evaluated</span>
+          </div>
+          <p className="int-metric-desc">Finished rounds with evaluation dossiers</p>
+          <div className="int-metric-footer-pill">
+            <span>DECISION ARCHIVE:</span>
+            <span style={{ color: '#15803d', fontWeight: 700 }}>LOGGED</span>
           </div>
         </article>
       </section>
 
-      {/* 4. Main Grid Workspace (12 cols) */}
-      <main className="int-main-workspace-grid">
-        {/* LEFT COLUMN: Main Workspace (8 cols) */}
-        <div className="int-left-col">
-          {/* View Selector Tabs & Filter Chips */}
-          <div className="int-view-selector-bar">
-            <div className="int-tabs-scroll" role="tablist">
-              <button
-                type="button"
-                className={`int-tab-btn ${activeTab === 'upcoming' ? 'active' : ''}`}
-                onClick={() => setActiveTab('upcoming')}
-              >
-                Upcoming (2)
-              </button>
+      {/* ── 3. Filter Bar ── */}
+      <section className="int-filter-bar" aria-label="Filter Sessions">
+        <div className="int-tabs-row" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'all'}
+            className={`int-tab-btn ${activeTab === 'all' ? 'active' : ''}`}
+            onClick={() => setActiveTab('all')}
+          >
+            Scheduled Rounds ({interviews.filter((i) => i.status === 'scheduled').length})
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'completed'}
+            className={`int-tab-btn ${activeTab === 'completed' ? 'active' : ''}`}
+            onClick={() => setActiveTab('completed')}
+          >
+            <span>Completed ({kpis.completedCount})</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'cancelled'}
+            className={`int-tab-btn ${activeTab === 'cancelled' ? 'active' : ''}`}
+            onClick={() => setActiveTab('cancelled')}
+          >
+            <span>Cancelled</span>
+          </button>
+        </div>
 
-              <button
-                type="button"
-                className={`int-tab-btn ${activeTab === 'action-required' ? 'active' : ''}`}
-                onClick={() => setActiveTab('action-required')}
-              >
-                Action Required
-                {!isZhaConfirmed && <span className="tab-badge-dot" aria-hidden="true" />}
-              </button>
+        <div className="int-controls-cluster">
+          <div className="int-search-wrap">
+            <span className="material-symbols-outlined int-search-icon" aria-hidden="true">
+              search
+            </span>
+            <input
+              type="text"
+              placeholder="Search candidate, role, or format..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              aria-label="Search interviews"
+            />
+          </div>
 
-              <button
-                type="button"
-                className={`int-tab-btn ${activeTab === 'past' ? 'active' : ''}`}
-                onClick={() => setActiveTab('past')}
-              >
-                Past Completed (5)
-              </button>
+          {/* Enhanced Custom Format Dropdown */}
+          <CustomSortDropdown
+            value={formatFilter}
+            options={FORMAT_OPTIONS}
+            onChange={setFormatFilter}
+            labelPrefix="Format:"
+            id="format-filter-dropdown"
+            align="right"
+          />
 
-              <button
-                type="button"
-                className={`int-tab-btn ${activeTab === 'all' ? 'active' : ''}`}
-                onClick={() => setActiveTab('all')}
-              >
-                All Rounds (8)
-              </button>
+          {/* Enhanced Custom Role Dropdown */}
+          {uniqueRoles.length > 0 && (
+            <CustomSortDropdown
+              value={roleFilter}
+              options={roleOptions}
+              onChange={setRoleFilter}
+              labelPrefix="Role:"
+              id="role-filter-dropdown"
+              align="right"
+            />
+          )}
+
+          <button
+            type="button"
+            className="btn-int-secondary"
+            style={{ padding: '8px 10px' }}
+            title="Reset Filters"
+            onClick={() => {
+              setSearchQuery('')
+              setFormatFilter('all')
+              setRoleFilter('all')
+              setActiveTab('all')
+              showToast('Filters reset to default view.')
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }} aria-hidden="true">
+              filter_list
+            </span>
+          </button>
+        </div>
+      </section>
+
+      {/* ── 4. Main 2-Column Grid (8 Cols List / 4 Cols Sidebar) ── */}
+      <section className="int-workspace-grid">
+        {/* LEFT COLUMN: INTERVIEW CARDS (8 Cols) */}
+        <div className="int-cards-column">
+          {loading ? (
+            <div className="int-shimmer-container" aria-busy="true" aria-label="Loading scheduled interviews">
+              <div className="int-shimmer-banner">
+                <span className="material-symbols-outlined spin-icon" aria-hidden="true">
+                  sync
+                </span>
+                <span>Syncing scheduled interview sessions, calendar slots &amp; candidate rounds...</span>
+              </div>
+              {[1, 2, 3].map((skeletonId) => (
+                <article key={skeletonId} className="int-skeleton-card">
+                  {/* Top row: tags, candidate title, and timing status badge */}
+                  <div className="int-card-top-row">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div className="int-shimmer int-skeleton-pill" style={{ width: '90px', height: '22px' }} />
+                        <div className="int-shimmer int-skeleton-pill" style={{ width: '130px', height: '22px' }} />
+                        <div className="int-shimmer int-skeleton-pill" style={{ width: '80px', height: '22px' }} />
+                      </div>
+                      <div className="int-shimmer int-skeleton-bar" style={{ width: '220px', height: '26px', marginTop: '4px' }} />
+                      <div className="int-shimmer int-skeleton-bar" style={{ width: '310px', height: '15px' }} />
+                    </div>
+                    {/* Status badge skeleton */}
+                    <div className="int-shimmer" style={{ width: '140px', height: '52px', borderRadius: '10px' }} />
+                  </div>
+
+                  {/* Schedule Ribbon with 3 cells */}
+                  <div className="int-schedule-ribbon">
+                    <div className="int-schedule-cell">
+                      <div className="int-shimmer int-skeleton-pill" style={{ width: '20px', height: '20px', borderRadius: '4px' }} />
+                      <div className="cell-info" style={{ gap: '6px' }}>
+                        <div className="int-shimmer int-skeleton-bar" style={{ width: '40px', height: '11px' }} />
+                        <div className="int-shimmer int-skeleton-bar" style={{ width: '90px', height: '14px' }} />
+                      </div>
+                    </div>
+                    <div className="int-schedule-cell">
+                      <div className="int-shimmer int-skeleton-pill" style={{ width: '20px', height: '20px', borderRadius: '4px' }} />
+                      <div className="cell-info" style={{ gap: '6px' }}>
+                        <div className="int-shimmer int-skeleton-bar" style={{ width: '55px', height: '11px' }} />
+                        <div className="int-shimmer int-skeleton-bar" style={{ width: '80px', height: '14px' }} />
+                      </div>
+                    </div>
+                    <div className="int-schedule-cell">
+                      <div className="int-shimmer int-skeleton-pill" style={{ width: '20px', height: '20px', borderRadius: '4px' }} />
+                      <div className="cell-info" style={{ gap: '6px' }}>
+                        <div className="int-shimmer int-skeleton-bar" style={{ width: '75px', height: '11px' }} />
+                        <div className="int-shimmer int-skeleton-bar" style={{ width: '100px', height: '14px' }} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Notes / Agenda brief skeleton */}
+                  <div className="int-shimmer" style={{ width: '100%', height: '48px', borderRadius: '8px' }} />
+
+                  {/* Bottom action buttons */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingTop: '4px' }}>
+                    <div className="int-shimmer int-skeleton-pill" style={{ width: '160px', height: '36px', borderRadius: '8px' }} />
+                    <div className="int-shimmer int-skeleton-pill" style={{ width: '140px', height: '36px', borderRadius: '8px' }} />
+                    <div className="int-shimmer int-skeleton-pill" style={{ width: '120px', height: '36px', borderRadius: '8px' }} />
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : filteredInterviews.length === 0 ? (
+            <div className="int-empty-state">
+              <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#727784' }}>
+                event_busy
+              </span>
+              <h3>No Interviews Found</h3>
+              <p>No candidate interview sessions match your current filter criteria.</p>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  className="btn-int-primary"
+                  onClick={() => {
+                    setSearchQuery('')
+                    setFormatFilter('all')
+                    setRoleFilter('all')
+                    setActiveTab('all')
+                  }}
+                >
+                  Reset Filters
+                </button>
+                {onNavigateToFindJobs && (
+                  <button
+                    type="button"
+                    className="btn-int-secondary"
+                    onClick={onNavigateToFindJobs}
+                  >
+                    Browse Open Requisitions
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            paginatedInterviews.map((session) => {
+              const isScheduled = session.status === 'scheduled'
+              const isCompleted = session.status === 'completed'
+              const isCancelled = session.status === 'cancelled'
+
+              return (
+                <article key={session.id} className={`int-card ${session.status}`}>
+                  <div className="int-top-accent-bar" aria-hidden="true" />
+
+                  {/* Card Header & Metadata */}
+                  <div className="int-card-top-row">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        {/* Status Badge */}
+                        <span
+                          className="int-stage-overline-pill"
+                          style={{
+                            background: isCompleted ? '#f0fdf4' : isCancelled ? '#eeeef0' : '#eff6ff',
+                            color: isCompleted ? '#15803d' : isCancelled ? '#727784' : '#1d4ed8',
+                            borderColor: isCompleted ? '#bbf7d0' : isCancelled ? '#c2c6d5' : '#bfdbfe',
+                          }}
+                        >
+                          {isScheduled && (
+                            <span className="int-pulse-dot" style={{ width: '6px', height: '6px', background: '#1d4ed8' }} aria-hidden="true" />
+                          )}
+                          {session.status.toUpperCase()}
+                        </span>
+
+                        {/* Interview Type Pill */}
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            background: '#eeeef0',
+                            padding: '3px 8px',
+                            borderRadius: '4px',
+                            fontFamily: 'JetBrains Mono',
+                            fontSize: '11px',
+                            color: '#1a1c1e',
+                            fontWeight: 600,
+                          }}
+                        >
+                          <span className="material-symbols-outlined text-primary" style={{ fontSize: '13px' }} aria-hidden="true">
+                            assignment
+                          </span>
+                          {session.interviewType}
+                        </span>
+
+                        <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>
+                          {session.durationMinutes} min round
+                        </span>
+                      </div>
+
+                      {/* Candidate Avatar, Name & Role */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '2px' }}>
+                        {session.candidateAvatar ? (
+                          <img
+                            src={session.candidateAvatar}
+                            alt={session.candidateName}
+                            style={{
+                              width: '44px',
+                              height: '44px',
+                              borderRadius: '50%',
+                              objectFit: 'cover',
+                              border: '1.5px solid #d8e2fd',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                              flexShrink: 0,
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '44px',
+                              height: '44px',
+                              borderRadius: '50%',
+                              background: '#eff4ff',
+                              color: '#1d4ed8',
+                              border: '1.5px solid #bfdbfe',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 700,
+                              fontSize: '15px',
+                              fontFamily: 'Inter, sans-serif',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {(session.candidateName || 'C').charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <h2 className="int-card-firm-title" style={{ margin: 0 }}>{session.candidateName}</h2>
+                          <p className="int-card-studio-line" style={{ margin: '2px 0 0 0' }}>
+                            Applied for: <strong style={{ color: '#00418f' }}>{session.candidateRole}</strong> •{' '}
+                            <span>{session.companyName}</span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Modern Clean Round Status & Timing */}
+                    {isScheduled ? (
+                      <div className="int-status-badge-clean">
+                        <div className="int-status-tag">
+                          <span className="int-status-dot-pulse" aria-hidden="true" />
+                          <span className="int-status-tag-label">CONFIRMED ROUND</span>
+                        </div>
+                        <div className="int-timing-subline">
+                          <span className="material-symbols-outlined" aria-hidden="true">
+                            schedule
+                          </span>
+                          <span>{session.interviewTime}</span>
+                        </div>
+                      </div>
+                    ) : isCompleted ? (
+                      <div className="int-status-badge-clean completed">
+                        <div className="int-status-tag completed">
+                          <span className="material-symbols-outlined" style={{ fontSize: '13px', color: '#15803d' }}>
+                            check_circle
+                          </span>
+                          <span className="int-status-tag-label" style={{ color: '#15803d' }}>
+                            EVALUATED
+                          </span>
+                        </div>
+                        {session.recommendation && (
+                          <div className="int-timing-subline" style={{ color: '#15803d' }}>
+                            <span>Decision: {session.recommendation}</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="int-status-badge-clean cancelled">
+                        <div className="int-status-tag cancelled">
+                          <span className="int-status-tag-label" style={{ color: '#727784' }}>
+                            CANCELLED
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Schedule Info Ribbon */}
+                  <div className="int-schedule-ribbon">
+                    <div className="int-schedule-cell">
+                      <span className="material-symbols-outlined" aria-hidden="true">
+                        calendar_today
+                      </span>
+                      <div className="cell-info">
+                        <span className="label">Date</span>
+                        <span className="value">{session.interviewDate}</span>
+                      </div>
+                    </div>
+
+                    <div className="int-schedule-cell">
+                      <span className="material-symbols-outlined" aria-hidden="true">
+                        pace
+                      </span>
+                      <div className="cell-info">
+                        <span className="label">Time Slot</span>
+                        <span className="value">{session.interviewTime}</span>
+                      </div>
+                    </div>
+
+                    <div className="int-schedule-cell">
+                      <span className="material-symbols-outlined" aria-hidden="true">
+                        videocam
+                      </span>
+                      <div className="cell-info">
+                        <span className="label">Channel / Mode</span>
+                        <span className="value" style={{ color: '#00418f' }}>
+                          {session.locationType}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Interview Notes / Agenda Brief */}
+                  {session.interviewerNotes && (
+                    <div style={{ background: '#f3f3f6', padding: '12px 14px', borderRadius: '8px', fontSize: '13px' }}>
+                      <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', color: '#727784', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>
+                        {isCompleted ? 'Evaluation & Reviewer Notes' : 'Round Agenda & Assessment Brief'}
+                      </span>
+                      <p style={{ margin: 0, color: '#1a1c1e', lineHeight: 1.45 }}>{session.interviewerNotes}</p>
+                    </div>
+                  )}
+
+                  {/* Actions Bottom Bar */}
+                  <div className="int-card-actions-row">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      {isScheduled && (
+                        <>
+                          <a
+                            href={session.locationValue.startsWith('http') ? session.locationValue : '#'}
+                            target={session.locationValue.startsWith('http') ? '_blank' : undefined}
+                            rel="noopener noreferrer"
+                            className="btn-int-primary"
+                            style={{ textDecoration: 'none' }}
+                            title={`Join ${session.locationType}`}
+                          >
+                            <span className="material-symbols-outlined" aria-hidden="true">
+                              meeting_room
+                            </span>
+                            <span>Join Meeting Room ↗</span>
+                          </a>
+
+                          <button
+                            type="button"
+                            className="btn-int-secondary"
+                            onClick={() => openFeedbackModal(session)}
+                            title="Submit Evaluation Scorecard"
+                          >
+                            <span className="material-symbols-outlined text-primary" aria-hidden="true">
+                              rate_review
+                            </span>
+                            <span>Submit Scorecard</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className="btn-int-secondary"
+                            onClick={() => openRescheduleModal(session)}
+                            title="Reschedule this session"
+                          >
+                            <span className="material-symbols-outlined text-primary" aria-hidden="true">
+                              edit_calendar
+                            </span>
+                            <span>Reschedule</span>
+                          </button>
+                        </>
+                      )}
+
+                      {isCompleted && (
+                        <button
+                          type="button"
+                          className="btn-int-secondary"
+                          onClick={() => openFeedbackModal(session)}
+                          title="View / Edit Evaluation Dossier"
+                        >
+                          <span className="material-symbols-outlined text-primary" aria-hidden="true">
+                            assignment_turned_in
+                          </span>
+                          <span>View Evaluation Scorecard</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {isScheduled && (
+                      <button
+                        type="button"
+                        style={{ background: 'none', border: 'none', color: '#b91c1c', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}
+                        onClick={() => handleCancelInterview(session.id)}
+                        title="Cancel this interview round"
+                      >
+                        Cancel Session
+                      </button>
+                    )}
+                  </div>
+                </article>
+              )
+            })
+          )}
+
+          {/* Pagination Navigation */}
+          {!loading && filteredInterviews.length > 0 && (
+            <nav className="int-pagination-nav" aria-label="Interviews pagination">
+              <div className="int-pagination-info">
+                Showing <strong>{startIndex + 1}</strong> –{' '}
+                <strong>{Math.min(startIndex + itemsPerPage, filteredInterviews.length)}</strong> of{' '}
+                <strong>{filteredInterviews.length}</strong> interview sessions
+              </div>
+
+              {totalPages > 1 && (
+                <div className="int-pagination-controls">
+                  <button
+                    type="button"
+                    className="int-page-btn"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={safeCurrentPage === 1}
+                    aria-label="Previous page"
+                  >
+                    <span className="material-symbols-outlined" aria-hidden="true">
+                      chevron_left
+                    </span>
+                    <span>Previous</span>
+                  </button>
+
+                  <div className="int-page-numbers-group">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        className={`int-page-number-btn ${safeCurrentPage === pageNum ? 'active' : ''}`}
+                        onClick={() => setCurrentPage(pageNum)}
+                        aria-current={safeCurrentPage === pageNum ? 'page' : undefined}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    className="int-page-btn"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={safeCurrentPage === totalPages}
+                    aria-label="Next page"
+                  >
+                    <span>Next</span>
+                    <span className="material-symbols-outlined" aria-hidden="true">
+                      chevron_right
+                    </span>
+                  </button>
+                </div>
+              )}
+            </nav>
+          )}
+        </div>
+
+        {/* RIGHT COLUMN: INTERVIEW DESK SIDEBAR (4 Cols) */}
+        <aside className="int-sidebar-column">
+          {/* Widget 1: Evaluation Standard Rubric */}
+          <div className="int-sidebar-card">
+            <div className="int-sidebar-header">
+              <div className="int-sidebar-title">
+                <span className="material-symbols-outlined" aria-hidden="true">
+                  checklist
+                </span>
+                <span>Evaluation Rubric</span>
+              </div>
+              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', background: '#d8e2ff', color: '#00418f', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                STANDARD
+              </span>
             </div>
 
-            <div className="int-filters-scroll">
-              <button
-                type="button"
-                className={`int-filter-pill ${formatFilter === '3d-model-defense' ? 'active' : ''}`}
-                onClick={() => setFormatFilter(formatFilter === '3d-model-defense' ? 'all' : '3d-model-defense')}
-              >
-                <span>Format: <strong>3D Model Defense</strong></span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '13px', height: '13px' }}>
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </button>
+            <p style={{ margin: 0, fontSize: '13px', color: '#424753', lineHeight: 1.45 }}>
+              Benchmark candidate competencies across standard architectural and engineering criteria:
+            </p>
 
-              <button
-                type="button"
-                className={`int-filter-pill ${formatFilter === 'tier-1' ? 'active' : ''}`}
-                onClick={() => setFormatFilter(formatFilter === 'tier-1' ? 'all' : 'tier-1')}
-              >
-                <span>Tier-1 AEC</span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width: '12px', height: '12px' }}>
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div className="int-focus-item">
+                <span style={{ fontWeight: 500 }}>Technical &amp; BIM Mastery</span>
+                <span className="int-focus-priority High">Weight 40%</span>
+              </div>
+              <div className="int-focus-item">
+                <span style={{ fontWeight: 500 }}>Project &amp; Code Execution</span>
+                <span className="int-focus-priority High">Weight 30%</span>
+              </div>
+              <div className="int-focus-item">
+                <span style={{ fontWeight: 500 }}>Communication &amp; Team Fit</span>
+                <span className="int-focus-priority Medium">Weight 30%</span>
+              </div>
             </div>
           </div>
 
-          {/* CARD 1: Pinned / Next Imminent Interview (Foster + Partners) */}
-          {(activeTab === 'upcoming' || activeTab === 'all') && (
-            <article className="imminent-session-card" aria-labelledby="fp-interview-title">
-              {/* Top Header & Imminent Tag */}
-              <div className="imminent-card-top">
-                <div className="firm-identity-block">
-                  <div className="firm-monogram-box">
-                    <span>F+P</span>
-                  </div>
-                  <div>
-                    <h2 className="firm-name-title" id="fp-interview-title">
-                      Foster + Partners
-                      <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2.5" style={{ width: '16px', height: '16px' }} aria-hidden="true">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    </h2>
-                    <p className="firm-subtext-line">Applied R&amp;D Computation Studio • London HQ (Riverside)</p>
-                  </div>
-                </div>
-
-                <div className="session-badge-strip">
-                  <span className="badge-live-pulse">
-                    <span className="pulse-dot-primary" style={{ background: '#ffffff' }} aria-hidden="true" />
-                    LIVE VIDEO + 3D SANDBOX
-                  </span>
-                  <span className="badge-session-code">SESSION: #INT-FP-9821</span>
-                </div>
+          {/* Widget 3: Interview Hiring Tip */}
+          <div className="int-sidebar-card" style={{ background: '#f8faff', borderColor: 'rgba(0, 88, 188, 0.2)' }}>
+            <div className="int-sidebar-header">
+              <div className="int-sidebar-title" style={{ color: '#00418f' }}>
+                <span className="material-symbols-outlined" aria-hidden="true">
+                  lightbulb
+                </span>
+                <span>Recruitment Velocity</span>
               </div>
+            </div>
 
-              {/* Role & Stage Banner */}
-              <div className="stage-role-banner">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                  <span className="stage-tracker-lbl">
-                    Stage 03 / 04 • Technical Algorithm &amp; LOD-400 Model Defense
-                  </span>
-                  <h3 className="role-prominent-title">
-                    Lead Computational Designer &amp; Façade Specialist
-                  </h3>
-                </div>
+            <p style={{ margin: 0, fontSize: '12.5px', color: '#334155', lineHeight: 1.45 }}>
+              Candidates respond <strong>2.8x faster</strong> when evaluation scorecards and next-stage decisions are logged
+              within 24 hours of round completion.
+            </p>
+          </div>
+        </aside>
+      </section>
 
-                <div className="fit-score-block">
-                  <div className="fit-text-meta">
-                    <div className="lbl">TECHNICAL FIT</div>
-                    <div className="score">96.4%</div>
-                  </div>
-                  <div style={{ position: 'relative', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg viewBox="0 0 36 36" style={{ width: '38px', height: '38px', transform: 'rotate(-90deg)' }}>
-                      <path
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                        fill="none"
-                        stroke="#e2e2e5"
-                        strokeWidth="3.5"
-                      />
-                      <path
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                        fill="none"
-                        stroke="#00418f"
-                        strokeWidth="3.5"
-                        strokeDasharray="96, 100"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ position: 'absolute', width: '14px', height: '14px' }} aria-hidden="true">
-                      <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                      <polyline points="2 17 12 22 22 17" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
+      {/* ── MODAL 1: Reschedule Round ── */}
+      {selectedSessionForReschedule && (
+        <div
+          className="int-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setSelectedSessionForReschedule(null)}
+        >
+          <div className="int-modal-window" style={{ maxWidth: '480px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="int-modal-header">
+              <h3 className="int-modal-title">Reschedule Interview Round</h3>
+              <button
+                type="button"
+                className="btn-card-icon"
+                onClick={() => setSelectedSessionForReschedule(null)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
 
-              {/* Timing and Interviewers Grid */}
-              <div className="timing-panelists-grid">
-                <div className="info-sub-card">
-                  <div className="info-card-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                      <line x1="16" y1="2" x2="16" y2="6" />
-                      <line x1="8" y1="2" x2="8" y2="6" />
-                      <line x1="3" y1="10" x2="21" y2="10" />
-                    </svg>
-                  </div>
-                  <div className="info-card-content">
-                    <span className="lbl">Scheduled Date &amp; Time</span>
-                    <p className="val-date">Thursday, Nov 7, 2024</p>
-                    <p className="val-time">14:00 - 14:45 GMT (45 mins)</p>
-                  </div>
-                </div>
-
-                <div className="info-sub-card">
-                  <div className="info-card-icon" style={{ background: '#eeeef0', color: '#39464f' }} aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                      <circle cx="9" cy="7" r="4" />
-                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                    </svg>
-                  </div>
-                  <div className="info-card-content">
-                    <span className="lbl">Examination Panel</span>
-                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#1a1c1e', margin: 0 }}>
-                      Elena Rostova <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', color: '#727784', fontWeight: 400 }}>(Head of Computational TA)</span>
-                    </p>
-                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#1a1c1e', margin: 0 }}>
-                      Dr. Julian Croft <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', color: '#727784', fontWeight: 400 }}>(Partner, Applied R&amp;D)</span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Defense Agenda Box */}
-              <div className="defense-agenda-box">
-                <div className="agenda-header-line">
-                  <span style={{ fontWeight: 700, color: '#1a1c1e', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '15px', height: '15px' }} aria-hidden="true">
-                      <polyline points="4 17 10 11 4 5" />
-                      <line x1="12" y1="19" x2="20" y2="19" />
-                    </svg>
-                    Session Agenda &amp; Live Model Scope
-                  </span>
-                  <span style={{ color: '#727784' }}>ISO 19650-2 / LOD-400 SPEC</span>
-                </div>
-
-                <div className="agenda-items-list">
-                  <div className="agenda-step-row">
-                    <span className="agenda-time-pill">15m</span>
-                    <div className="agenda-desc-text">
-                      <strong>Grasshopper &amp; pyRevit Automation Workflow:</strong> Candidate walkthrough of parametric skin script for <em>The Scalpel Tower</em> diagrid rationalization.
-                    </div>
-                  </div>
-
-                  <div className="agenda-step-row">
-                    <span className="agenda-time-pill">20m</span>
-                    <div className="agenda-desc-text">
-                      <strong>Live LOD-400 Panelization &amp; Clash Script Defense:</strong> Live interactive test in WebGL sandbox. Rationalizing double-curved GFRC panels with fabrication tolerance.
-                    </div>
-                  </div>
-
-                  <div className="agenda-step-row">
-                    <span className="agenda-time-pill">10m</span>
-                    <div className="agenda-desc-text">
-                      <strong>ISO 19650 CDE &amp; BEP Architecture:</strong> Interactive Q&amp;A on multi-firm federated coordination protocols &amp; schema mappings.
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Pre-loaded Technical Materials Strip */}
-              <div className="preloaded-assets-row">
-                <div className="assets-chips-wrap">
-                  <span style={{ color: '#727784', textTransform: 'uppercase', marginRight: '4px' }}>Pre-loaded Assets:</span>
-                  <button
-                    type="button"
-                    className="asset-chip-link"
-                    onClick={() => showToast('Opening Foster_Technical_Panel_Brief.pdf...')}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#ba1a1a" strokeWidth="2" aria-hidden="true">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                      <polyline points="14 2 14 8 20 8" />
-                    </svg>
-                    <span>Foster_Technical_Panel_Brief.pdf</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="asset-chip-link"
-                    onClick={() => showToast('Inspecting Scalpel_Facade_Cluster.ghx cluster definitions...')}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" aria-hidden="true">
-                      <polyline points="16 18 22 12 16 6" />
-                      <polyline points="8 6 2 12 8 18" />
-                    </svg>
-                    <span>Scalpel_Facade_Cluster.ghx</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="asset-chip-link"
-                    onClick={() => showToast('Alex_Morgan_Verified_CV_v4.2.pdf loaded.')}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#39464f" strokeWidth="2" aria-hidden="true">
-                      <circle cx="12" cy="12" r="10" />
-                      <polyline points="12 6 12 12 14 14" />
-                    </svg>
-                    <span>Alex_Morgan_Verified_CV_v4.2.pdf</span>
-                  </button>
-                </div>
-
-                <span style={{ color: '#727784' }}>ENCRYPTION: TLS 1.3 AEC-VAULT</span>
-              </div>
-
-              {/* Main CTA Bar */}
-              <div className="imminent-cta-bar">
-                <div className="cta-left-group">
-                  <button
-                    type="button"
-                    className="btn-int-primary"
-                    onClick={() => showToast('Live Video Room will activate at 13:50 GMT on Thursday, Nov 7.')}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                      <polygon points="23 7 16 12 23 17 23 7" />
-                      <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-                    </svg>
-                    <span>Join Live Room (Opens in 46h)</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="btn-int-light"
-                    onClick={() => {
-                      setIsDiagnosticsModalOpen(true)
-                      runFullDiagnostics()
-                    }}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" aria-hidden="true">
-                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                    </svg>
-                    <span>Test BIM Sandbox &amp; Mic</span>
-                  </button>
-                </div>
-
-                <div className="cta-right-group">
-                  <button
-                    type="button"
-                    className="btn-int-light"
-                    style={{ fontSize: '12px' }}
-                    onClick={() => showToast('Reschedule request sent to Elena Rostova (F+P).')}
-                  >
-                    Reschedule / Propose Alternate
-                  </button>
-
-                  <button
-                    type="button"
-                    className="btn-int-light"
-                    style={{ padding: '8px 10px' }}
-                    title="Download .ics calendar file"
-                    onClick={() => handleDownloadIcs('Foster_Partners_Technical_Defense')}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '16px', height: '16px' }}>
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                      <line x1="16" y1="2" x2="16" y2="6" />
-                      <line x1="8" y1="2" x2="8" y2="6" />
-                      <line x1="12" y1="11" x2="12" y2="17" />
-                      <line x1="9" y1="14" x2="15" y2="14" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </article>
-          )}
-
-          {/* CARD 2: Grimshaw Upcoming Interview */}
-          {(activeTab === 'upcoming' || activeTab === 'all') && (
-            <article className="secondary-session-card" aria-labelledby="grimshaw-title">
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div className="firm-monogram-box" style={{ background: '#eeeef0', color: '#39464f' }}>
-                    <span>GA</span>
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <h3 className="firm-name-title" id="grimshaw-title">Grimshaw Architects</h3>
-                      <span className="badge-session-code" style={{ fontSize: '10px' }}>STAGE 02 / 03</span>
-                    </div>
-                    <p className="firm-subtext-line" style={{ fontWeight: 600 }}>
-                      Senior BIM Infrastructure Coordinator (HS2 Rail Interchange)
-                    </p>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span className="badge-session-code" style={{ background: '#d8e2ff', color: '#00418f', fontWeight: 700 }}>
-                    CDE SIMULATION
-                  </span>
-                  <span className="badge-session-code" style={{ background: '#eeeef0', color: '#1a1c1e', fontWeight: 700 }}>
-                    SOLIBRI AUDIT
-                  </span>
-                </div>
-              </div>
-
-              <div className="three-col-metric-grid">
-                <div className="three-col-item">
-                  <span className="lbl">DATE &amp; WINDOW</span>
-                  <span className="main">Mon, Nov 11, 2024</span>
-                  <span className="sub">10:30 - 11:30 GMT (60m)</span>
-                </div>
-
-                <div className="three-col-item">
-                  <span className="lbl">LEAD ASSESSOR</span>
-                  <span className="main">Marcus Vance</span>
-                  <span className="sub">VDC Director, Transit &amp; Rail</span>
-                </div>
-
-                <div className="three-col-item">
-                  <span className="lbl">VERIFICATION FOCUS</span>
-                  <span className="main">ISO 19650 BEP Audit</span>
-                  <span className="sub" style={{ color: '#00418f', fontWeight: 600 }}>Cross-Disciplinary Model QA</span>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', paddingTop: '8px', borderTop: '1px solid rgba(194, 198, 213, 0.3)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <button
-                    type="button"
-                    className="btn-int-primary"
-                    style={{ fontSize: '12px', padding: '6px 14px' }}
-                    onClick={() => showToast('Opening HS2 Rail Interchange Preparation Checklist...')}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '15px', height: '15px' }}>
-                      <polyline points="9 11 12 14 22 4" />
-                      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                    </svg>
-                    <span>Prepare Checklist</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="btn-int-light"
-                    style={{ fontSize: '12px', padding: '6px 12px' }}
-                    onClick={() => showToast('Marcus Vance: VDC Director @ Grimshaw, 14 yrs AEC experience.')}
-                  >
-                    View Panelist Profile
-                  </button>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#424753' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '15px', height: '15px' }} aria-hidden="true">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                    <polyline points="22 4 12 14.01 9 11.01" />
-                  </svg>
-                  <span>Calendar Invite Sent (.ics confirmed)</span>
-                </div>
-              </div>
-            </article>
-          )}
-
-          {/* CARD 3: Action Required (Pending Invitation Slot Selection - ZHA) */}
-          {(activeTab === 'action-required' || activeTab === 'all') && (
-            <article className="action-required-card" aria-labelledby="zha-title">
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div className="firm-monogram-box" style={{ background: '#eeeef0', color: '#b3272d' }}>
-                    <span>ZHA</span>
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <h3 className="firm-name-title" id="zha-title">Zaha Hadid Architects</h3>
-                      <span className="badge-action-alert">
-                        {isZhaConfirmed ? 'SLOT CONFIRMED' : 'ACTION REQUIRED'}
-                      </span>
-                    </div>
-                    <p className="firm-subtext-line">
-                      Parametric Façade Scripting Specialist • CODE Computation Research Unit
-                    </p>
-                  </div>
-                </div>
-
-                {!isZhaConfirmed && (
-                  <div className="expiry-countdown">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '15px', height: '15px' }}>
-                      <path d="M5 22h14M5 2h14m-4 0v6.5a4.5 4.5 0 0 1-9 0V2m9 20v-6.5a4.5 4.5 0 0 0-9 0V22" />
-                    </svg>
-                    <span>EXPIRES IN 22 HOURS</span>
-                  </div>
-                )}
-              </div>
-
-              <div style={{ background: '#f3f3f6', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13px', color: '#1a1c1e' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '16px', height: '16px' }} aria-hidden="true">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                    <line x1="3" y1="10" x2="21" y2="10" />
-                  </svg>
-                  Stage 1: Portfolio &amp; Algorithmic Geometry Review
-                </div>
-                <p style={{ fontSize: '13px', color: '#424753', margin: 0 }}>
-                  Recruiter Shona Macleod (Lead AEC Talent Partner) proposed 3 time slots for your 45-minute portfolio deep-dive. Please confirm one to synchronize calendars:
-                </p>
-
-                <div className="slots-selector-grid">
-                  {zhaSlots.map((slot) => {
-                    const isSelected = selectedZhaSlot === slot.id
-
-                    return (
-                      <label
-                        key={slot.id}
-                        className={`slot-radio-card ${isSelected ? 'selected' : ''}`}
-                      >
-                        <input
-                          type="radio"
-                          name="zha_slot"
-                          checked={isSelected}
-                          onChange={() => setSelectedZhaSlot(slot.id)}
-                        />
-                        <div>
-                          <p className="slot-date-title">{slot.dateText}</p>
-                          <p className="slot-time-sub">{slot.timeText}</p>
-                        </div>
-                      </label>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', paddingTop: '6px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {isZhaConfirmed ? (
-                    <span className="btn-int-light" style={{ background: '#d8e2ff', color: '#00418f', fontWeight: 700 }}>
-                      ✓ Slot Confirmed &amp; Calendar Synced
+            <form onSubmit={onSubmitReschedule} className="int-modal-body">
+              {/* Candidate Info & Comparison Banner */}
+              <div className="int-reschedule-compare">
+                <div className="int-compare-box">
+                  <span className="int-compare-label">Current Scheduled Slot</span>
+                  <span className="int-compare-val">
+                    <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#727784' }} aria-hidden="true">
+                      event
                     </span>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        className="btn-int-primary"
-                        onClick={handleConfirmZhaSlot}
-                      >
-                        Confirm Selected Slot
-                      </button>
+                    <span>{selectedSessionForReschedule.interviewDate} • {selectedSessionForReschedule.interviewTime}</span>
+                  </span>
+                </div>
+                <div className="int-compare-box">
+                  <span className="int-compare-label">New Proposed Slot</span>
+                  <span className="int-compare-val highlight">
+                    <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#00418f' }} aria-hidden="true">
+                      update
+                    </span>
+                    <span>{rescheduleDate || 'Select date'} • {formatTimeTo12Hour(rescheduleTime) || 'Select time'}</span>
+                  </span>
+                </div>
+              </div>
 
-                      <button
-                        type="button"
-                        className="btn-int-light"
-                        onClick={() => showToast('Alternative times requested from ZHA CODE unit.')}
-                      >
-                        Request Alternative Time
-                      </button>
-                    </>
+              {/* Candidate & Round summary */}
+              <div>
+                <strong style={{ fontSize: '14.5px', color: '#1a1c1e' }}>
+                  {selectedSessionForReschedule.candidateName}
+                </strong>
+                <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#727784' }}>
+                  {selectedSessionForReschedule.candidateRole} • {selectedSessionForReschedule.interviewType} ({selectedSessionForReschedule.durationMinutes} min round)
+                </p>
+              </div>
+
+              {/* Date Input with min={todayStr} */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1a1c1e' }}>
+                  New Date <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <input
+                  type="date"
+                  className="int-input-box"
+                  min={todayStr}
+                  value={rescheduleDate}
+                  onChange={(e) => setRescheduleDate(e.target.value)}
+                  required
+                />
+              </div>
+
+              {/* Time Picker Row with native input type="time" and 12-hour formatted badge */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1a1c1e' }}>
+                    New Time Slot <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  {rescheduleTime && (
+                    <span className="int-time-preview-badge">
+                      Selected: {formatTimeTo12Hour(rescheduleTime)}
+                    </span>
                   )}
                 </div>
 
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>
-                  HOST: CODE COMPUTATION LAB
-                </span>
-              </div>
-            </article>
-          )}
-
-          {/* CARD 4: Past Interview Archive Snippet */}
-          {(activeTab === 'past' || activeTab === 'all') && (
-            <article className="archive-snippet-box">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#39464f" strokeWidth="2" style={{ width: '18px', height: '18px' }} aria-hidden="true">
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                  </svg>
-                  <h4 style={{ fontFamily: 'Hanken Grotesk', fontSize: '15px', fontWeight: 700, margin: 0, color: '#1a1c1e' }}>
-                    Recent Verified Performance
-                  </h4>
+                <div className="int-time-picker-row">
+                  <div className="int-time-picker-wrapper">
+                    <input
+                      type="time"
+                      value={rescheduleTime}
+                      onChange={(e) => setRescheduleTime(e.target.value)}
+                      required
+                    />
+                  </div>
                 </div>
 
+                {/* Quick Time Slots */}
+                <div className="int-quick-slots-container">
+                  <span className="int-quick-slots-label">Quick Pick Slots:</span>
+                  <div className="int-quick-slots-grid">
+                    {QUICK_TIME_SLOTS.map((slot) => {
+                      const isActive = rescheduleTime === slot.time24
+                      return (
+                        <button
+                          key={slot.time24}
+                          type="button"
+                          className={`int-quick-slot-chip ${isActive ? 'active' : ''}`}
+                          onClick={() => setRescheduleTime(slot.time24)}
+                        >
+                          {slot.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Reason for Reschedule */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1a1c1e' }}>
+                  Reason for Rescheduling
+                </label>
+                <select
+                  className="int-input-box"
+                  value={rescheduleReason}
+                  onChange={(e) => setRescheduleReason(e.target.value)}
+                >
+                  <option value="Candidate requested alternate slot">Candidate requested alternate slot</option>
+                  <option value="Interviewer / Panelist schedule conflict">Interviewer / Panelist schedule conflict</option>
+                  <option value="Internal technical round alignment">Internal technical round alignment</option>
+                  <option value="Urgent operational rescheduling">Urgent operational rescheduling</option>
+                  <option value="Other / Mutual consensus">Other / Mutual consensus</option>
+                </select>
+              </div>
+
+              {/* Validation Feedback: Error Banner */}
+              {rescheduleValidation.error && (
+                <div className="int-validation-alert error" role="alert">
+                  <span className="material-symbols-outlined" aria-hidden="true">
+                    error
+                  </span>
+                  <span>{rescheduleValidation.error}</span>
+                </div>
+              )}
+
+              {/* Validation Feedback: Warning Banner */}
+              {!rescheduleValidation.error && rescheduleValidation.warning && (
+                <div className="int-validation-alert warning" role="status">
+                  <span className="material-symbols-outlined" aria-hidden="true">
+                    warning
+                  </span>
+                  <span>{rescheduleValidation.warning}</span>
+                </div>
+              )}
+
+              {/* Modal Footer */}
+              <div className="int-modal-footer" style={{ justifyContent: 'flex-end', gap: '10px' }}>
                 <button
                   type="button"
-                  style={{ border: 'none', background: 'none', fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
-                  onClick={() => setIsFeedbackModalOpen(true)}
+                  className="btn-int-secondary"
+                  onClick={() => setSelectedSessionForReschedule(null)}
                 >
-                  View All 5 Completed Rounds →
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-int-primary"
+                  disabled={!rescheduleValidation.valid}
+                  style={!rescheduleValidation.valid ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+                  title={rescheduleValidation.error || 'Confirm updated schedule'}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }} aria-hidden="true">
+                    schedule_send
+                  </span>
+                  <span>Confirm Reschedule</span>
                 </button>
               </div>
-
-              <div className="archive-items-grid">
-                {completedInterviews.slice(0, 2).map((item: CompletedInterview) => (
-                  <div className="archive-item-card" key={item.id}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <strong style={{ fontSize: '13.5px', color: '#1a1c1e' }}>{item.firmName}</strong>
-                        <span className="badge-session-code" style={{ background: item.badgeColor === 'success' ? '#d8e2ff' : 'rgba(0,65,143,0.1)', color: '#00418f', fontWeight: 700, fontSize: '9.5px' }}>
-                          {item.statusBadge}
-                        </span>
-                      </div>
-                      <span style={{ fontSize: '12px', color: '#424753' }}>
-                        {item.roleTitle} • {item.dateText}
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="btn-int-light"
-                      style={{ padding: '6px 8px' }}
-                      title="View Performance Breakdown"
-                      onClick={() => {
-                        setSelectedFeedbackItem(item)
-                        setIsFeedbackModalOpen(true)
-                      }}
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '16px', height: '16px' }}>
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </article>
-          )}
+            </form>
+          </div>
         </div>
+      )}
 
-        {/* RIGHT COLUMN: Telemetry, Prep Simulator & Diagnostic Sidebar (4 cols) */}
-        <aside className="int-right-col">
-          {/* Card: AI Interview Prep Kit */}
-          <article className="sidebar-box-card">
-            <div className="sidebar-card-header">
-              <h3 className="sidebar-card-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '18px', height: '18px' }} aria-hidden="true">
-                  <path d="M12 2a10 10 0 0 1 10 10c0 4.42-3.58 8-8 8v2c0 .55-.45 1-1 1s-1-.45-1-1v-2a8 8 0 0 1-8-8c0-5.52 4.48-10 10-10z" />
-                </svg>
-                AI Interview Prep Kit
-              </h3>
-              <span className="int-verified-badge" style={{ fontSize: '10px' }}>GPT-4o BIM</span>
-            </div>
-
-            <p className="sidebar-card-desc">
-              Context-tailored drill generator calibrated for <strong>Foster + Partners</strong> computational defense panel.
-            </p>
-
-            <div style={{ background: '#f3f3f6', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', textTransform: 'uppercase', color: '#727784', fontWeight: 700 }}>
-                Recommended Prep Focus
-              </span>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '12px', color: '#1a1c1e' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '15px', height: '15px', flexShrink: 0, marginTop: '2px' }}>
-                  <polyline points="16 18 22 12 16 6" />
-                  <polyline points="8 6 2 12 8 18" />
-                </svg>
-                <span>pyRevit Unit Testing &amp; Ribbon deployment structure</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '12px', color: '#1a1c1e' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '15px', height: '15px', flexShrink: 0, marginTop: '2px' }}>
-                  <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                </svg>
-                <span>Rhino.Inside geometry streaming under IFC4 schema</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '12px', color: '#1a1c1e' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '15px', height: '15px', flexShrink: 0, marginTop: '2px' }}>
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                </svg>
-                <span>Embodied Carbon evaluation scripts in Ladybug &amp; Pollination</span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="btn-int-primary"
-              style={{ justifyContent: 'center' }}
-              onClick={() => setIsMockModalOpen(true)}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '16px', height: '16px' }}>
-                <circle cx="12" cy="12" r="10" />
-                <polygon points="10 8 16 12 10 16 10 8" />
-              </svg>
-              <span>Launch Mock Technical Simulator</span>
-            </button>
-            <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', color: '#727784', textAlign: 'center' }}>
-              Includes live audio interrogation + live code sandbox
-            </span>
-          </article>
-
-          {/* Card: 3D Sandbox Diagnostics */}
-          <article className="sidebar-box-card">
-            <div className="sidebar-card-header">
-              <h3 className="sidebar-card-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '18px', height: '18px' }} aria-hidden="true">
-                  <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                  <polyline points="2 17 12 22 22 17" />
-                  <polyline points="2 12 12 17 22 12" />
-                </svg>
-                3D Sandbox Diagnostics
-              </h3>
-              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', color: '#00418f', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span className="pulse-dot-primary" aria-hidden="true" />
-                ACTIVE
-              </span>
-            </div>
-
-            <p className="sidebar-card-desc">
-              Local workstation diagnostic suite for seamless model manipulation during technical defense panels.
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div className="diagnostic-item-row">
-                <span>WebGL 2.0 Graphics Pipeline</span>
-                <span className="status-val">60 FPS (RTX Active)</span>
-              </div>
-              <div className="diagnostic-item-row">
-                <span>IFC4x3 WASM Parser</span>
-                <span className="status-val">READY (v3.2)</span>
-              </div>
-              <div className="diagnostic-item-row">
-                <span>Dual Screen Share Sync</span>
-                <span className="status-val">VERIFIED</span>
-              </div>
-              <div className="diagnostic-item-row">
-                <span>Audio/Latency Buffer</span>
-                <span className="status-val">18 ms (Ultra-low)</span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="btn-int-light"
-              style={{ justifyContent: 'center' }}
-              onClick={() => {
-                setIsDiagnosticsModalOpen(true)
-                runFullDiagnostics()
-              }}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="#39464f" strokeWidth="2" style={{ width: '16px', height: '16px' }}>
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 14 14" />
-              </svg>
-              <span>Run 60s Tech Check</span>
-            </button>
-          </article>
-
-          {/* Card: Recruiter Notes & Debrief Feedback */}
-          <article className="sidebar-box-card">
-            <div className="sidebar-card-header">
-              <h3 className="sidebar-card-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '18px', height: '18px' }} aria-hidden="true">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                </svg>
-                Debrief Feedback
-              </h3>
-              <span className="badge-session-code" style={{ fontSize: '10px' }}>ARUP AUDIT</span>
-            </div>
-
-            <div className="debrief-quote-box">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <strong style={{ fontSize: '13px', color: '#1a1c1e' }}>Arup Global Computational Panel</strong>
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: '#00418f', fontWeight: 700 }}>
-                  9.6 / 10
-                </span>
-              </div>
-              <p className="debrief-quote-text">
-                “Exceptional mastery of openBIM schemas and Grasshopper custom components. Strong communication of complex parametric constraints and automated fabrication outputs.”
-              </p>
-              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', color: '#727784', textAlign: 'right' }}>
-                — Dr. Sarah Jenkins, Lead Partner
-              </span>
-            </div>
-
-            <div style={{ textAlign: 'center', paddingTop: '4px' }}>
+      {/* ── MODAL 2: Evaluation Scorecard Modal ── */}
+      {selectedSessionForFeedback && (
+        <div
+          className="int-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setSelectedSessionForFeedback(null)}
+        >
+          <div className="int-modal-window" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="int-modal-header">
+              <h3 className="int-modal-title">Candidate Evaluation Scorecard</h3>
               <button
                 type="button"
-                style={{ border: 'none', background: 'none', fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
-                onClick={() => setIsFeedbackModalOpen(true)}
+                className="btn-card-icon"
+                onClick={() => setSelectedSessionForFeedback(null)}
+                aria-label="Close"
               >
-                View All 4 Post-Interview Feedback Reports →
-              </button>
-            </div>
-          </article>
-
-          {/* Card: Availability Window */}
-          <article className="sidebar-box-card">
-            <div className="sidebar-card-header">
-              <h3 className="sidebar-card-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '18px', height: '18px' }} aria-hidden="true">
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
-                </svg>
-                Availability Window
-              </h3>
-              <button
-                type="button"
-                style={{ border: 'none', background: 'none', fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
-                onClick={() => setIsAvailabilityModalOpen(true)}
-              >
-                Edit
+                ✕
               </button>
             </div>
 
-            <p className="sidebar-card-desc">Automated reservation slots published to Tier-1 firms:</p>
-
-            <div className="hours-schedule-list">
-              <div className="hours-row">
-                <span style={{ fontWeight: 600, color: '#1a1c1e' }}>Mon – Thu:</span>
-                <span style={{ fontFamily: 'JetBrains Mono', color: '#00418f', fontWeight: 700 }}>14:00 – 18:00 GMT</span>
-              </div>
-              <div className="hours-row">
-                <span style={{ fontWeight: 600, color: '#1a1c1e' }}>Friday:</span>
-                <span style={{ fontFamily: 'JetBrains Mono', color: '#424753' }}>10:00 – 13:00 GMT</span>
-              </div>
-              <div className="hours-row">
-                <span style={{ fontWeight: 600, color: '#1a1c1e' }}>Min Notice:</span>
-                <span style={{ fontFamily: 'JetBrains Mono', color: '#424753' }}>24 Hours Required</span>
-              </div>
-            </div>
-
-            <div>
-              <label style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', textTransform: 'uppercase', color: '#727784', display: 'block', marginBottom: '4px' }}>
-                Active Timezone Reference
-              </label>
-              <select
-                className="timezone-select-box"
-                value={selectedTimezone}
-                onChange={(e) => {
-                  setSelectedTimezone(e.target.value)
-                  showToast(`Timezone updated to ${e.target.value}`)
-                }}
-              >
-                <option value="Europe/London (GMT / UTC+0)">Europe/London (GMT / UTC+0)</option>
-                <option value="Europe/Berlin (CET / UTC+1)">Europe/Berlin (CET / UTC+1)</option>
-                <option value="America/New_York (EST / UTC-5)">America/New_York (EST / UTC-5)</option>
-                <option value="Asia/Dubai (GST / UTC+4)">Asia/Dubai (GST / UTC+4)</option>
-                <option value="Asia/Singapore (SGT / UTC+8)">Asia/Singapore (SGT / UTC+8)</option>
-              </select>
-            </div>
-          </article>
-        </aside>
-      </main>
-
-      {/* ── MODAL: AI Mock Simulator ── */}
-      {isMockModalOpen && (
-        <div className="int-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="mock-modal-title">
-          <div className="int-modal-dialog">
-            <div className="modal-header-bar">
-              <h2 id="mock-modal-title">AI Mock Technical Assessment Simulator</h2>
-              <button
-                type="button"
-                className="modal-close-icon"
-                onClick={() => setIsMockModalOpen(false)}
-                aria-label="Close dialog"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '20px', height: '20px' }}>
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="modal-content-body">
-              <div style={{ background: '#f3f3f6', padding: '12px', borderRadius: '10px' }}>
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f', fontWeight: 700 }}>
-                  ACTIVE TARGET: FOSTER + PARTNERS PANEL
-                </span>
-                <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: '#1a1c1e' }}>
-                  Simulates a 45-minute technical interrogation covering double-curved façade rationalization and LOD-400 ISO 19650 protocols.
+            <form onSubmit={onSubmitEvaluation} className="int-modal-body">
+              <div>
+                <strong style={{ fontSize: '15px', color: '#1a1c1e' }}>
+                  {selectedSessionForFeedback.candidateName}
+                </strong>
+                <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#727784' }}>
+                  {selectedSessionForFeedback.candidateRole} • {selectedSessionForFeedback.interviewType}
                 </p>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label style={{ fontWeight: 600, color: '#1a1c1e' }}>Select Simulator Difficulty</label>
-                <select className="timezone-select-box" defaultValue="advanced">
-                  <option value="standard">Standard BIM Coordinator Level</option>
-                  <option value="advanced">Senior / Lead Computational Architect (Tier-1 Standard)</option>
-                  <option value="expert">Expert Partner Level (High pressure / Edge cases)</option>
-                </select>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label style={{ fontWeight: 600, color: '#1a1c1e' }}>Live Code &amp; Geometry Engine</label>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <span className="badge-session-code" style={{ background: '#d8e2ff', color: '#00418f', fontWeight: 700 }}>
-                    Grasshopper WebGL Sandbox: ACTIVE
-                  </span>
-                  <span className="badge-session-code" style={{ background: '#eeeef0', color: '#39464f', fontWeight: 700 }}>
-                    pyRevit Console: READY
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="modal-footer-bar">
-              <button
-                type="button"
-                className="btn-int-light"
-                onClick={() => setIsMockModalOpen(false)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn-int-primary"
-                onClick={() => {
-                  setIsMockModalOpen(false)
-                  showToast('Starting AI Mock Simulator session with audio & WebGL engine...')
-                }}
-              >
-                Begin 45-Min Session
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── MODAL: 60s Tech Check Diagnostics ── */}
-      {isDiagnosticsModalOpen && (
-        <div className="int-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="diag-modal-title">
-          <div className="int-modal-dialog">
-            <div className="modal-header-bar">
-              <h2 id="diag-modal-title">Local Workstation 3D &amp; Comms Diagnostic</h2>
-              <button
-                type="button"
-                className="modal-close-icon"
-                onClick={() => setIsDiagnosticsModalOpen(false)}
-                aria-label="Close dialog"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '20px', height: '20px' }}>
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="modal-content-body">
-              <p style={{ margin: 0 }}>
-                Running hardware acceleration and WebRTC connectivity tests for live model sharing during technical assessments.
-              </p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div className="diagnostic-item-row">
-                  <span>1. WebGL 2.0 Shader Pipeline</span>
-                  <span className="status-val" style={{ color: diagStep >= 1 ? '#00418f' : '#727784' }}>
-                    {diagStep >= 1 ? '✓ 60 FPS (NVIDIA RTX)' : 'Testing...'}
-                  </span>
-                </div>
-                <div className="diagnostic-item-row">
-                  <span>2. IFC4.3 WebAssembly Parser</span>
-                  <span className="status-val" style={{ color: diagStep >= 2 ? '#00418f' : '#727784' }}>
-                    {diagStep >= 2 ? '✓ VERIFIED (v3.2.1)' : 'Pending...'}
-                  </span>
-                </div>
-                <div className="diagnostic-item-row">
-                  <span>3. Microphone &amp; Noise Cancellation</span>
-                  <span className="status-val" style={{ color: diagStep >= 3 ? '#00418f' : '#727784' }}>
-                    {diagStep >= 3 ? '✓ Clear (48kHz)' : 'Pending...'}
-                  </span>
-                </div>
-                <div className="diagnostic-item-row">
-                  <span>4. Network Latency to London Hub</span>
-                  <span className="status-val" style={{ color: diagStep >= 4 ? '#00418f' : '#727784' }}>
-                    {diagStep >= 4 ? '✓ 18ms (Ultra-Low)' : 'Pending...'}
-                  </span>
-                </div>
-              </div>
-
-              {isTestingDiag && (
-                <div style={{ textAlign: 'center', fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f', fontWeight: 600 }}>
-                  Testing streaming buffer and vertex shaders...
-                </div>
-              )}
-            </div>
-
-            <div className="modal-footer-bar">
-              <button
-                type="button"
-                className="btn-int-light"
-                onClick={() => setIsDiagnosticsModalOpen(false)}
-              >
-                Close
-              </button>
-              <button
-                type="button"
-                className="btn-int-primary"
-                onClick={runFullDiagnostics}
-              >
-                Rerun Test
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── MODAL: Availability Editor ── */}
-      {isAvailabilityModalOpen && (
-        <div className="int-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="avail-modal-title">
-          <div className="int-modal-dialog">
-            <div className="modal-header-bar">
-              <h2 id="avail-modal-title">Edit Availability Windows</h2>
-              <button
-                type="button"
-                className="modal-close-icon"
-                onClick={() => setIsAvailabilityModalOpen(false)}
-                aria-label="Close dialog"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '20px', height: '20px' }}>
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="modal-content-body">
+              {/* Overall Score (0-100) */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontWeight: 600, color: '#1a1c1e' }}>Monday – Thursday Time Slot</label>
+                <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1a1c1e' }}>
+                  Overall Assessment Score (0 - 100): <strong>{evalScore}%</strong>
+                </label>
                 <input
-                  type="text"
-                  className="timezone-select-box"
-                  defaultValue="14:00 – 18:00 GMT"
+                  type="range"
+                  min={40}
+                  max={100}
+                  value={evalScore}
+                  onChange={(e) => setEvalScore(Number(e.target.value))}
+                  style={{ width: '100%', accentColor: '#00418f' }}
                 />
               </div>
 
+              {/* Hiring Recommendation */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontWeight: 600, color: '#1a1c1e' }}>Friday Time Slot</label>
-                <input
-                  type="text"
-                  className="timezone-select-box"
-                  defaultValue="10:00 – 13:00 GMT"
+                <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1a1c1e' }}>
+                  Hiring Recommendation
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {(['Strong Hire', 'Hire', 'Hold', 'Decline'] as InterviewSession['recommendation'][]).map(
+                    (rec) => (
+                      <button
+                        key={rec}
+                        type="button"
+                        className={`int-tab-btn ${evalRecommendation === rec ? 'active' : ''}`}
+                        onClick={() => setEvalRecommendation(rec)}
+                        style={{ flex: 1, padding: '7px 4px', fontSize: '12px' }}
+                      >
+                        {rec}
+                      </button>
+                    )
+                  )}
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1a1c1e' }}>
+                  Reviewer Notes &amp; Observations
+                </label>
+                <textarea
+                  className="int-input-box"
+                  rows={4}
+                  placeholder="Document candidate problem-solving, strengths, and alignment with requisition requirements..."
+                  value={evalNotes}
+                  onChange={(e) => setEvalNotes(e.target.value)}
+                  style={{ resize: 'vertical' }}
                 />
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontWeight: 600, color: '#1a1c1e' }}>Minimum Advance Notice</label>
-                <select className="timezone-select-box" defaultValue="24">
-                  <option value="12">12 Hours</option>
-                  <option value="24">24 Hours Required</option>
-                  <option value="48">48 Hours</option>
-                </select>
+              <div className="int-modal-footer" style={{ justifyContent: 'flex-end', gap: '10px' }}>
+                <button
+                  type="button"
+                  className="btn-int-secondary"
+                  onClick={() => setSelectedSessionForFeedback(null)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-int-primary">
+                  Save Scorecard
+                </button>
               </div>
-            </div>
-
-            <div className="modal-footer-bar">
-              <button
-                type="button"
-                className="btn-int-light"
-                onClick={() => setIsAvailabilityModalOpen(false)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn-int-primary"
-                onClick={() => {
-                  setIsAvailabilityModalOpen(false)
-                  showToast('Availability windows published to Tier-1 hiring firms.')
-                }}
-              >
-                Save Changes
-              </button>
-            </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* ── MODAL: Feedback & Performance Breakdown ── */}
-      {isFeedbackModalOpen && (
-        <div className="int-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="feedback-modal-title">
-          <div className="int-modal-dialog" style={{ maxWidth: '600px' }}>
-            <div className="modal-header-bar">
-              <h2 id="feedback-modal-title">Completed Rounds &amp; Panel Feedback</h2>
+      {/* ── MODAL 3: Schedule New Interview Modal ── */}
+      {isScheduleNewModalOpen && (
+        <div
+          className="int-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setIsScheduleNewModalOpen(false)}
+        >
+          <div className="int-modal-window" style={{ maxWidth: '520px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="int-modal-header">
+              <h3 className="int-modal-title">Schedule New Candidate Interview</h3>
               <button
                 type="button"
-                className="modal-close-icon"
-                onClick={() => {
-                  setIsFeedbackModalOpen(false)
-                  setSelectedFeedbackItem(null)
-                }}
-                aria-label="Close dialog"
+                className="btn-card-icon"
+                onClick={() => setIsScheduleNewModalOpen(false)}
+                aria-label="Close"
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '20px', height: '20px' }}>
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
+                ✕
               </button>
             </div>
 
-            <div className="modal-content-body">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {completedInterviews.map((item) => (
-                  <div
-                    key={item.id}
-                    style={{
-                      background: '#f3f3f6',
-                      borderRadius: '10px',
-                      padding: '12px 14px',
-                      border: selectedFeedbackItem?.id === item.id ? '2px solid #00418f' : '1px solid #e2e2e5',
-                    }}
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault()
+                if (!newCandidateName.trim()) return
+                setIsSubmittingSchedule(true)
+
+                let formattedTime = newTime
+                if (newTime && newTime.includes(':')) {
+                  const [hStr, mStr] = newTime.split(':')
+                  const h = parseInt(hStr, 10)
+                  const m = mStr || '00'
+                  const ampm = h >= 12 ? 'PM' : 'AM'
+                  const h12 = h % 12 || 12
+                  formattedTime = `${String(h12).padStart(2, '0')}:${m} ${ampm}`
+                }
+
+                const matched = availableCandidates.find(
+                  (c) => c.name.toLowerCase() === newCandidateName.trim().toLowerCase()
+                )
+
+                const success = await handleScheduleNewInterview({
+                  candidateName: newCandidateName.trim(),
+                  candidateRole: newCandidateRole.trim() || 'Candidate',
+                  candidateId: matched?.id,
+                  jobApplicationId: matched?.applicationId,
+                  interviewDate: newDate,
+                  interviewTime: formattedTime,
+                  interviewType: newType,
+                  locationType: newLocationType,
+                  locationValue: newLocationVal.trim(),
+                })
+
+                setIsSubmittingSchedule(false)
+                if (success) {
+                  setNewCandidateName('')
+                  setNewCandidateRole('Structural Engineer')
+                }
+              }}
+              className="int-modal-body"
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1a1c1e' }}>
+                  Candidate Name{' '}
+                  {availableCandidates.length > 0 && (
+                    <span style={{ fontWeight: 400, color: '#727784', fontSize: '11px' }}>
+                      (auto-suggests from applicants)
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="text"
+                  className="int-input-box"
+                  list="candidate-name-suggestions"
+                  placeholder="e.g. Passionate Learner"
+                  value={newCandidateName}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setNewCandidateName(val)
+                    const matched = availableCandidates.find(
+                      (c) => c.name.toLowerCase() === val.trim().toLowerCase()
+                    )
+                    if (matched && matched.role) {
+                      setNewCandidateRole(matched.role)
+                    }
+                  }}
+                  required
+                />
+                {availableCandidates.length > 0 && (
+                  <datalist id="candidate-name-suggestions">
+                    {availableCandidates.map((c) => (
+                      <option key={c.id + (c.applicationId || '')} value={c.name}>
+                        {c.role ? `${c.role}` : ''}
+                      </option>
+                    ))}
+                  </datalist>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1a1c1e' }}>Applied Role</label>
+                <input
+                  type="text"
+                  className="int-input-box"
+                  placeholder="e.g. Structural Engineer"
+                  value={newCandidateRole}
+                  onChange={(e) => setNewCandidateRole(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1a1c1e' }}>Date</label>
+                  <input
+                    type="date"
+                    className="int-input-box"
+                    min={todayStr}
+                    value={newDate}
+                    onChange={(e) => setNewDate(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1a1c1e' }}>Time</label>
+                  <input
+                    type="time"
+                    className="int-input-box"
+                    value={newTime}
+                    onChange={(e) => setNewTime(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1a1c1e' }}>Round Type</label>
+                  <select
+                    className="int-input-box"
+                    value={newType}
+                    onChange={(e) => setNewType(e.target.value as InterviewSession['interviewType'])}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong style={{ fontSize: '14px', color: '#1a1c1e' }}>{item.firmName}</strong>
-                      <span className="badge-session-code" style={{ background: '#d8e2ff', color: '#00418f', fontWeight: 700 }}>
-                        {item.statusBadge}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: '12.5px', color: '#00418f', margin: '3px 0 0', fontWeight: 600 }}>
-                      {item.roleTitle} ({item.dateText})
-                    </p>
-                    <p style={{ fontSize: '12px', color: '#424753', margin: '4px 0 0' }}>
-                      {item.summary}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
+                    <option value="Technical Review">Technical Review</option>
+                    <option value="Portfolio Deep-Dive">Portfolio Deep-Dive</option>
+                    <option value="Cultural Fit">Cultural Fit</option>
+                    <option value="Final Round">Final Round</option>
+                  </select>
+                </div>
 
-            <div className="modal-footer-bar">
-              <button
-                type="button"
-                className="btn-int-primary"
-                onClick={() => {
-                  setIsFeedbackModalOpen(false)
-                  setSelectedFeedbackItem(null)
-                }}
-              >
-                Done
-              </button>
-            </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1a1c1e' }}>Meeting Mode</label>
+                  <select
+                    className="int-input-box"
+                    value={newLocationType}
+                    onChange={(e) => setNewLocationType(e.target.value as InterviewSession['locationType'])}
+                  >
+                    <option value="Google Meet">Google Meet</option>
+                    <option value="Microsoft Teams">Microsoft Teams</option>
+                    <option value="Zoom">Zoom</option>
+                    <option value="In-Person">In-Person</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1a1c1e' }}>Meeting Link / Address</label>
+                <input
+                  type="text"
+                  className="int-input-box"
+                  placeholder="https://meet.google.com/..."
+                  value={newLocationVal}
+                  onChange={(e) => setNewLocationVal(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="int-modal-footer" style={{ justifyContent: 'flex-end', gap: '10px' }}>
+                <button
+                  type="button"
+                  className="btn-int-secondary"
+                  onClick={() => setIsScheduleNewModalOpen(false)}
+                  disabled={isSubmittingSchedule}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-int-primary" disabled={isSubmittingSchedule}>
+                  {isSubmittingSchedule ? 'Scheduling Round...' : 'Schedule Round'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
-    </div>
+    </main>
   )
 }
 

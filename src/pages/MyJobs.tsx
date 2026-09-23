@@ -3,26 +3,29 @@ import './MyJobs.css'
 import {
   useMyJobs,
   type RequisitionItem,
-  type LiveRadarAlert,
 } from './useMyJobs'
 
-interface MyJobsProps {
+export interface MyJobsProps {
   onPostNewJob?: () => void
+  onViewCandidates?: (jobId: string, jobTitle: string) => void
+  highlightedJobId?: string | null
 }
 
-export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob }) => {
+export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highlightedJobId }) => {
   const {
     filteredRequisitions,
+    loading,
+    companyName,
     activeTab,
     setActiveTab,
     searchQuery,
     setSearchQuery,
-    radarAlerts,
     totalCount,
     activeCount,
     draftCount,
     interviewingCount,
     closedCount,
+    totalApplicantsCount,
     selectedReqForCandidates,
     isCandidatesModalOpen,
     setIsCandidatesModalOpen,
@@ -30,6 +33,7 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob }) => {
     setIsExportModalOpen,
     toastMessage,
     showToast,
+    refreshJobs,
     handlePauseRequisition,
     handleDuplicateRequisition,
     handleDiscardDraft,
@@ -63,7 +67,7 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob }) => {
             <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '15px', height: '15px' }} aria-hidden="true">
               <path d="M3 21h18M3 7v14M21 7v14M6 11h2M6 15h2M10 11h2M10 15h2M14 11h2M14 15h2M18 11h2M18 15h2M9 3h6v4H9z" />
             </svg>
-            Foster + Partners (Applied R&amp;D Studio)
+            {companyName}
           </span>
           <span style={{ color: '#c2c6d5' }}>/</span>
           <span style={{ color: '#1a1c1e', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -72,7 +76,7 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob }) => {
               <circle cx="12" cy="12" r="6" />
               <circle cx="12" cy="12" r="2" />
             </svg>
-            LIVE TALENT RADAR: 4 ACTIVE NODES
+            LIVE TALENT RADAR: {activeCount} ACTIVE {activeCount === 1 ? 'NODE' : 'NODES'}
           </span>
         </div>
 
@@ -91,7 +95,7 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob }) => {
         <div className="mj-title-wrapper">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span className="mj-radar-badge">Recruiter Desk // Production Ready</span>
-            <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>STU_CODE: FP-ARD-LON</span>
+            <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>FIRM: {companyName.toUpperCase()}</span>
           </div>
           <h1 className="mj-main-heading">Requisition Hub &amp; Active Postings</h1>
           <p className="mj-lead-description">
@@ -100,6 +104,31 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob }) => {
         </div>
 
         <div className="mj-action-cluster">
+          <button
+            type="button"
+            className="btn-mj-light"
+            onClick={refreshJobs}
+            title="Refresh Requisitions"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#00418f"
+              strokeWidth="2"
+              aria-hidden="true"
+              style={{
+                width: '15px',
+                height: '15px',
+                animation: loading ? 'spin 1s linear infinite' : 'none',
+              }}
+            >
+              <polyline points="23 4 23 10 17 10" />
+              <polyline points="1 20 1 14 7 14" />
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+            </svg>
+            <span>Refresh</span>
+          </button>
+
           <button
             type="button"
             className="btn-mj-light"
@@ -135,7 +164,7 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob }) => {
           <div className="mj-metric-top">
             <span className="mj-metric-lbl">Active Requisitions</span>
             <div className="mj-metric-icon-box" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '18px', height: '18px' }}>
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                 <polyline points="22 4 12 14.01 9 11.01" />
               </svg>
@@ -143,29 +172,30 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob }) => {
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-              <span className="mj-metric-huge-num">06</span>
-              <span style={{ fontFamily: 'JetBrains Mono', color: '#00418f', fontWeight: 700, fontSize: '13px' }}>Live / Synced</span>
+              <span className="mj-metric-huge-num">{loading ? '...' : String(activeCount).padStart(2, '0')}</span>
+              <span style={{ fontFamily: 'JetBrains Mono', color: '#00418f', fontWeight: 700, fontSize: '13px' }}>
+                {activeCount > 0 ? 'Live / Synced' : 'No Active Posts'}
+              </span>
             </div>
             <p className="mj-metric-subtext" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '15px', height: '15px' }}>
                 <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
                 <polyline points="17 6 23 6 23 12" />
               </svg>
-              +2 added this month (London, Zurich, Remote)
+              Live radar syndication active
             </p>
           </div>
           <div style={{ width: '100%', height: '6px', borderRadius: '4px', background: '#eeeef0', overflow: 'hidden', display: 'flex' }}>
-            <div style={{ width: '75%', height: '100%', background: '#00418f' }} />
-            <div style={{ width: '25%', height: '100%', background: '#095bbf' }} />
+            <div style={{ width: activeCount > 0 ? '100%' : '0%', height: '100%', background: '#00418f' }} />
           </div>
         </article>
 
         {/* Metric 2 */}
         <article className="mj-metric-card">
           <div className="mj-metric-top">
-            <span className="mj-metric-lbl">Talent Inbound</span>
+            <span className="mj-metric-lbl">Total Inbound Applicants</span>
             <div className="mj-metric-icon-box tertiary" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '18px', height: '18px' }}>
                 <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                 <circle cx="8.5" cy="7" r="4" />
                 <line x1="20" y1="8" x2="20" y2="14" />
@@ -175,11 +205,11 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob }) => {
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-              <span className="mj-metric-huge-num">384</span>
+              <span className="mj-metric-huge-num">{loading ? '...' : totalApplicantsCount}</span>
               <span style={{ fontFamily: 'JetBrains Mono', color: '#00418f', fontWeight: 700, fontSize: '13px' }}>Profiles</span>
             </div>
             <p className="mj-metric-subtext" style={{ marginTop: '4px' }}>
-              <strong style={{ fontFamily: 'JetBrains Mono', color: '#1a1c1e' }}>88</strong> verified at 95%+ Fit score
+              Across {totalCount} total {totalCount === 1 ? 'job post' : 'job posts'}
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>
@@ -187,43 +217,42 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob }) => {
               <circle cx="12" cy="12" r="10" />
               <polyline points="12 6 12 12 16 14" />
             </svg>
-            First qualified inbound: 17.8 mins avg
+            Applicant Tracking System Synced
           </div>
         </article>
 
         {/* Metric 3 */}
         <article className="mj-metric-card">
           <div className="mj-metric-top">
-            <span className="mj-metric-lbl">3D Sandbox Cleared</span>
+            <span className="mj-metric-lbl">Draft Requisitions</span>
             <div className="mj-metric-icon-box" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                <polyline points="2 17 12 22 22 17" />
-                <polyline points="2 12 12 17 22 12" />
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '18px', height: '18px' }}>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
               </svg>
             </div>
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-              <span className="mj-metric-huge-num">42</span>
-              <span style={{ fontFamily: 'JetBrains Mono', color: '#00418f', fontWeight: 700, fontSize: '13px' }}>Submissions</span>
+              <span className="mj-metric-huge-num">{loading ? '...' : String(draftCount).padStart(2, '0')}</span>
+              <span style={{ fontFamily: 'JetBrains Mono', color: '#00418f', fontWeight: 700, fontSize: '13px' }}>In Vault</span>
             </div>
             <p className="mj-metric-subtext" style={{ marginTop: '4px' }}>
-              GFRC Panelization &amp; pyRevit scripts validated
+              Unpublished drafts awaiting launch
             </p>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>
-            <span>WebGL Test Pass Rate</span>
-            <span style={{ color: '#00418f', fontWeight: 700 }}>87.4%</span>
+            <span>Vault Status</span>
+            <span style={{ color: '#00418f', fontWeight: 700 }}>Ready to configure</span>
           </div>
         </article>
 
         {/* Metric 4 */}
         <article className="mj-metric-card">
           <div className="mj-metric-top">
-            <span className="mj-metric-lbl">Velocity Benchmark</span>
+            <span className="mj-metric-lbl">Closed / Fulfilled</span>
             <div className="mj-metric-icon-box secondary" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '18px', height: '18px' }}>
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 14 14" />
               </svg>
@@ -231,11 +260,11 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob }) => {
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-              <span className="mj-metric-huge-num">6.4</span>
-              <span style={{ fontFamily: 'JetBrains Mono', color: '#39464f', fontWeight: 700, fontSize: '13px' }}>Days to Shortlist</span>
+              <span className="mj-metric-huge-num">{loading ? '...' : String(closedCount).padStart(2, '0')}</span>
+              <span style={{ fontFamily: 'JetBrains Mono', color: '#39464f', fontWeight: 700, fontSize: '13px' }}>Archived</span>
             </div>
             <p className="mj-metric-subtext" style={{ marginTop: '4px' }}>
-              34% faster than industry standard
+              Past completed hiring campaigns
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f' }}>
@@ -243,7 +272,7 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob }) => {
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
               <polyline points="22 4 12 14.01 9 11.01" />
             </svg>
-            BEP Skill Matrix Automation On
+            Ledger historical record intact
           </div>
         </article>
       </section>
@@ -326,14 +355,77 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob }) => {
       <main className="mj-main-grid">
         {/* Primary Requisitions Column (8 Cols Left) */}
         <div className="mj-cards-col">
-          {filteredRequisitions.map((req: RequisitionItem) => {
+          {loading ? (
+            <>
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="mj-skeleton-card">
+                  <div className="mj-skeleton-line" style={{ width: '35%', height: '16px', marginBottom: '16px' }} />
+                  <div className="mj-skeleton-line" style={{ width: '65%', height: '24px', marginBottom: '12px' }} />
+                  <div className="mj-skeleton-line" style={{ width: '45%', height: '14px', marginBottom: '24px' }} />
+                  <div className="mj-skeleton-line" style={{ width: '100%', height: '56px', borderRadius: '10px' }} />
+                </div>
+              ))}
+            </>
+          ) : filteredRequisitions.length === 0 ? (
+            <div className="mj-empty-state">
+              <div className="mj-empty-icon-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '32px', height: '32px' }}>
+                  <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                </svg>
+              </div>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1a1c1e', marginBottom: '8px' }}>
+                {searchQuery || activeTab !== 'all' ? 'No Requisitions Match Criteria' : 'No Requisitions Posted Yet'}
+              </h3>
+              <p style={{ fontSize: '14px', color: '#727784', maxWidth: '440px', lineHeight: 1.5, marginBottom: '20px' }}>
+                {searchQuery || activeTab !== 'all'
+                  ? `No requisitions found matching your filter criteria. Reset the search query or active filter to view all listings.`
+                  : `Your organization (${companyName}) has not deployed any job posts yet. Launch your first recruitment funnel to start sourcing qualified architectural & engineering talent.`}
+              </p>
+              {searchQuery || activeTab !== 'all' ? (
+                <button
+                  type="button"
+                  className="btn-mj-light"
+                  onClick={() => {
+                    setSearchQuery('')
+                    setActiveTab('all')
+                  }}
+                >
+                  Clear Filters
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn-mj-primary"
+                  onClick={onPostNewJob}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '16px', height: '16px' }}>
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  Post a New Requisition
+                </button>
+              )}
+            </div>
+          ) : (
+            filteredRequisitions.map((req: RequisitionItem) => {
             const isClosed = req.status === 'closed'
             const isDraft = req.status === 'draft'
+
+            const isHighlighted = Boolean(
+              highlightedJobId && (
+                req.id.toLowerCase() === highlightedJobId.toLowerCase() ||
+                req.title.toLowerCase().includes(highlightedJobId.toLowerCase()) ||
+                highlightedJobId.toLowerCase().includes(req.title.toLowerCase())
+              )
+            )
 
             return (
               <article
                 key={req.id}
-                className={`req-hub-card ${isClosed ? 'closed' : ''}`}
+                id={`req-card-${req.id}`}
+                className={`req-hub-card ${isClosed ? 'closed' : ''} ${isHighlighted ? 'highlighted-requisition' : ''}`}
                 aria-labelledby={`req-title-${req.id}`}
               >
                 {/* Header & Badges */}
@@ -385,19 +477,11 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob }) => {
                     </div>
                   </div>
 
-                  {/* Health Score or Status */}
+                  {/* Posting Date / Metadata */}
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0 }}>
-                    <div className="req-health-badge">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '15px', height: '15px' }}>
-                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-                      </svg>
-                      HEALTH: {req.healthScore}/100
-                    </div>
-                    {req.healthLabel && (
-                      <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784', marginTop: '3px' }}>
-                        {req.healthLabel}
-                      </span>
-                    )}
+                    <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11.5px', color: '#727784', fontWeight: 500 }}>
+                      {req.createdDateText}
+                    </span>
                   </div>
                 </div>
 
@@ -411,45 +495,105 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob }) => {
                   ))}
                 </div>
 
-                {/* Pipeline Funnel Box if Active / Interviewing */}
+                {/* Pipeline Breakdown (5 Stages: New, In Review, Shortlisted, Scheduled, Rejected) */}
                 {!isDraft && !isClosed && (
                   <div className="pipeline-conversion-box">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
                       <span style={{ fontWeight: 700, color: '#1a1c1e', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '16px', height: '16px' }}>
-                          <circle cx="12" cy="12" r="3" />
-                          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09" />
+                          <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
                         </svg>
-                        Pipeline Stage Conversion
+                        Candidate Pipeline Stages
                       </span>
                       <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f', fontWeight: 600 }}>
-                        {req.pipeline.sandboxes} Live Sandbox Panels Scheduled
+                        Total Applicants: {req.pipeline.total}
                       </span>
                     </div>
 
                     <div className="pipeline-funnel-grid">
-                      <div className="funnel-segment-card">
-                        <span className="lbl">Sourced Pool</span>
-                        <span className="num">{req.pipeline.sourced}</span>
-                        <span className="sub">RADAR INBOUND</span>
+                      <div
+                        className="funnel-segment-card"
+                        onClick={() => {
+                          if (onViewCandidates) {
+                            onViewCandidates(req.id, req.title)
+                          } else {
+                            handleOpenCandidates(req)
+                          }
+                        }}
+                        style={{ cursor: 'pointer' }}
+                        title="View New Applications"
+                      >
+                        <span className="lbl">New</span>
+                        <span className="num">{req.pipeline.newCount}</span>
+                        <span className="sub">Awaiting Review</span>
                       </div>
 
-                      <div className="funnel-segment-card">
-                        <span className="lbl">Applied</span>
-                        <span className="num">{req.pipeline.applied}</span>
-                        <span className="sub">+4 today</span>
+                      <div
+                        className="funnel-segment-card"
+                        onClick={() => {
+                          if (onViewCandidates) {
+                            onViewCandidates(req.id, req.title)
+                          } else {
+                            handleOpenCandidates(req)
+                          }
+                        }}
+                        style={{ cursor: 'pointer' }}
+                        title="View Applications In Review"
+                      >
+                        <span className="lbl">In Review</span>
+                        <span className="num">{req.pipeline.inReview}</span>
+                        <span className="sub">Screening</span>
                       </div>
 
-                      <div className="funnel-segment-card highlighted">
-                        <span className="lbl">Shortlist (95%+)</span>
+                      <div
+                        className="funnel-segment-card"
+                        onClick={() => {
+                          if (onViewCandidates) {
+                            onViewCandidates(req.id, req.title)
+                          } else {
+                            handleOpenCandidates(req)
+                          }
+                        }}
+                        style={{ cursor: 'pointer' }}
+                        title="View Shortlisted Candidates"
+                      >
+                        <span className="lbl">Shortlisted</span>
                         <span className="num">{req.pipeline.shortlisted}</span>
-                        <span className="sub">PASSED BEP VERIF</span>
+                        <span className="sub">Evaluation</span>
                       </div>
 
-                      <div className="funnel-segment-card">
-                        <span className="lbl">3D Sandboxes</span>
-                        <span className="num">0{req.pipeline.sandboxes}</span>
-                        <span className="sub">Elena &amp; Julian C.</span>
+                      <div
+                        className="funnel-segment-card"
+                        onClick={() => {
+                          if (onViewCandidates) {
+                            onViewCandidates(req.id, req.title)
+                          } else {
+                            handleOpenCandidates(req)
+                          }
+                        }}
+                        style={{ cursor: 'pointer' }}
+                        title="View Scheduled Interviews"
+                      >
+                        <span className="lbl">Scheduled</span>
+                        <span className="num">{req.pipeline.scheduled}</span>
+                        <span className="sub">Interviews</span>
+                      </div>
+
+                      <div
+                        className="funnel-segment-card"
+                        onClick={() => {
+                          if (onViewCandidates) {
+                            onViewCandidates(req.id, req.title)
+                          } else {
+                            handleOpenCandidates(req)
+                          }
+                        }}
+                        style={{ cursor: 'pointer' }}
+                        title="View Rejected Applications"
+                      >
+                        <span className="lbl">Rejected</span>
+                        <span className="num">{req.pipeline.rejected}</span>
+                        <span className="sub">Declined</span>
                       </div>
                     </div>
                   </div>
@@ -482,32 +626,25 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob }) => {
                 <div className="req-card-footer">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     {!isDraft && !isClosed && (
-                      <>
-                        <button
-                          type="button"
-                          className="btn-mj-primary"
-                          style={{ fontSize: '12.5px', padding: '7px 14px' }}
-                          onClick={() => handleOpenCandidates(req)}
-                        >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '15px', height: '15px' }}>
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                            <circle cx="9" cy="7" r="4" />
-                          </svg>
-                          <span>View Candidates ({req.pipeline.applied})</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          className="btn-mj-light"
-                          style={{ fontSize: '12.5px', padding: '7px 12px' }}
-                          onClick={() => handleOpenCandidates(req)}
-                        >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '15px', height: '15px' }}>
-                            <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                          </svg>
-                          <span>3D Sandboxes ({req.pipeline.shortlisted})</span>
-                        </button>
-                      </>
+                      <button
+                        type="button"
+                        className="btn-mj-primary"
+                        style={{ fontSize: '12.5px', padding: '7px 16px' }}
+                        onClick={() => {
+                          if (onViewCandidates) {
+                            onViewCandidates(req.id, req.title)
+                          } else {
+                            handleOpenCandidates(req)
+                          }
+                        }}
+                        title={`View all candidates for ${req.title}`}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '15px', height: '15px' }}>
+                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                          <circle cx="9" cy="7" r="4" />
+                        </svg>
+                        <span>View Candidates ({req.pipeline.total})</span>
+                      </button>
                     )}
 
                     {isDraft && (
@@ -559,19 +696,6 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob }) => {
                       <button
                         type="button"
                         className="btn-icon-req"
-                        title="Pause Radar"
-                        onClick={() => handlePauseRequisition(req.id)}
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <circle cx="12" cy="12" r="10" />
-                          <line x1="10" y1="15" x2="10" y2="9" />
-                          <line x1="14" y1="15" x2="14" y2="9" />
-                        </svg>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="btn-icon-req"
                         title="Duplicate Requisition"
                         onClick={() => handleDuplicateRequisition(req)}
                       >
@@ -584,14 +708,13 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob }) => {
                       <button
                         type="button"
                         className="btn-icon-req"
-                        title="Syndicate Configuration"
-                        onClick={() => showToast('Syndication channels updated.')}
+                        title="Pause Requisition"
+                        onClick={() => handlePauseRequisition(req.id)}
                       >
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <circle cx="18" cy="5" r="3" />
-                          <circle cx="6" cy="12" r="3" />
-                          <circle cx="18" cy="19" r="3" />
-                          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                          <circle cx="12" cy="12" r="10" />
+                          <line x1="10" y1="15" x2="10" y2="9" />
+                          <line x1="14" y1="15" x2="14" y2="9" />
                         </svg>
                       </button>
 
@@ -611,191 +734,10 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob }) => {
                 </div>
               </article>
             )
-          })}
-        </div>
+          })
+        )}
+      </div>
 
-        {/* Right Sidebar / Talent Intelligence & Radar (4 Cols) */}
-        <aside className="mj-sidebar-col">
-          {/* Widget 1: Live Inbound Talent Radar */}
-          <article className="mj-sidebar-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 className="mj-sidebar-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '18px', height: '18px' }}>
-                  <circle cx="12" cy="12" r="10" />
-                  <circle cx="12" cy="12" r="6" />
-                  <circle cx="12" cy="12" r="2" />
-                </svg>
-                Live Inbound Alerts
-              </h3>
-              <span className="pulse-dot-mj" title="Radar Streaming" aria-hidden="true" />
-            </div>
-
-            <div className="radar-stream-list">
-              {radarAlerts.map((alert: LiveRadarAlert) => (
-                <div
-                  key={alert.id}
-                  className="radar-alert-item"
-                  onClick={() => showToast(`Opening candidate profile for ${alert.candidateName}...`)}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <strong style={{ fontSize: '13.5px', color: '#1a1c1e', display: 'block' }}>
-                        {alert.candidateName}
-                      </strong>
-                      <span style={{ fontSize: '11.5px', color: '#727784' }}>
-                        {alert.candidateRole}
-                      </span>
-                    </div>
-                    <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', background: '#00418f', color: '#ffffff', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                      {alert.matchScore}% MATCH
-                    </span>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'JetBrains Mono', fontSize: '10.5px', color: '#727784', borderTop: '1px solid #e2e2e5', paddingTop: '4px' }}>
-                    <span style={{ color: '#00418f', fontWeight: 600 }}>{alert.targetRequisitionTitle}</span>
-                    <span>{alert.timeAgo}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <button
-              type="button"
-              className="btn-mj-light"
-              style={{ justifyContent: 'center', color: '#00418f', fontWeight: 700 }}
-              onClick={() => showToast('Opening Real-Time Radar Console...')}
-            >
-              Open Real-Time Radar Console ↗
-            </button>
-          </article>
-
-          {/* Widget 2: Performance Heatmap & Conversion Telemetry */}
-          <article className="mj-sidebar-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 className="mj-sidebar-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '18px', height: '18px' }}>
-                  <line x1="18" y1="20" x2="18" y2="10" />
-                  <line x1="12" y1="20" x2="12" y2="4" />
-                  <line x1="6" y1="20" x2="6" y2="14" />
-                </svg>
-                Funnel Conversion
-              </h3>
-              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', color: '#727784' }}>LAST 30 DAYS</span>
-            </div>
-
-            <div className="funnel-blueprint-graphic">
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>
-                <span>METRIC BREAKDOWN</span>
-                <span style={{ color: '#00418f', fontWeight: 700 }}>RATE: 4.8x BENCHMARK</span>
-              </div>
-
-              {/* Blueprint SVG Chart */}
-              <svg viewBox="0 0 320 100" style={{ width: '100%', height: '80px', overflow: 'visible' }}>
-                <line x1="0" y1="20" x2="320" y2="20" stroke="#c2c6d5" strokeDasharray="2,2" strokeOpacity="0.5" />
-                <line x1="0" y1="50" x2="320" y2="50" stroke="#c2c6d5" strokeDasharray="2,2" strokeOpacity="0.5" />
-                <line x1="0" y1="80" x2="320" y2="80" stroke="#c2c6d5" strokeDasharray="2,2" strokeOpacity="0.5" />
-
-                <rect x="20" y="30" width="30" height="50" rx="4" fill="#e2e2e5" />
-                <rect x="80" y="40" width="30" height="40" rx="4" fill="#095bbf" opacity="0.4" />
-                <rect x="140" y="20" width="30" height="60" rx="4" fill="#d8e2ff" />
-                <rect x="200" y="10" width="30" height="70" rx="4" fill="#00418f" />
-                <rect x="260" y="35" width="30" height="45" rx="4" fill="#39464f" />
-
-                <path d="M 35 30 L 95 40 L 155 20 L 215 10 L 275 35" fill="none" stroke="#00418f" strokeWidth="2.5" />
-                <circle cx="215" cy="10" r="4" fill="#ffffff" stroke="#00418f" strokeWidth="2" />
-              </svg>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', textAlign: 'center', fontFamily: 'JetBrains Mono', fontSize: '11px' }}>
-                <div style={{ background: '#ffffff', padding: '6px', borderRadius: '6px' }}>
-                  <span style={{ fontSize: '9.5px', color: '#727784', display: 'block' }}>IMPRESSIONS</span>
-                  <span style={{ fontWeight: 700, color: '#1a1c1e' }}>14.8k</span>
-                </div>
-                <div style={{ background: '#ffffff', padding: '6px', borderRadius: '6px' }}>
-                  <span style={{ fontSize: '9.5px', color: '#727784', display: 'block' }}>APPLY RATE</span>
-                  <span style={{ fontWeight: 700, color: '#00418f' }}>2.6%</span>
-                </div>
-                <div style={{ background: '#ffffff', padding: '6px', borderRadius: '6px' }}>
-                  <span style={{ fontSize: '9.5px', color: '#727784', display: 'block' }}>TEST PASS</span>
-                  <span style={{ fontWeight: 700, color: '#39464f' }}>87.4%</span>
-                </div>
-              </div>
-            </div>
-          </article>
-
-          {/* Widget 3: Automated Syndication Hub Status */}
-          <article className="mj-sidebar-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 className="mj-sidebar-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '18px', height: '18px' }}>
-                  <polyline points="16 3 21 3 21 8" />
-                  <line x1="4" y1="20" x2="21" y2="3" />
-                  <polyline points="21 16 21 21 16 21" />
-                  <line x1="15" y1="15" x2="21" y2="21" />
-                  <line x1="4" y1="4" x2="9" y2="9" />
-                </svg>
-                AEC Syndication Grid
-              </h3>
-              <span className="badge-req-status" style={{ fontSize: '10px' }}>ALL LIVE</span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px' }}>
-              <div style={{ background: '#f3f3f6', padding: '8px 12px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 600, color: '#1a1c1e' }}>RIBA Appointments</span>
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f' }}>PING: 42ms</span>
-              </div>
-              <div style={{ background: '#f3f3f6', padding: '8px 12px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 600, color: '#1a1c1e' }}>buildingSMART API</span>
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f' }}>IFC 4x3 SYNC</span>
-              </div>
-              <div style={{ background: '#f3f3f6', padding: '8px 12px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 600, color: '#1a1c1e' }}>LinkedIn AEC Direct</span>
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f' }}>ACTIVE // 6 POSTS</span>
-              </div>
-            </div>
-          </article>
-
-          {/* Widget 4: Quick Launch Templates */}
-          <article className="mj-sidebar-card">
-            <h3 className="mj-sidebar-title">
-              <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '18px', height: '18px' }}>
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-              </svg>
-              Quick Draft Templates
-            </h3>
-            <p style={{ fontSize: '12.5px', color: '#424753', margin: 0 }}>
-              Pre-configured with Foster + Partners BIM Execution Standards:
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <button
-                type="button"
-                className="quick-template-btn"
-                onClick={onPostNewJob}
-              >
-                <span>+ Façade Computation Specialist</span>
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', color: '#727784' }}>LOD 400</span>
-              </button>
-
-              <button
-                type="button"
-                className="quick-template-btn"
-                onClick={onPostNewJob}
-              >
-                <span>+ Infrastructure VDC Coordinator</span>
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', color: '#727784' }}>COBie / 4D</span>
-              </button>
-
-              <button
-                type="button"
-                className="quick-template-btn"
-                onClick={onPostNewJob}
-              >
-                <span>+ AEC C# &amp; Speckle Plugin Dev</span>
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', color: '#727784' }}>.NET 8</span>
-              </button>
-            </div>
-          </article>
-        </aside>
       </main>
 
       {/* ── MODAL: Candidates Drawer ── */}
@@ -862,10 +804,14 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob }) => {
                 className="btn-mj-primary"
                 onClick={() => {
                   setIsCandidatesModalOpen(false)
-                  showToast('Opened candidate review panel in Applicants desk.')
+                  if (onViewCandidates && selectedReqForCandidates) {
+                    onViewCandidates(selectedReqForCandidates.id, selectedReqForCandidates.title)
+                  } else {
+                    showToast('Opened candidate review panel in Applicants desk.')
+                  }
                 }}
               >
-                Review Inbound in Candidates Hub
+                Review Inbound in Candidates Hub →
               </button>
             </div>
           </div>

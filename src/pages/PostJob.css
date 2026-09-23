@@ -889,3 +889,184 @@
     grid-template-columns: 8fr 4fr;
   }
 }
+
+/* ── Form Error & Validation Styles ── */
+.pj-text-input.error,
+.pj-select-input.error,
+textarea.pj-text-input.error {
+  border-color: #dc2626 !important;
+  background: #fffafa !important;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15) !important;
+}
+
+.pj-field-error {
+  font-family: 'Manrope', sans-serif;
+  font-size: 11.5px;
+  color: #dc2626;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  animation: fadeIn 0.15s ease-in-out;
+}
+
+.pj-field-error svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+.optional-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: #727784;
+  background: #eeeef0;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.char-counter {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: #727784;
+}
+
+/* ── Interactive Pills & Grids ── */
+.pills-cloud-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pill-option-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  background: #f3f3f6;
+  border: 1px solid rgba(194, 198, 213, 0.5);
+  color: #39464f;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Manrope', sans-serif;
+}
+
+.pill-option-btn:hover {
+  background: #e7e8ed;
+  color: #00418f;
+  border-color: #00418f;
+}
+
+.pill-option-btn.selected {
+  background: #00418f;
+  color: #ffffff;
+  border-color: #00418f;
+  box-shadow: 0 2px 6px rgba(0, 65, 143, 0.25);
+}
+
+.pill-option-btn.selected svg {
+  stroke: #ffffff;
+}
+
+/* ── Openings Stepper Input ── */
+.openings-stepper-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 220px;
+}
+
+.stepper-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid rgba(194, 198, 213, 0.6);
+  background: #ffffff;
+  color: #00418f;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.stepper-btn:hover:not(:disabled) {
+  background: #d8e2ff;
+  border-color: #00418f;
+}
+
+.stepper-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.openings-input {
+  width: 70px;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* ── Preview Modal Layout ── */
+.preview-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-size: 13.5px;
+  color: #1a1c1e;
+}
+
+.preview-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.preview-badge {
+  background: #d8e2ff;
+  color: #001a41;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.preview-section-box {
+  background: #f9f9fc;
+  border: 1px solid rgba(194, 198, 213, 0.4);
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.preview-section-box h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #00418f;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.preview-section-box p,
+.preview-section-box pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: 'Manrope', sans-serif;
+  line-height: 1.5;
+  color: #39464f;
+  font-size: 13px;
+}
+

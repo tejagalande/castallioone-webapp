@@ -173,6 +173,37 @@
   padding: 24px;
 }
 
+.welcome-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.welcome-logout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: rgba(179, 39, 45, 0.08);
+  border: 1px solid rgba(179, 39, 45, 0.2);
+  color: #b3272d;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Manrope', sans-serif;
+  flex-shrink: 0;
+}
+
+.welcome-logout-btn:hover {
+  background: #b3272d;
+  color: #ffffff;
+  border-color: #b3272d;
+  box-shadow: 0 2px 6px rgba(179, 39, 45, 0.2);
+}
+
 .welcome-name {
   font-family: 'Hanken Grotesk', sans-serif;
   font-size: 32px;

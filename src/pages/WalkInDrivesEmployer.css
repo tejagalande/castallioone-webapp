@@ -1,0 +1,830 @@
+/* ── Walk-in Drives Employer Styling ── */
+.wid-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 8px 0 60px;
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #1a1c1e;
+}
+
+/* Toast Alert */
+.wid-toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  background: #001a41;
+  color: #ffffff;
+  padding: 12px 20px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 26, 65, 0.25);
+  font-size: 13.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 1200;
+  border-left: 4px solid #0058bc;
+  animation: slideInDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.wid-toast svg {
+  width: 18px;
+  height: 18px;
+  stroke: #4d8eff;
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 1. Telemetry Strip */
+.wid-telemetry-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(194, 198, 213, 0.6);
+  border-radius: 10px;
+  padding: 8px 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+
+.wid-telemetry-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.wid-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #00418f;
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 65, 143, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(0, 65, 143, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 65, 143, 0);
+  }
+}
+
+/* 2. Header Section */
+.wid-header-section {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.wid-title-wrapper {
+  max-width: 720px;
+}
+
+.wid-tag-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #00418f;
+  background: #d8e2ff;
+  padding: 3px 10px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+.wid-main-heading {
+  font-family: 'Hanken Grotesk', -apple-system, sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+  color: #1a1c1e;
+}
+
+.wid-lead-desc {
+  font-size: 14px;
+  color: #424753;
+  line-height: 22px;
+  margin: 0;
+}
+
+.wid-action-cluster {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-wid-primary {
+  background: #00418f;
+  color: #ffffff;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 3px 12px rgba(0, 65, 143, 0.28);
+  transition: all 0.2s ease;
+  font-family: 'Manrope', sans-serif;
+}
+
+.btn-wid-primary:hover {
+  background: #0058bc;
+  transform: translateY(-1px);
+}
+
+.btn-wid-light {
+  background: #ffffff;
+  color: #1a1c1e;
+  border: 1px solid rgba(194, 198, 213, 0.7);
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+  font-family: 'Manrope', sans-serif;
+}
+
+.btn-wid-light:hover {
+  background: #f3f3f6;
+  border-color: #00418f;
+}
+
+/* 3. Metric Quad */
+.wid-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.wid-metric-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(194, 198, 213, 0.5);
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.wid-metric-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wid-metric-lbl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #727784;
+}
+
+.wid-metric-icon-box {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #d8e2ff;
+  color: #00418f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wid-metric-icon-box svg {
+  width: 17px;
+  height: 17px;
+}
+
+.wid-metric-huge-num {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  color: #1a1c1e;
+  letter-spacing: -0.02em;
+}
+
+.wid-metric-subtext {
+  font-size: 11.5px;
+  color: #727784;
+  margin: 0;
+}
+
+/* 4. Filter Console */
+.wid-filter-console {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(194, 198, 213, 0.4);
+}
+
+.wid-tabs-scroll {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+}
+
+.wid-tab-btn {
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: #424753;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.wid-tab-btn.active {
+  background: #00418f;
+  color: #ffffff;
+}
+
+.wid-tab-btn:hover:not(.active) {
+  background: #f0f0f4;
+}
+
+.wid-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid rgba(194, 198, 213, 0.6);
+  border-radius: 8px;
+  padding: 6px 12px;
+  min-width: 280px;
+}
+
+.wid-search-box input {
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  color: #1a1c1e;
+  outline: none;
+  width: 100%;
+}
+
+.wid-search-box svg {
+  width: 16px;
+  height: 16px;
+  color: #727784;
+}
+
+/* 5. Drive Feed Card */
+.wid-cards-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.wid-card {
+  background: #ffffff;
+  border: 1px solid rgba(194, 198, 213, 0.6);
+  border-radius: 16px;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease;
+}
+
+.wid-card:hover {
+  box-shadow: 0 6px 18px rgba(0, 65, 143, 0.08);
+  border-color: #00418f;
+}
+
+.wid-card.closed {
+  background: #fafafc;
+  opacity: 0.85;
+}
+
+.wid-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.wid-card-main-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+/* Calendar Date Badge */
+.wid-date-badge {
+  background: linear-gradient(135deg, #00418f 0%, #002d66 100%);
+  color: #ffffff;
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 65, 143, 0.2);
+  flex-shrink: 0;
+}
+
+.wid-date-badge.past {
+  background: #727784;
+  box-shadow: none;
+}
+
+.wid-date-badge-month {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.9;
+}
+
+.wid-date-badge-day {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.wid-date-badge-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  opacity: 0.85;
+  margin-top: 2px;
+}
+
+.wid-card-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wid-card-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.badge-wid-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.badge-wid-status.active {
+  background: #d8e2ff;
+  color: #00418f;
+}
+
+.badge-wid-status.past {
+  background: #eeeef0;
+  color: #727784;
+}
+
+.badge-wid-status.closed {
+  background: #fee2e2;
+  color: #b3272d;
+}
+
+.badge-wid-role {
+  background: #f0f0f4;
+  color: #1a1c1e;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.badge-wid-openings {
+  background: #e6f4ea;
+  color: #137333;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.wid-card-title {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1c1e;
+  margin: 0;
+}
+
+.wid-card-location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #424753;
+}
+
+.wid-card-location svg {
+  width: 15px;
+  height: 15px;
+  color: #00418f;
+  flex-shrink: 0;
+}
+
+/* Skills Chips */
+.wid-skills-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.wid-skill-chip {
+  background: #f3f3f6;
+  color: #1a1c1e;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(194, 198, 213, 0.4);
+}
+
+.wid-card-description {
+  background: #f9f9fb;
+  border-left: 3px solid #00418f;
+  padding: 10px 14px;
+  border-radius: 0 8px 8px 0;
+  font-size: 13px;
+  color: #424753;
+  line-height: 1.5;
+}
+
+.wid-card-contacts {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: #f8f9fc;
+  border-radius: 8px;
+  border: 1px solid rgba(194, 198, 213, 0.4);
+  font-size: 12.5px;
+}
+
+.wid-contact-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #00418f;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.15s ease;
+}
+
+.wid-contact-link:hover {
+  text-decoration: underline;
+  color: #002d66;
+}
+
+.wid-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(194, 198, 213, 0.4);
+  padding-top: 14px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.wid-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Empty State */
+.wid-empty-state {
+  background: #ffffff;
+  border: 1px dashed rgba(194, 198, 213, 0.8);
+  border-radius: 16px;
+  padding: 56px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.wid-empty-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: #d8e2ff;
+  color: #00418f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wid-empty-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+/* 6. Create Drive Modal */
+.wid-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 29, 37, 0.65);
+  backdrop-filter: blur(6px);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.wid-modal-dialog {
+  background: #ffffff;
+  border: 1px solid rgba(194, 198, 213, 0.5);
+  border-radius: 18px;
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.wid-modal-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid rgba(194, 198, 213, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wid-modal-header h2 {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 19px;
+  font-weight: 800;
+  margin: 0;
+  color: #1a1c1e;
+}
+
+.wid-modal-close {
+  background: none;
+  border: none;
+  color: #727784;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wid-modal-close:hover {
+  background: #f3f3f6;
+  color: #1a1c1e;
+}
+
+.wid-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.wid-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wid-field-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a1c1e;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wid-field-label span.req {
+  color: #b3272d;
+  margin-left: 3px;
+}
+
+.wid-input,
+.wid-select,
+.wid-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(194, 198, 213, 0.7);
+  font-size: 13.5px;
+  color: #1a1c1e;
+  font-family: inherit;
+  transition: all 0.15s;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.wid-input:focus,
+.wid-select:focus,
+.wid-textarea:focus {
+  outline: none;
+  border-color: #00418f;
+  box-shadow: 0 0 0 3px rgba(0, 65, 143, 0.12);
+}
+
+.wid-input.error,
+.wid-select.error,
+.wid-textarea.error {
+  border-color: #b3272d;
+  background: #fff8f8;
+}
+
+.wid-field-error {
+  font-size: 12px;
+  color: #b3272d;
+  font-weight: 600;
+}
+
+/* Two Column Grid */
+.wid-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* Interactive Chip UI for Technical Focus */
+.wid-chips-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.wid-chip-selectable {
+  background: #f0f0f4;
+  color: #424753;
+  border: 1px solid rgba(194, 198, 213, 0.6);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.wid-chip-selectable:hover {
+  border-color: #00418f;
+  color: #00418f;
+}
+
+.wid-chip-selectable.selected {
+  background: #00418f;
+  color: #ffffff;
+  border-color: #00418f;
+  box-shadow: 0 2px 6px rgba(0, 65, 143, 0.2);
+}
+
+.wid-chip-add-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.wid-chip-add-box input {
+  padding: 6px 10px;
+  font-size: 12.5px;
+  border-radius: 6px;
+  border: 1px solid rgba(194, 198, 213, 0.6);
+  flex: 1;
+}
+
+.wid-chip-add-btn {
+  background: #d8e2ff;
+  color: #00418f;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.wid-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid rgba(194, 198, 213, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #fafafc;
+}
+
+/* ==========================================================================
+   7. Shimmer / Skeleton Loading State
+   ========================================================================== */
+
+@keyframes widShimmerAnim {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.wid-shimmer {
+  background: linear-gradient(
+    90deg,
+    #edeef2 0%,
+    #f8f8fb 40%,
+    #edeef2 80%
+  );
+  background-size: 200% 100%;
+  animation: widShimmerAnim 1.6s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+.wid-metric-shimmer {
+  width: 54px;
+  height: 32px;
+  margin: 6px 0;
+  border-radius: 8px;
+}
+
+.wid-card-skeleton {
+  pointer-events: none;
+  cursor: default;
+  opacity: 0.95;
+  border-color: rgba(194, 198, 213, 0.4);
+  animation: none;
+}

@@ -228,6 +228,58 @@
   height: 18px;
 }
 
+/* ── Header User Profile & Sign Out ── */
+.header-user-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 12px;
+  border-left: 1px solid rgba(194, 198, 213, 0.4);
+}
+
+.user-avatar-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #00418f;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 2px 4px rgba(0, 65, 143, 0.2);
+}
+
+.btn-header-logout {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #b3272d;
+  background: rgba(179, 39, 45, 0.06);
+  border: 1px solid rgba(179, 39, 45, 0.2);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Manrope', sans-serif;
+}
+
+.btn-header-logout:hover {
+  background: #b3272d;
+  color: #ffffff;
+  border-color: #b3272d;
+  box-shadow: 0 2px 8px rgba(179, 39, 45, 0.25);
+}
+
+.btn-header-logout svg {
+  width: 15px;
+  height: 15px;
+}
+
 /* ── Dashboard Content ── */
 .dashboard-content {
   flex: 1;
@@ -327,8 +379,22 @@
   height: 16px;
 }
 
+.metric-value.loading {
+  opacity: 0.45;
+  animation: metric-pulse 1.4s infinite ease-in-out;
+}
+
+@keyframes metric-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.75; }
+}
+
 .metric-trend.positive {
   color: #22c55e;
+}
+
+.metric-trend.negative {
+  color: #ef4444;
 }
 
 .metric-trend.neutral {

@@ -1,19 +1,26 @@
 import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
 import './SignUp.css'
 
 type AuthTab = 'talent' | 'employers'
 
 interface SignUpProps {
-  onNavigateToSignIn: () => void
-  onSignUpSuccess: (type: 'talent' | 'employers') => void
+  onNavigateToSignIn?: () => void
+  onSignUpSuccess?: (type: 'talent' | 'employers') => void
 }
 
 function SignUp({ onNavigateToSignIn, onSignUpSuccess }: SignUpProps) {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<AuthTab>('talent')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const [isLinkedInLoading, setIsLinkedInLoading] = useState(false)
+
+  const { signInWithGoogle, signInWithLinkedIn, error: authError } = useAuth()
 
   const getPasswordStrength = (pwd: string): number => {
     let score = 0
@@ -37,7 +44,32 @@ function SignUp({ onNavigateToSignIn, onSignUpSuccess }: SignUpProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     console.log('Sign up:', { activeTab, fullName, email, password })
-    onSignUpSuccess(activeTab)
+    if (onSignUpSuccess) {
+      onSignUpSuccess(activeTab)
+    } else {
+      navigate(activeTab === 'employers' ? '/company-setup' : '/talent')
+    }
+  }
+
+  const handleGoogleSignUp = async () => {
+    try {
+      setIsGoogleLoading(true)
+      await signInWithGoogle(activeTab)
+    } finally {
+      setIsGoogleLoading(false)
+    }
+  }
+
+  const handleLinkedInSignUp = async () => {
+    try {
+      setIsLinkedInLoading(true)
+      localStorage.setItem('castallio_oauth_intent', 'signup')
+      localStorage.setItem('castallio_signup_provider', 'linkedin')
+      localStorage.setItem('castallio_signup_role', activeTab)
+      await signInWithLinkedIn(activeTab)
+    } finally {
+      setIsLinkedInLoading(false)
+    }
   }
 
   return (
@@ -111,9 +143,20 @@ function SignUp({ onNavigateToSignIn, onSignUpSuccess }: SignUpProps) {
               className={`persona-btn ${activeTab === 'employers' ? 'active' : ''}`}
               onClick={() => setActiveTab('employers')}
             >
-              For Employers
+              Enterprise (Employers)
             </button>
           </div>
+
+          {authError && (
+            <div className="auth-error-banner" role="alert">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span>{authError}</span>
+            </div>
+          )}
 
           <form className="signup-form" onSubmit={handleSubmit}>
             <div className="form-group">
@@ -250,7 +293,13 @@ function SignUp({ onNavigateToSignIn, onSignUpSuccess }: SignUpProps) {
           </div>
 
           <div className="social-grid">
-            <button type="button" className="social-btn google">
+            <button
+              type="button"
+              className="social-btn google"
+              onClick={handleGoogleSignUp}
+              disabled={isGoogleLoading}
+              aria-label="Sign up with Google"
+            >
               <svg className="social-icon" viewBox="0 0 24 24">
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -269,9 +318,15 @@ function SignUp({ onNavigateToSignIn, onSignUpSuccess }: SignUpProps) {
                   fill="#EA4335"
                 />
               </svg>
-              Google
+              {isGoogleLoading ? 'Connecting...' : 'Google'}
             </button>
-            <button type="button" className="social-btn linkedin">
+            <button
+              type="button"
+              className="social-btn linkedin"
+              onClick={handleLinkedInSignUp}
+              disabled={isLinkedInLoading}
+              aria-label="Sign up with LinkedIn"
+            >
               <svg
                 className="social-icon"
                 viewBox="0 0 24 24"
@@ -279,16 +334,30 @@ function SignUp({ onNavigateToSignIn, onSignUpSuccess }: SignUpProps) {
               >
                 <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
               </svg>
-              LinkedIn
+              {isLinkedInLoading ? 'Connecting...' : 'LinkedIn'}
             </button>
           </div>
 
           <div className="signup-footer">
             <p>
               Already have an account?{' '}
-              <a href="#" onClick={onNavigateToSignIn}>
+              <Link
+                to="/signin"
+                onClick={(e) => {
+                  if (onNavigateToSignIn) {
+                    e.preventDefault()
+                    onNavigateToSignIn()
+                  }
+                }}
+              >
                 Sign In
-              </a>
+              </Link>
+            </p>
+            <p className="signup-terms" style={{ marginTop: '10px', fontSize: '12px', color: '#64748b', textAlign: 'center', lineHeight: 1.5 }}>
+              By creating an account, you agree to our{' '}
+              <Link to="/terms" style={{ color: '#00418f', fontWeight: 500 }}>Terms and Conditions</Link>,{' '}
+              <Link to="/privacy" style={{ color: '#00418f', fontWeight: 500 }}>Privacy Policy</Link>, and{' '}
+              <Link to="/app-privacy" style={{ color: '#00418f', fontWeight: 500 }}>App Privacy</Link>.
             </p>
           </div>
         </div>

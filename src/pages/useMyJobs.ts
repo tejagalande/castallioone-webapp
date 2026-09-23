@@ -1,19 +1,27 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 
 export interface PipelineStats {
-  sourced: number
+  total: number
   applied: number
+  newCount: number
+  inReview: number
   shortlisted: number
-  sandboxes: number
+  scheduled: number
+  rejected: number
 }
 
 export interface RequisitionItem {
   id: string
   refCode: string
   title: string
+  category?: string
+  projectType?: string
   location: string
+  workType?: string
   salaryRange: string
   employmentType: string
+  openings?: number
   status: 'active' | 'draft' | 'interviewing' | 'closed'
   badges: string[]
   healthScore: number
@@ -24,178 +32,276 @@ export interface RequisitionItem {
   author?: string
   progressPercent?: number
   hiredCandidateName?: string
+  jobDescription?: string
+  technicalRequirements?: string
+  responsibilities?: string
+  whatWeOffer?: string
 }
 
-export interface LiveRadarAlert {
-  id: string
-  candidateName: string
-  candidateRole: string
-  matchScore: number
-  targetRequisitionTitle: string
-  timeAgo: string
-  isSandboxCompleted?: boolean
-}
 
 export type JobSegmentFilter = 'all' | 'active' | 'draft' | 'interviewing' | 'closed'
 
-const INITIAL_REQUISITIONS: RequisitionItem[] = [
-  {
-    id: 'req-1',
-    refCode: 'REQ-F+P-8041',
-    title: 'Lead Computational Façade Designer',
-    location: 'London Riverside Studio (Hybrid)',
-    salaryRange: '£125,000 - £155,000 / yr',
-    employmentType: 'Permanent Position',
-    status: 'active',
-    badges: ['ACTIVE • INSTANT RADAR', 'LOD 400 FABRICATION', 'ISO 19650 LEVEL 2'],
-    healthScore: 96,
-    healthLabel: 'Optimal Funnel',
-    stack: ['Revit API & pyRevit', 'Rhino 8 + Grasshopper', 'Speckle Systems', 'Solibri Checker'],
-    pipeline: {
-      sourced: 142,
-      applied: 38,
-      shortlisted: 18,
-      sandboxes: 2,
-    },
-    createdDateText: 'Active 3d ago',
-    author: 'Elena Rostova',
-  },
-  {
-    id: 'req-2',
-    refCode: 'REQ-F+P-7910',
-    title: 'Senior VDC / Infrastructure BIM Lead (HS2 Phase 1)',
-    location: 'Birmingham / London • Hybrid',
-    salaryRange: '£95,000 - £115,000 / yr',
-    employmentType: 'Full-time Permanent',
-    status: 'interviewing',
-    badges: ['ACTIVE • LIVE SYNDICATION', 'openBIM / IFC 4x3', 'COBie SPECIFIED'],
-    healthScore: 91,
-    healthLabel: '1 Offer Stage Pending',
-    stack: ['Navisworks Manage', 'Synchro 4D', 'Civil 3D Alignment', 'Solibri Ruleset'],
-    pipeline: {
-      sourced: 96,
-      applied: 24,
-      shortlisted: 8,
-      sandboxes: 1,
-    },
-    createdDateText: 'Active 1w ago',
-    author: 'Dr. Julian Croft',
-  },
-  {
-    id: 'req-3',
-    refCode: 'REQ-F+P-8102',
-    title: 'AEC Software Engineer & C# / Speckle Plugin Developer',
-    location: 'Global Remote (Worldwide)',
-    salaryRange: '$160,000 - $190,000 USD',
-    employmentType: 'Remote Staff',
-    status: 'active',
-    badges: ['ACTIVE • GLOBAL REMOTE', 'C# / .NET 8', 'AUTODESK PLATFORM SERVICES (APS)'],
-    healthScore: 98,
-    healthLabel: '12 Git Repos Evaluated',
-    stack: ['C#', '.NET 8', 'Speckle Core', 'Revit API', 'GraphQL'],
-    pipeline: {
-      sourced: 114,
-      applied: 42,
-      shortlisted: 12,
-      sandboxes: 4,
-    },
-    createdDateText: 'Active 5d ago',
-    author: 'Elena Rostova',
-  },
-  {
-    id: 'req-4',
-    refCode: 'REQ-F+P-8220',
-    title: 'Parametric Urban Designer & Environmental Simulation Lead',
-    location: 'Studio: London / Zurich',
-    salaryRange: '£110,000 - £135,000 / yr',
-    employmentType: 'Draft Requisition',
-    status: 'draft',
-    badges: ['DRAFT • PENDING COMP APPROVAL', 'LADYBUG / HONEYBEE'],
-    healthScore: 75,
-    healthLabel: 'Stage 03 Computational Stack Setup (75% Done)',
-    stack: ['Rhino', 'Grasshopper', 'Ladybug', 'Honeybee', 'CityEngine'],
-    progressPercent: 75,
-    pipeline: {
-      sourced: 0,
-      applied: 0,
-      shortlisted: 0,
-      sandboxes: 0,
-    },
-    createdDateText: 'Created 2 days ago by Elena Rostova',
-    author: 'Elena Rostova',
-  },
-  {
-    id: 'req-5',
-    refCode: 'REQ-F+P-7409',
-    title: 'BIM Coordinator - Aviation Master Terminals',
-    location: 'London Riverside Studio',
-    salaryRange: '£90,000 - £110,000 / yr',
-    employmentType: 'Fulfilled / Archived',
-    status: 'closed',
-    badges: ['FULFILLED • ARCHIVED'],
-    healthScore: 100,
-    healthLabel: 'Hired via Castallio Radar (Oct 2024)',
-    hiredCandidateName: 'Alex Morgan (Current BIM Lead at Studio)',
-    stack: ['Revit', 'Navisworks', 'BIM 360', 'COBie'],
-    pipeline: {
-      sourced: 85,
-      applied: 32,
-      shortlisted: 6,
-      sandboxes: 1,
-    },
-    createdDateText: 'Fulfilled Oct 2024',
-    author: 'Elena Rostova',
-  },
-]
+interface DBJobRow {
+  id: string
+  company_id: string
+  posted_by: string
+  title: string
+  category: string | null
+  project_type: string | null
+  experience: string | null
+  work_type: string | null
+  location: string | null
+  employment_type: string[] | string | null
+  salary_min: number | string | null
+  salary_max: number | string | null
+  number_of_openings: number | null
+  job_description: string | null
+  technical_requirements: string | null
+  responsibilities: string | null
+  about_us: string | null
+  status: string | null
+  created_at: string | null
+  updated_at: string | null
+}
 
-const LIVE_RADAR_ALERTS: LiveRadarAlert[] = [
-  {
-    id: 'ra-1',
-    candidateName: 'David Kim',
-    candidateRole: 'Senior Façade Engineer • Zaha Hadid Arch alumni',
-    matchScore: 96,
-    targetRequisitionTitle: 'Lead Computational Façade',
-    timeAgo: '12m ago',
-  },
-  {
-    id: 'ra-2',
-    candidateName: 'Elena V. Kowalski',
-    candidateRole: 'Computational BIM Specialist • Arup Berlin',
-    matchScore: 94,
-    targetRequisitionTitle: 'Completed 3D WebGL Sandbox',
-    timeAgo: '34m ago',
-    isSandboxCompleted: true,
-  },
-  {
-    id: 'ra-3',
-    candidateName: 'Marcus Thorne, PE',
-    candidateRole: 'VDC Project Director • Skanska UK',
-    matchScore: 97,
-    targetRequisitionTitle: 'HS2 Infrastructure Lead',
-    timeAgo: '1h 14m ago',
-  },
-]
+function formatRelativeDate(isoDate: string | null | undefined): string {
+  if (!isoDate) return 'Recently'
+  const date = new Date(isoDate)
+  const now = new Date()
+  const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000)
+  if (diffSec < 60) return 'Just now'
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`
+  if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}d ago`
+  return date.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+function formatSalaryRange(min: number | string | null, max: number | string | null): string {
+  if (!min && !max) return 'Competitive / Negotiable'
+  const minFmt = min ? Number(min).toLocaleString('en-IN') : null
+  const maxFmt = max ? Number(max).toLocaleString('en-IN') : null
+  if (minFmt && maxFmt) return `₹ ${minFmt} - ₹ ${maxFmt}`
+  if (minFmt) return `From ₹ ${minFmt}`
+  if (maxFmt) return `Up to ₹ ${maxFmt}`
+  return 'Competitive'
+}
+
+function extractStack(techReqs: string | null | undefined, category: string | null | undefined): string[] {
+  if (techReqs) {
+    const parts = techReqs
+      .split(/[,;\n•]+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 1 && s.length < 32)
+    if (parts.length > 0) return parts.slice(0, 4)
+  }
+  if (category) return [category, 'AEC Engineering']
+  return ['Revit & BIM', 'AutoCAD']
+}
 
 export function useMyJobs(onPostNewJob?: () => void) {
-  const [requisitions, setRequisitions] = useState<RequisitionItem[]>(INITIAL_REQUISITIONS)
+  const [requisitions, setRequisitions] = useState<RequisitionItem[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
+  const [companyName, setCompanyName] = useState<string>('Enterprise Company')
+  const [companyId, setCompanyId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<JobSegmentFilter>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
-  const [radarAlerts] = useState<LiveRadarAlert[]>(LIVE_RADAR_ALERTS)
-
-  // Modals state
   const [selectedReqForCandidates, setSelectedReqForCandidates] = useState<RequisitionItem | null>(null)
   const [isCandidatesModalOpen, setIsCandidatesModalOpen] = useState<boolean>(false)
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false)
-
-  // Toast notification
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg)
     setTimeout(() => {
-      setToastMessage((current) => (current === msg ? null : current))
+      setToastMessage((cur) => (cur === msg ? null : cur))
     }, 3500)
   }, [])
+
+  // Fetch jobs and applicant counts from Supabase
+  const fetchCompanyJobs = useCallback(async () => {
+    try {
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+      if (userError || !userData?.user) {
+        setLoading(false)
+        return
+      }
+
+      const user = userData.user
+
+      // 1. Resolve company
+      const { data: companyData } = await supabase
+        .from('companies')
+        .select('id, name')
+        .eq('owner_id', user.id)
+        .maybeSingle()
+
+      const cId = companyData?.id || null
+      const cName = companyData?.name || 'Enterprise Studio'
+      setCompanyId(cId)
+      setCompanyName(cName)
+
+      // 2. Fetch jobs
+      let jobsQuery = supabase
+        .from('create_job_post')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (cId) {
+        jobsQuery = jobsQuery.or(`company_id.eq.${cId},posted_by.eq.${user.id}`)
+      } else {
+        jobsQuery = jobsQuery.eq('posted_by', user.id)
+      }
+
+      const { data: rawJobs, error: jobsError } = await jobsQuery
+      if (jobsError) {
+        throw new Error(jobsError.message)
+      }
+
+      const jobsList = (rawJobs as DBJobRow[]) || []
+
+      // 3. Fetch applications for these jobs to aggregate counts
+      const appCountsMap: Record<
+        string,
+        {
+          total: number
+          newCount: number
+          inReview: number
+          shortlisted: number
+          scheduled: number
+          rejected: number
+        }
+      > = {}
+
+      if (cId) {
+        const { data: appsData } = await supabase
+          .from('job_applications')
+          .select('id, job_id, status')
+          .eq('company_id', cId)
+
+        if (appsData && Array.isArray(appsData)) {
+          appsData.forEach((app) => {
+            const jId = app.job_id
+            if (!appCountsMap[jId]) {
+              appCountsMap[jId] = {
+                total: 0,
+                newCount: 0,
+                inReview: 0,
+                shortlisted: 0,
+                scheduled: 0,
+                rejected: 0,
+              }
+            }
+            appCountsMap[jId].total += 1
+            const st = (app.status || 'new').toLowerCase()
+            if (st === 'new') appCountsMap[jId].newCount += 1
+            else if (st === 'in_review') appCountsMap[jId].inReview += 1
+            else if (st === 'shortlisted') appCountsMap[jId].shortlisted += 1
+            else if (st === 'scheduled') appCountsMap[jId].scheduled += 1
+            else if (st === 'rejected') appCountsMap[jId].rejected += 1
+            else {
+              appCountsMap[jId].inReview += 1
+            }
+          })
+        }
+      }
+
+      // 4. Map DB rows to RequisitionItem
+      const mappedRequisitions: RequisitionItem[] = jobsList.map((job) => {
+        const prefix = cName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase() || 'AEC'
+        const shortId = job.id.slice(0, 4).toUpperCase()
+        const refCode = `REQ-${prefix}-${shortId}`
+
+        const appStats = appCountsMap[job.id] || {
+          total: 0,
+          newCount: 0,
+          inReview: 0,
+          shortlisted: 0,
+          scheduled: 0,
+          rejected: 0,
+        }
+        const rawStatus = (job.status || 'active').toLowerCase()
+        const status =
+          rawStatus === 'active' || rawStatus === 'draft' || rawStatus === 'interviewing' || rawStatus === 'closed'
+            ? (rawStatus as RequisitionItem['status'])
+            : 'active'
+
+        const statusBadge =
+          status === 'active'
+            ? 'ACTIVE'
+            : status === 'draft'
+            ? 'DRAFT'
+            : status === 'closed'
+            ? 'CLOSED'
+            : 'INTERVIEWING'
+
+        const badges: string[] = [statusBadge]
+        if (job.project_type) badges.push(`${job.project_type.toUpperCase()} PROJECT`)
+        if (job.experience) badges.push(job.experience.toUpperCase())
+        if (job.work_type) badges.push(job.work_type.toUpperCase())
+
+        const empType = Array.isArray(job.employment_type)
+          ? job.employment_type.join(', ')
+          : typeof job.employment_type === 'string'
+          ? job.employment_type
+          : 'Full-time'
+
+        // Calculate a representative health score
+        let score = 70
+        if (job.technical_requirements) score += 10
+        if (job.job_description && job.job_description.length > 50) score += 10
+        if (job.salary_min || job.salary_max) score += 10
+        score = Math.min(98, score)
+
+        return {
+          id: job.id,
+          refCode,
+          title: job.title,
+          category: job.category || undefined,
+          projectType: job.project_type || undefined,
+          location: job.location ? `${job.location} (${job.work_type || 'Hybrid'})` : 'Remote / Hybrid',
+          workType: job.work_type || undefined,
+          salaryRange: formatSalaryRange(job.salary_min, job.salary_max),
+          employmentType: empType,
+          openings: job.number_of_openings || 1,
+          status,
+          badges,
+          healthScore: score,
+          healthLabel: score >= 90 ? 'Optimal Funnel' : score >= 80 ? 'Good Coverage' : 'Draft Incomplete',
+          stack: extractStack(job.technical_requirements, job.category),
+          pipeline: {
+            total: appStats.total,
+            applied: appStats.total,
+            newCount: appStats.newCount,
+            inReview: appStats.inReview,
+            shortlisted: appStats.shortlisted,
+            scheduled: appStats.scheduled,
+            rejected: appStats.rejected,
+          },
+          createdDateText: `Posted ${formatRelativeDate(job.created_at)}`,
+          author: cName,
+          progressPercent: status === 'draft' ? 65 : undefined,
+          jobDescription: job.job_description || undefined,
+          technicalRequirements: job.technical_requirements || undefined,
+          responsibilities: job.responsibilities || undefined,
+          whatWeOffer: job.about_us || undefined,
+        }
+      })
+
+      setRequisitions(mappedRequisitions)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to load company requisitions.'
+      console.error('fetchCompanyJobs error:', msg)
+      showToast(msg)
+    } finally {
+      setLoading(false)
+    }
+  }, [showToast])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchCompanyJobs()
+  }, [fetchCompanyJobs])
+
 
   // Derived counts
   const totalCount = requisitions.length
@@ -203,6 +309,10 @@ export function useMyJobs(onPostNewJob?: () => void) {
   const draftCount = useMemo(() => requisitions.filter((r) => r.status === 'draft').length, [requisitions])
   const interviewingCount = useMemo(() => requisitions.filter((r) => r.status === 'interviewing').length, [requisitions])
   const closedCount = useMemo(() => requisitions.filter((r) => r.status === 'closed').length, [requisitions])
+  const totalApplicantsCount = useMemo(
+    () => requisitions.reduce((acc, r) => acc + r.pipeline.applied, 0),
+    [requisitions]
+  )
 
   // Filtered requisitions
   const filteredRequisitions = useMemo(() => {
@@ -227,48 +337,105 @@ export function useMyJobs(onPostNewJob?: () => void) {
     })
   }, [requisitions, activeTab, searchQuery])
 
-  // Handlers
+  // Handlers connected to Supabase
   const handlePauseRequisition = useCallback(
-    (id: string) => {
-      setRequisitions((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, status: r.status === 'active' ? 'draft' : 'active' } : r))
-      )
-      showToast('Requisition radar status updated.')
+    async (id: string) => {
+      try {
+        const target = requisitions.find((r) => r.id === id)
+        const newStatus = target?.status === 'active' ? 'closed' : 'active'
+        const { error } = await supabase.from('create_job_post').update({ status: newStatus }).eq('id', id)
+        if (error) throw error
+
+        setRequisitions((prev) =>
+          prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r))
+        )
+        showToast(`Requisition marked as ${newStatus}.`)
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Error updating status'
+        showToast(msg)
+      }
     },
-    [showToast]
+    [requisitions, showToast]
   )
 
   const handleDuplicateRequisition = useCallback(
-    (req: RequisitionItem) => {
-      const duplicated: RequisitionItem = {
-        ...req,
-        id: `req-${Date.now()}`,
-        refCode: `REQ-F+P-${Math.floor(1000 + Math.random() * 9000)}`,
-        title: `${req.title} (Copy)`,
-        status: 'draft',
-        createdDateText: 'Duplicated just now',
-        pipeline: { sourced: 0, applied: 0, shortlisted: 0, sandboxes: 0 },
+    async (req: RequisitionItem) => {
+      try {
+        const { data: userData } = await supabase.auth.getUser()
+        if (!userData?.user || !companyId) {
+          showToast('Could not duplicate requisition.')
+          return
+        }
+
+        const duplicatePayload = {
+          company_id: companyId,
+          posted_by: userData.user.id,
+          title: `${req.title} (Copy)`,
+          category: req.category || null,
+          project_type: req.projectType || null,
+          work_type: req.workType || 'Hybrid',
+          location: req.location,
+          employment_type: [req.employmentType],
+          number_of_openings: req.openings || 1,
+          job_description: req.jobDescription || null,
+          technical_requirements: req.technicalRequirements || null,
+          responsibilities: req.responsibilities || null,
+          about_us: req.whatWeOffer || null,
+          status: 'draft',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+
+        const { data: inserted, error } = await supabase
+          .from('create_job_post')
+          .insert(duplicatePayload)
+          .select()
+          .single()
+
+        if (error) throw error
+
+        if (inserted) {
+          fetchCompanyJobs()
+          showToast(`Duplicated "${req.title}" as new draft requisition.`)
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Error duplicating requisition'
+        showToast(msg)
       }
-      setRequisitions((prev) => [duplicated, ...prev])
-      showToast(`Duplicated "${req.title}" as new draft requisition.`)
     },
-    [showToast]
+    [companyId, fetchCompanyJobs, showToast]
   )
 
   const handleDiscardDraft = useCallback(
-    (id: string) => {
-      setRequisitions((prev) => prev.filter((r) => r.id !== id))
-      showToast('Draft requisition discarded.')
+    async (id: string) => {
+      try {
+        const { error } = await supabase.from('create_job_post').delete().eq('id', id)
+        if (error) throw error
+
+        setRequisitions((prev) => prev.filter((r) => r.id !== id))
+        showToast('Requisition removed.')
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Error discarding requisition'
+        showToast(msg)
+      }
     },
     [showToast]
   )
 
   const handleReopenRequisition = useCallback(
-    (id: string) => {
-      setRequisitions((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, status: 'active', createdDateText: 'Re-opened today' } : r))
-      )
-      showToast('Requisition re-opened on active Talent Radar.')
+    async (id: string) => {
+      try {
+        const { error } = await supabase.from('create_job_post').update({ status: 'active' }).eq('id', id)
+        if (error) throw error
+
+        setRequisitions((prev) =>
+          prev.map((r) => (r.id === id ? { ...r, status: 'active', createdDateText: 'Re-opened today' } : r))
+        )
+        showToast('Requisition re-opened on active Talent Radar.')
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Error re-opening requisition'
+        showToast(msg)
+      }
     },
     [showToast]
   )
@@ -287,7 +454,7 @@ export function useMyJobs(onPostNewJob?: () => void) {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `Foster_Partners_AEC_Requisitions_${new Date().toISOString().slice(0, 10)}.${format === 'csv' ? 'csv' : 'txt'}`
+      a.download = `${companyName.replace(/[^a-zA-Z0-9]/g, '_')}_AEC_Requisitions_${new Date().toISOString().slice(0, 10)}.${format === 'csv' ? 'csv' : 'txt'}`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -295,7 +462,7 @@ export function useMyJobs(onPostNewJob?: () => void) {
       setIsExportModalOpen(false)
       showToast(`Exported ${requisitions.length} requisitions as ${format.toUpperCase()} ledger!`)
     },
-    [requisitions, showToast]
+    [requisitions, companyName, showToast]
   )
 
   const handleOpenCandidates = useCallback((req: RequisitionItem) => {
@@ -303,19 +470,26 @@ export function useMyJobs(onPostNewJob?: () => void) {
     setIsCandidatesModalOpen(true)
   }, [])
 
+  const refreshJobs = useCallback(() => {
+    setLoading(true)
+    void fetchCompanyJobs()
+  }, [fetchCompanyJobs])
+
   return {
     requisitions,
     filteredRequisitions,
+    loading,
+    companyName,
     activeTab,
     setActiveTab,
     searchQuery,
     setSearchQuery,
-    radarAlerts,
     totalCount,
     activeCount,
     draftCount,
     interviewingCount,
     closedCount,
+    totalApplicantsCount,
     selectedReqForCandidates,
     isCandidatesModalOpen,
     setIsCandidatesModalOpen,
@@ -323,6 +497,7 @@ export function useMyJobs(onPostNewJob?: () => void) {
     setIsExportModalOpen,
     toastMessage,
     showToast,
+    refreshJobs,
     handlePauseRequisition,
     handleDuplicateRequisition,
     handleDiscardDraft,

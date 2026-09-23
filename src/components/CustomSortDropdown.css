@@ -1,0 +1,271 @@
+/* ── Custom Sort Dropdown Component (Castallio One Design System) ── */
+
+.cs-dropdown-container {
+  position: relative;
+  display: inline-block;
+  user-select: none;
+}
+
+.cs-dropdown-container.is-open {
+  z-index: 500;
+}
+
+/* Trigger Button */
+.cs-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f3f3f6;
+  border: 1px solid rgba(194, 198, 213, 0.6);
+  padding: 9px 14px;
+  border-radius: 12px;
+  color: #1a1c1e;
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.cs-dropdown-trigger:hover {
+  background: #ebebee;
+  border-color: #aab0c0;
+}
+
+.cs-dropdown-trigger:focus-visible,
+.cs-dropdown-trigger.active {
+  background: #ffffff;
+  border-color: #0058bc;
+  box-shadow: 0 0 0 3px rgba(0, 88, 188, 0.12), 0 2px 8px rgba(0, 40, 90, 0.06);
+}
+
+.cs-trigger-icon {
+  color: #00418f;
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.cs-trigger-label-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cs-trigger-prefix {
+  color: #727784;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.cs-trigger-value {
+  color: #1a1c1e;
+  font-weight: 700;
+}
+
+.cs-trigger-chevron {
+  color: #727784;
+  font-size: 19px;
+  line-height: 1;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-left: 2px;
+}
+
+.cs-trigger-chevron.rotated {
+  transform: rotate(180deg);
+  color: #00418f;
+}
+
+/* Popover Menu */
+.cs-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  z-index: 9999;
+  min-width: 260px;
+  max-width: 320px;
+  width: max-content;
+  background: #ffffff;
+  border: 1px solid rgba(194, 198, 213, 0.65);
+  border-radius: 14px;
+  padding: 6px;
+  box-shadow:
+    0 12px 32px rgba(0, 30, 80, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.04);
+  animation: csMenuScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(16px);
+}
+
+.cs-dropdown-menu.align-right {
+  right: 0;
+  left: auto;
+}
+
+.cs-dropdown-menu.align-left {
+  left: 0;
+  right: auto;
+}
+
+@keyframes csMenuScaleIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Menu Header */
+.cs-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid #f0f1f5;
+}
+
+.cs-dropdown-header-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #727784;
+}
+
+.cs-header-icon {
+  font-size: 15px;
+  color: #9aa1b2;
+}
+
+/* Option List */
+.cs-dropdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cs-dropdown-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #1a1c1e;
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.18s ease;
+}
+
+.cs-dropdown-item:hover {
+  background: #f0f4ff;
+  border-color: rgba(0, 88, 188, 0.1);
+  color: #00418f;
+}
+
+.cs-dropdown-item.selected {
+  background: rgba(0, 88, 188, 0.08);
+  border-color: rgba(0, 88, 188, 0.2);
+  color: #00418f;
+}
+
+.cs-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.cs-item-icon-box {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: #f3f3f6;
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+}
+
+.cs-dropdown-item:hover .cs-item-icon-box,
+.cs-dropdown-item.selected .cs-item-icon-box {
+  background: rgba(0, 88, 188, 0.14);
+}
+
+.cs-item-icon {
+  font-size: 18px !important;
+  line-height: 1 !important;
+  width: 18px !important;
+  height: 18px !important;
+  color: #555c68;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  flex-shrink: 0;
+  transition: color 0.18s ease;
+}
+
+.cs-dropdown-item:hover .cs-item-icon,
+.cs-dropdown-item.selected .cs-item-icon {
+  color: #00418f;
+}
+
+.cs-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cs-item-label {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: inherit;
+}
+
+.cs-dropdown-item.selected .cs-item-label {
+  font-weight: 700;
+}
+
+.cs-item-desc {
+  font-size: 11px;
+  color: #727784;
+  line-height: 1.2;
+}
+
+.cs-dropdown-item.selected .cs-item-desc {
+  color: #00418f;
+  opacity: 0.8;
+}
+
+.cs-item-check {
+  font-size: 18px;
+  color: #00418f;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 640px) {
+  .cs-dropdown-menu {
+    max-width: calc(100vw - 32px);
+    right: 0;
+    left: auto;
+  }
+}
