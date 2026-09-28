@@ -561,18 +561,23 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = () => {
                     <div className="sl-match-ring-box">
                       <div className="sl-svg-ring">
                         <svg viewBox="0 0 36 36">
-                          <path
-                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          <circle
+                            cx="18"
+                            cy="18"
+                            r="15.9155"
                             fill="none"
                             stroke="#eeeef0"
                             strokeWidth="3.5"
                           />
-                          <path
-                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          <circle
+                            cx="18"
+                            cy="18"
+                            r="15.9155"
                             fill="none"
                             stroke="#00418f"
                             strokeWidth="3.5"
                             strokeDasharray={`${cand.matchScore}, 100`}
+                            strokeDashoffset="0"
                             strokeLinecap="round"
                           />
                         </svg>

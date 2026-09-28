@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { checkUserProfile } from '../lib/companyService'
+import { checkTalentProfile } from '../lib/talentService'
 
 interface RootRedirectProps {
   showToast?: (message: string, type: 'success' | 'error' | 'info' | 'warning', title?: string) => void
@@ -51,7 +52,15 @@ export const RootRedirect: React.FC<RootRedirectProps> = ({ showToast }) => {
         }
       } else {
         if (!isMounted) return
-        navigate('/talent', { replace: true })
+        const { exists, needsOnboarding } = await checkTalentProfile(user.id)
+        if (!isMounted) return
+
+        if (!exists || needsOnboarding) {
+          showToast?.('Please complete your talent profile onboarding to access opportunities.', 'info', 'Profile Setup Required')
+          navigate('/talent-setup', { replace: true })
+        } else {
+          navigate('/talent', { replace: true })
+        }
       }
     }
 

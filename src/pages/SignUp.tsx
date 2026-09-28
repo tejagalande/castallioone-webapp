@@ -47,7 +47,7 @@ function SignUp({ onNavigateToSignIn, onSignUpSuccess }: SignUpProps) {
     if (onSignUpSuccess) {
       onSignUpSuccess(activeTab)
     } else {
-      navigate(activeTab === 'employers' ? '/company-setup' : '/talent')
+      navigate(activeTab === 'employers' ? '/company-setup' : '/talent-setup')
     }
   }
 
@@ -136,14 +136,14 @@ function SignUp({ onNavigateToSignIn, onSignUpSuccess }: SignUpProps) {
               className={`persona-btn ${activeTab === 'talent' ? 'active' : ''}`}
               onClick={() => setActiveTab('talent')}
             >
-              For Talent
+              Professional
             </button>
             <button
               type="button"
               className={`persona-btn ${activeTab === 'employers' ? 'active' : ''}`}
               onClick={() => setActiveTab('employers')}
             >
-              Enterprise (Employers)
+              Company
             </button>
           </div>
 

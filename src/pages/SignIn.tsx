@@ -77,13 +77,13 @@ function SignIn({ onNavigateToSignUp, onSignInSuccess }: SignInProps) {
               className={`signin-tab ${activeTab === 'talent' ? 'active' : ''}`}
               onClick={() => setActiveTab('talent')}
             >
-              For Talent
+              Professional
             </button>
             <button
               className={`signin-tab ${activeTab === 'employers' ? 'active' : ''}`}
               onClick={() => setActiveTab('employers')}
             >
-              For Employers
+              Company
             </button>
           </div>
 

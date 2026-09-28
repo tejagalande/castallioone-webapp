@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { generateJobEmbedding } from '../lib/jobEmbeddingService'
 
 export interface CandidatePreview {
   id: string
@@ -385,6 +386,9 @@ export function usePostJob(onSuccess?: () => void) {
         throw new Error('Company profile not found. Please complete company setup first.')
       }
 
+      const now = new Date()
+      const expiresAt = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000)
+
       const payload = {
         company_id: companyId,
         posted_by: user.id,
@@ -403,16 +407,26 @@ export function usePostJob(onSuccess?: () => void) {
         responsibilities: responsibilities.trim(),
         about_us: whatWeOffer.trim() || null,
         status: 'active',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        created_at: now.toISOString(),
+        updated_at: now.toISOString(),
+        expires_at: expiresAt.toISOString(),
       }
 
-      const { error: insertError } = await supabase
+      const { data: insertedJob, error: insertError } = await supabase
         .from('create_job_post')
         .insert(payload)
+        .select()
+        .single()
 
       if (insertError) {
         throw new Error(insertError.message)
+      }
+
+      // Execute generate-job-embedding edge function once job row is inserted (parity with mobile app)
+      if (insertedJob?.id) {
+        generateJobEmbedding(insertedJob.id, insertedJob).catch((edgeErr) => {
+          console.warn('[PostJob] Edge function generate-job-embedding notice:', edgeErr)
+        })
       }
 
       setIsPublishSuccessModalOpen(true)
@@ -473,6 +487,9 @@ export function usePostJob(onSuccess?: () => void) {
       }
 
       if (user && companyId) {
+        const now = new Date()
+        const expiresAt = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000)
+
         const payload = {
           company_id: companyId,
           posted_by: user.id,
@@ -491,8 +508,9 @@ export function usePostJob(onSuccess?: () => void) {
           responsibilities: responsibilities.trim() || null,
           about_us: whatWeOffer.trim() || null,
           status: 'draft',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          created_at: now.toISOString(),
+          updated_at: now.toISOString(),
+          expires_at: expiresAt.toISOString(),
         }
 
         const { error } = await supabase.from('create_job_post').insert(payload)

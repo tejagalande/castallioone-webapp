@@ -425,13 +425,17 @@ export function useMyJobs(onPostNewJob?: () => void) {
   const handleReopenRequisition = useCallback(
     async (id: string) => {
       try {
-        const { error } = await supabase.from('create_job_post').update({ status: 'active' }).eq('id', id)
+        const newExpiresAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString()
+        const { error } = await supabase
+          .from('create_job_post')
+          .update({ status: 'active', expires_at: newExpiresAt })
+          .eq('id', id)
         if (error) throw error
 
         setRequisitions((prev) =>
           prev.map((r) => (r.id === id ? { ...r, status: 'active', createdDateText: 'Re-opened today' } : r))
         )
-        showToast('Requisition re-opened on active Talent Radar.')
+        showToast('Requisition re-opened on active Talent Radar (15 days validity).')
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Error re-opening requisition'
         showToast(msg)

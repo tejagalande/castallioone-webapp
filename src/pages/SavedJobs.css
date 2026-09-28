@@ -128,6 +128,12 @@
   width: fit-content;
   max-width: 100%;
   overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.segmented-tabs-bar::-webkit-scrollbar {
+  display: none;
 }
 
 .segment-btn {
@@ -655,6 +661,7 @@
   width: 28px;
   height: 28px;
   transform: rotate(-90deg);
+  transform-origin: 50% 50%;
 }
 
 .circle-bg {
@@ -1419,4 +1426,211 @@ input:checked + .toggle-slider:before {
   .saved-grid-container {
     grid-template-columns: 8fr 4fr;
   }
+}
+
+/* ── Company Logo & Reasons Row (Aligned with FindJobs) ── */
+.company-logo-box {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(194, 198, 213, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.company-logo-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.card-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.reason-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: #edf5ff;
+  color: #00418f;
+  border: 1px solid #bfdbfe;
+  line-height: 1.2;
+}
+
+.reason-tag svg {
+  width: 12px;
+  height: 12px;
+  stroke: #00418f;
+}
+
+.fit-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid #bfdbfe;
+  border-radius: 9999px;
+  padding: 3px 10px;
+  box-shadow: 0 1px 2px rgba(0, 65, 143, 0.05);
+}
+
+.fit-icon {
+  width: 13px;
+  height: 13px;
+  color: #0058bc;
+}
+
+.fit-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0058bc;
+}
+
+.fit-val.high {
+  color: #00418f;
+}
+
+/* ── Modern Shimmer Loading Animation ── */
+@keyframes savedShimmerWave {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer-elem {
+  background: linear-gradient(
+    90deg,
+    #eceef2 0%,
+    #f8f9fb 40%,
+    #e8ebf0 60%,
+    #eceef2 100%
+  );
+  background-size: 200% 100%;
+  animation: savedShimmerWave 1.6s infinite ease-in-out;
+  border-radius: 6px;
+}
+
+.saved-shimmer-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.saved-shimmer-card {
+  pointer-events: none;
+  border: 1px solid rgba(194, 198, 213, 0.4);
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  border-radius: 14px;
+}
+
+.shimmer-logo-box {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.shimmer-badge-row {
+  height: 18px;
+  width: 200px;
+  margin-bottom: 8px;
+  border-radius: 9999px;
+}
+
+.shimmer-title-line {
+  height: 20px;
+  width: 55%;
+  margin-bottom: 8px;
+}
+
+.shimmer-meta-line {
+  height: 14px;
+  width: 35%;
+}
+
+.shimmer-fit-pill {
+  width: 80px;
+  height: 38px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.shimmer-stack-strip {
+  height: 26px;
+  width: 65%;
+  border-radius: 6px;
+}
+
+.shimmer-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid #f0f0f3;
+}
+
+.shimmer-btn-outline {
+  width: 90px;
+  height: 32px;
+  border-radius: 6px;
+}
+
+.shimmer-btn-apply {
+  width: 110px;
+  height: 34px;
+  border-radius: 6px;
+  margin-left: auto;
+}
+
+.saved-shimmer-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.shimmer-widget-header {
+  height: 20px;
+  width: 50%;
+  border-radius: 4px;
+}
+
+.shimmer-widget-metric {
+  height: 72px;
+  width: 100%;
+  border-radius: 8px;
+}
+
+.shimmer-widget-btn {
+  height: 36px;
+  width: 100%;
+  border-radius: 6px;
+}
+
+.shimmer-widget-item {
+  height: 44px;
+  width: 100%;
+  border-radius: 6px;
 }

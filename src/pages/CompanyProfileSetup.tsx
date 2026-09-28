@@ -319,6 +319,9 @@ export const CompanyProfileSetup: React.FC<CompanyProfileSetupProps> = ({
                     onChange={(year) => updateField('establishmentYear', year)}
                     onBlur={() => handleBlur('establishmentYear')}
                     hasError={!!errors.establishmentYear}
+                    placeholder="Choose establishment year..."
+                    suffix=" (Established)"
+                    ariaLabel="Select Establishment Year"
                   />
                   {errors.establishmentYear && (
                     <span className="field-error">

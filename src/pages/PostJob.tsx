@@ -136,6 +136,15 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess }) => {
             </svg>
             AEC &amp; INFRASTRUCTURE DIRECTORY VERIFIED
           </span>
+
+          <span style={{ color: '#c2c6d5' }}>•</span>
+          <span style={{ color: '#00418f', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '13px', height: '13px' }} aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            POST VALIDITY: 15 DAYS
+          </span>
         </div>
 
         <div className="pj-telemetry-right">
@@ -1016,7 +1025,7 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess }) => {
               Job Successfully Published!
             </h2>
             <p style={{ fontSize: '14px', color: '#424753', margin: '0 0 20px' }}>
-              Your job post <strong>"{title}"</strong> is now live on Castallio One.
+              Your job post <strong>"{title}"</strong> is now live on Castallio One with a 15-day active validity window.
             </p>
             <button
               type="button"

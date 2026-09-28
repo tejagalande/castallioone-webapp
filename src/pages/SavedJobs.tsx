@@ -2,20 +2,32 @@ import type { FC } from 'react'
 import './SavedJobs.css'
 import {
   useSavedJobs,
-  type SavedJob,
-  UPCOMING_DEADLINES,
-  ARCHIVED_JOBS,
-  SAVED_COMPANIES,
+  type SavedJobItem,
+  type SavedDriveItem,
 } from './useSavedJobs'
+import type { RecommendedJob, TalentProfileInfo } from './useTalentDashboard'
 
 interface SavedJobsProps {
   onNavigateToFindJobs?: () => void
+  jobs?: RecommendedJob[]
+  loading?: boolean
+  profile?: TalentProfileInfo
+  savedJobIds?: Set<string>
+  appliedJobIds?: Set<string>
+  onSave?: (job: RecommendedJob) => void
+  onApply?: (job: RecommendedJob) => Promise<void>
 }
 
-const SavedJobs: FC<SavedJobsProps> = ({ onNavigateToFindJobs }) => {
+const SavedJobs: FC<SavedJobsProps> = (props) => {
+  const { onNavigateToFindJobs } = props
+
   const {
-    jobs,
+    loading,
+    activeJobs,
+    savedDrives,
     filteredJobs,
+    upcomingDeadlines,
+    urgentClosingJob,
     searchQuery,
     setSearchQuery,
     activeTab,
@@ -27,26 +39,15 @@ const SavedJobs: FC<SavedJobsProps> = ({ onNavigateToFindJobs }) => {
     selectedJobIds,
     toggleSelectAll,
     toggleSelectJob,
-    activeNoteEditId,
-    noteDraft,
-    setNoteDraft,
-    startEditingNote,
-    cancelEditingNote,
-    saveNote,
     removeSavedJob,
+    removeSavedDrive,
     handleQuickApply,
     handleBulkApply,
-    handleExportSpecs,
     appliedJobIds,
-    autoMatchAlerts,
-    setAutoMatchAlerts,
-    alertCadence,
-    setAlertCadence,
     toastMessage,
-    showToast,
-  } = useSavedJobs()
+  } = useSavedJobs(props)
 
-  const disciplines = ['All', 'Structural', 'BIM Mgmt', 'Computational', 'MEP']
+  const disciplines = ['All', 'Structural', 'BIM Management', 'Computational', 'Architecture', 'MEP']
 
   return (
     <div className="saved-jobs-page">
@@ -66,11 +67,11 @@ const SavedJobs: FC<SavedJobsProps> = ({ onNavigateToFindJobs }) => {
         <div className="saved-header-left">
           <div className="telemetry-badges">
             <span className="tech-badge-primary">PORTAL_SAVED // INDEX</span>
-            <span className="tech-badge-subtle">LOD-400 DISCIPLINE SYNC</span>
+            <span className="tech-badge-subtle">AEC TALENT REPOSITORY</span>
           </div>
-          <h1 className="saved-title">Saved Jobs</h1>
+          <h1 className="saved-title">Saved Opportunities</h1>
           <p className="saved-subtitle">
-            Manage your bookmarked opportunities, track application deadlines, and monitor technical alignment.
+            Manage your bookmarked opportunities, monitor application deadlines, and coordinate technical submissions.
           </p>
         </div>
 
@@ -87,11 +88,29 @@ const SavedJobs: FC<SavedJobsProps> = ({ onNavigateToFindJobs }) => {
             </svg>
             Saved Jobs
             <span className={`segment-pill ${activeTab === 'saved' ? '' : 'muted'}`}>
-              {jobs.length}
+              {activeJobs.length}
             </span>
           </button>
 
           <button
+            type="button"
+            className={`segment-btn ${activeTab === 'drives' ? 'active' : ''}`}
+            onClick={() => setActiveTab('drives')}
+            aria-selected={activeTab === 'drives'}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            Walk-in Drives
+            <span className={`segment-pill ${activeTab === 'drives' ? '' : 'muted'}`}>
+              {savedDrives.length}
+            </span>
+          </button>
+
+          {/* <button
             type="button"
             className={`segment-btn ${activeTab === 'archived' ? 'active' : ''}`}
             onClick={() => setActiveTab('archived')}
@@ -104,29 +123,14 @@ const SavedJobs: FC<SavedJobsProps> = ({ onNavigateToFindJobs }) => {
             </svg>
             Archived & Expired
             <span className={`segment-pill ${activeTab === 'archived' ? '' : 'muted'}`}>
-              {ARCHIVED_JOBS.length}
+              {archivedJobs.length}
             </span>
-          </button>
-
-          <button
-            type="button"
-            className={`segment-btn ${activeTab === 'companies' ? 'active' : ''}`}
-            onClick={() => setActiveTab('companies')}
-            aria-selected={activeTab === 'companies'}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="M3 21h18M9 8h1m4 0h1m-5 4h1m4 0h1M4 21V5a2 2 0 012-2h12a2 2 0 012 2v16" />
-            </svg>
-            Saved Companies
-            <span className={`segment-pill ${activeTab === 'companies' ? '' : 'muted'}`}>
-              {SAVED_COMPANIES.length}
-            </span>
-          </button>
+          </button> */}
         </nav>
       </header>
 
       {/* Filter and Command Search Console */}
-      {activeTab === 'saved' && (
+      {activeTab !== 'drives' && (
         <section className="saved-filter-console" aria-label="Search and filter options">
           <div className="saved-search-input-box">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -135,15 +139,11 @@ const SavedJobs: FC<SavedJobsProps> = ({ onNavigateToFindJobs }) => {
             </svg>
             <input
               type="text"
-              placeholder="Filter bookmarked roles by software, company, or LOD level..."
+              placeholder="Filter bookmarked roles by title, company, or tech stack..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               aria-label="Search saved roles"
             />
-            <div className="kbd-shortcut" aria-hidden="true">
-              <span>⌘</span>
-              <span>F</span>
-            </div>
           </div>
 
           <div className="filter-actions-group">
@@ -183,25 +183,27 @@ const SavedJobs: FC<SavedJobsProps> = ({ onNavigateToFindJobs }) => {
             </div>
 
             {/* Select All Toggle Button */}
-            <button
-              type="button"
-              className="btn-bulk-select"
-              onClick={toggleSelectAll}
-              title="Toggle Select All"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                {selectedJobIds.length === filteredJobs.length && filteredJobs.length > 0 && (
-                  <polyline points="9 11 12 14 22 4" />
-                )}
-              </svg>
-              {selectedJobIds.length === filteredJobs.length && filteredJobs.length > 0
-                ? 'Deselect All'
-                : `Select All (${filteredJobs.length})`}
-            </button>
+            {activeTab === 'saved' && filteredJobs.length > 0 && (
+              <button
+                type="button"
+                className="btn-bulk-select"
+                onClick={toggleSelectAll}
+                title="Toggle Select All"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  {selectedJobIds.length === filteredJobs.length && filteredJobs.length > 0 && (
+                    <polyline points="9 11 12 14 22 4" />
+                  )}
+                </svg>
+                {selectedJobIds.length === filteredJobs.length && filteredJobs.length > 0
+                  ? 'Deselect All'
+                  : `Select All (${filteredJobs.length})`}
+              </button>
+            )}
 
             {/* Bulk Action Button */}
-            {selectedJobIds.length > 0 && (
+            {activeTab === 'saved' && selectedJobIds.length > 0 && (
               <button
                 type="button"
                 className="btn-quick-apply"
@@ -219,12 +221,12 @@ const SavedJobs: FC<SavedJobsProps> = ({ onNavigateToFindJobs }) => {
         </section>
       )}
 
-      {/* Main Fluid Grid (8 cols / 4 cols) */}
-      {activeTab === 'saved' && (
-        <main className="saved-grid-container">
-          {/* LEFT COLUMN: Opportunity Cards & Closing Alert */}
-          <section className="saved-stream" aria-label="Bookmarked Job Opportunities">
-            {/* Critical Closing Alert Banner */}
+      {/* Main Fluid Grid (Left stream, Right telemetry sidebar) */}
+      <main className="saved-grid-container">
+        {/* LEFT COLUMN: Saved Opportunities */}
+        <section className="saved-stream" aria-label="Bookmarked Opportunities">
+          {/* Dynamic Urgent Closing Banner (Only displayed if an active saved job is closing soon) */}
+          {activeTab === 'saved' && urgentClosingJob && (
             <aside className="critical-closing-banner">
               <div className="closing-banner-inner">
                 <div className="closing-banner-content">
@@ -237,18 +239,20 @@ const SavedJobs: FC<SavedJobsProps> = ({ onNavigateToFindJobs }) => {
                   <div className="closing-info">
                     <div className="closing-tag-row">
                       <span className="tag-urgent">Action Required</span>
-                      <span className="tag-deadline">CLOSING IN 48 HOURS</span>
+                      <span className="tag-deadline">CLOSING SOON</span>
                     </div>
-                    <h2 className="closing-job-title">Lead Computational Designer at Foster + Partners</h2>
+                    <h2 className="closing-job-title">
+                      {urgentClosingJob.title} at {urgentClosingJob.company}
+                    </h2>
                     <p className="closing-job-desc">
-                      Technical alignment rated at <span className="score-highlight">96%</span> against your Rhino/Grasshopper repository.
+                      Technical alignment evaluated at <span className="score-highlight">{urgentClosingJob.matchScore}%</span> against your AEC verified credentials.
                     </p>
                   </div>
                 </div>
                 <button
                   type="button"
                   className="btn-closing-apply"
-                  onClick={() => handleQuickApply('job-1', 'Lead Computational Designer')}
+                  onClick={() => handleQuickApply(urgentClosingJob.jobId, urgentClosingJob.title, urgentClosingJob.companyId)}
                 >
                   Apply Now
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -257,31 +261,62 @@ const SavedJobs: FC<SavedJobsProps> = ({ onNavigateToFindJobs }) => {
                 </button>
               </div>
             </aside>
+          )}
 
-            {/* List of Saved Job Cards */}
-            {filteredJobs.length === 0 ? (
+          {/* Shimmer Effect while loading */}
+          {loading ? (
+            <div className="saved-shimmer-container" aria-label="Loading saved opportunities...">
+              {[1, 2, 3].map((itemIndex) => (
+                <div key={itemIndex} className="saved-shimmer-card">
+                  <div className="job-card-top-row">
+                    <div className="job-brand-wrap" style={{ flex: 1 }}>
+                      <div className="shimmer-elem shimmer-logo-box" />
+                      <div className="job-headline-info" style={{ flex: 1 }}>
+                        <div className="shimmer-elem shimmer-badge-row" />
+                        <div className="shimmer-elem shimmer-title-line" />
+                        <div className="shimmer-elem shimmer-meta-line" />
+                      </div>
+                    </div>
+                    <div className="shimmer-elem shimmer-fit-pill" />
+                  </div>
+                  <div className="shimmer-elem shimmer-stack-strip" />
+                  <div className="shimmer-actions-row">
+                    <div className="shimmer-elem shimmer-btn-outline" />
+                    <div className="shimmer-elem shimmer-btn-outline" />
+                    <div className="shimmer-elem shimmer-btn-apply" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : activeTab === 'saved' || activeTab === 'archived' ? (
+            /* Active & Archived Jobs Stream */
+            filteredJobs.length === 0 ? (
               <div className="empty-saved-state">
                 <div className="empty-icon-wrap">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
                     <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
                   </svg>
                 </div>
-                <h3 className="empty-title">No Saved Jobs Found</h3>
+                <h3 className="empty-title">
+                  {activeTab === 'archived' ? 'No Archived Jobs' : 'No Saved Jobs Found'}
+                </h3>
                 <p className="empty-desc">
                   {searchQuery
-                    ? `No bookmarked opportunities match "${searchQuery}". Try adjusting your filters.`
-                    : 'You have not saved any jobs in this category yet.'}
+                    ? `No opportunities match "${searchQuery}". Try adjusting your filters.`
+                    : activeTab === 'archived'
+                    ? 'You have no expired or closed saved positions.'
+                    : 'You have not bookmarked any active jobs yet. Browse openings to save roles for quick review.'}
                 </p>
-                {onNavigateToFindJobs && (
+                {onNavigateToFindJobs && activeTab === 'saved' && (
                   <button type="button" className="btn-browse-jobs" onClick={onNavigateToFindJobs}>
                     Browse AEC Openings
                   </button>
                 )}
               </div>
             ) : (
-              filteredJobs.map((job: SavedJob) => {
-                const isSelected = selectedJobIds.includes(job.id)
-                const isApplied = appliedJobIds.includes(job.id)
+              filteredJobs.map((job: SavedJobItem) => {
+                const isSelected = selectedJobIds.includes(job.jobId)
+                const isApplied = appliedJobIds.includes(job.jobId)
 
                 return (
                   <article
@@ -291,15 +326,44 @@ const SavedJobs: FC<SavedJobsProps> = ({ onNavigateToFindJobs }) => {
                   >
                     <div className="job-card-top-row">
                       <div className="job-brand-wrap">
-                        {/* Company Logo Monogram */}
-                        <div
-                          className={`company-badge ${job.companyColor}`}
-                          aria-label={`${job.company} monogram`}
-                        >
-                          {job.companyInitials}
-                        </div>
+                        {/* Company Logo Image or Fallback Initials */}
+                        {job.companyLogoUrl ? (
+                          <div className="company-logo-box">
+                            <img src={job.companyLogoUrl} alt={job.company} className="company-logo-img" />
+                          </div>
+                        ) : (
+                          <div
+                            className={`company-badge ${job.companyColor}`}
+                            aria-label={`${job.company} monogram`}
+                          >
+                            {job.companyInitials}
+                          </div>
+                        )}
 
                         <div className="job-headline-info">
+                          {/* Match Reasons + Fit Score Pill aligned exactly with FindJobs */}
+                          <div className="card-badge-row">
+                            {job.matchReasons.map((reason, rIdx) => (
+                              <span className="reason-tag" key={rIdx}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                                {reason}
+                              </span>
+                            ))}
+
+                            <div className="fit-pill">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="fit-icon" aria-hidden="true">
+                                <circle cx="12" cy="12" r="10" />
+                                <circle cx="12" cy="6" />
+                                <circle cx="12" cy="2" fill="currentColor" />
+                              </svg>
+                              <span className="fit-val high">
+                                {job.matchScore}% FIT
+                              </span>
+                            </div>
+                          </div>
+
                           <div className="job-title-row">
                             <h2 id={`job-title-${job.id}`} className="job-title-text">
                               {job.title}
@@ -310,6 +374,10 @@ const SavedJobs: FC<SavedJobsProps> = ({ onNavigateToFindJobs }) => {
                                   job.closingBadge.isUrgent ? 'urgent' : ''
                                 }`}
                               >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12" aria-hidden="true" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }}>
+                                  <circle cx="12" cy="12" r="10" />
+                                  <polyline points="12 6 12 12 16 14" />
+                                </svg>
                                 {job.closingBadge.text}
                               </span>
                             )}
@@ -323,7 +391,7 @@ const SavedJobs: FC<SavedJobsProps> = ({ onNavigateToFindJobs }) => {
                                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                                 <circle cx="12" cy="10" r="3" />
                               </svg>
-                              {job.location}
+                              {job.location} ({job.workType})
                             </span>
                             <span className="meta-dot" aria-hidden="true" />
                             <span className="salary-tag">{job.salary}</span>
@@ -331,24 +399,30 @@ const SavedJobs: FC<SavedJobsProps> = ({ onNavigateToFindJobs }) => {
                         </div>
                       </div>
 
-                      {/* Match Score Indicator (Circular SVG) */}
+                      {/* Saved Time Tag & Circular Fit Visual */}
                       <div className="fit-score-box">
-                        <div className="score-visual-pill">
+                        <div className="score-visual-pill" title={`${job.matchScore}% Match`}>
                           <svg className="circle-progress-svg" viewBox="0 0 36 36" aria-hidden="true">
-                            <path
+                            <circle
                               className="circle-bg"
-                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                              cx="18"
+                              cy="18"
+                              r="15.9155"
                               fill="none"
                               stroke="currentColor"
                               strokeWidth="3.5"
                             />
-                            <path
+                            <circle
                               className="circle-fill"
-                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                              cx="18"
+                              cy="18"
+                              r="15.9155"
                               fill="none"
                               stroke="currentColor"
-                              strokeDasharray={`${job.matchScore}, 100`}
                               strokeWidth="3.5"
+                              strokeDasharray={`${job.matchScore}, 100`}
+                              strokeDashoffset="0"
+                              strokeLinecap="round"
                             />
                           </svg>
                           <div className="score-text-block">
@@ -370,103 +444,30 @@ const SavedJobs: FC<SavedJobsProps> = ({ onNavigateToFindJobs }) => {
                       ))}
                     </div>
 
-                    {/* Candidate Recruiter / Log Note */}
-                    {activeNoteEditId === job.id ? (
-                      <div className="note-edit-area">
-                        <textarea
-                          className="note-textarea"
-                          rows={3}
-                          value={noteDraft}
-                          onChange={(e) => setNoteDraft(e.target.value)}
-                          placeholder="Write private notes about this position (recruiter contact, specific projects, requirements)..."
-                          aria-label="Edit candidate log"
-                        />
-                        <div className="note-edit-buttons">
-                          <button
-                            type="button"
-                            className="btn-action-outline"
-                            onClick={cancelEditingNote}
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-quick-apply"
-                            onClick={() => saveNote(job.id)}
-                          >
-                            Save Note
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      job.candidateNote && (
-                        <div className="candidate-note-box">
-                          <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            className="note-icon"
-                            aria-hidden="true"
-                          >
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                            <polyline points="14 2 14 8 20 8" />
-                            <line x1="16" y1="13" x2="8" y2="13" />
-                            <line x1="16" y1="17" x2="8" y2="17" />
-                          </svg>
-                          <p className="note-text">
-                            <strong>Candidate Log:</strong> {job.candidateNote}
-                          </p>
-                        </div>
-                      )
-                    )}
-
                     {/* Action Deck */}
                     <div className="card-action-deck">
                       <div className="action-deck-left">
-                        <button
-                          type="button"
-                          className="btn-icon-saved"
-                          onClick={() => toggleSelectJob(job.id)}
-                          aria-label={isSelected ? 'Deselect job' : 'Select job'}
-                          title={isSelected ? 'Selected' : 'Select for bulk action'}
-                        >
-                          <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1">
-                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                          </svg>
-                        </button>
-
-                        <button
-                          type="button"
-                          className="btn-action-outline"
-                          onClick={() => startEditingNote(job)}
-                          aria-label="Edit recruiter or candidate note"
-                        >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                          </svg>
-                          {job.candidateNote ? 'Edit Note' : 'Add Note'}
-                        </button>
-
-                        <button
-                          type="button"
-                          className="btn-action-outline"
-                          onClick={() => handleExportSpecs(job)}
-                          aria-label="Export technical position specs"
-                        >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                            <polyline points="7 10 12 15 17 10" />
-                            <line x1="12" y1="15" x2="12" y2="3" />
-                          </svg>
-                          Export Specs
-                        </button>
+                        {activeTab === 'saved' && (
+                          <button
+                            type="button"
+                            className="btn-icon-saved"
+                            onClick={() => toggleSelectJob(job.jobId)}
+                            aria-label={isSelected ? 'Deselect job' : 'Select job'}
+                            title={isSelected ? 'Selected' : 'Select for bulk action'}
+                          >
+                            <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1">
+                              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                            </svg>
+                          </button>
+                        )}
 
                         <button
                           type="button"
                           className="btn-action-danger"
-                          onClick={() => removeSavedJob(job.id, job.title)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            void removeSavedJob(job.id, job.jobId, job.title)
+                          }}
                           aria-label={`Remove ${job.title} from saved jobs`}
                           title="Remove bookmark"
                         >
@@ -474,23 +475,26 @@ const SavedJobs: FC<SavedJobsProps> = ({ onNavigateToFindJobs }) => {
                             <polyline points="3 6 5 6 21 6" />
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                           </svg>
+                          <span>Remove</span>
                         </button>
                       </div>
 
                       <div className="action-deck-right">
-                        <button
-                          type="button"
-                          className="btn-view-pos"
-                          onClick={() => showToast(`Opening specifications for ${job.title}...`)}
-                        >
-                          View Position
-                        </button>
+                        {onNavigateToFindJobs && (
+                          <button
+                            type="button"
+                            className="btn-view-pos"
+                            onClick={onNavigateToFindJobs}
+                          >
+                            View Details
+                          </button>
+                        )}
 
                         <button
                           type="button"
                           className={`btn-quick-apply ${isApplied ? 'applied' : ''}`}
-                          onClick={() => handleQuickApply(job.id, job.title)}
-                          disabled={isApplied}
+                          onClick={() => handleQuickApply(job.jobId, job.title, job.companyId)}
+                          disabled={isApplied || job.isExpired}
                           aria-label={isApplied ? 'Already applied' : `Quick apply to ${job.title}`}
                         >
                           {isApplied ? (
@@ -500,6 +504,8 @@ const SavedJobs: FC<SavedJobsProps> = ({ onNavigateToFindJobs }) => {
                                 <polyline points="20 6 9 17 4 12" />
                               </svg>
                             </>
+                          ) : job.isExpired ? (
+                            'Position Closed'
                           ) : (
                             <>
                               Quick Apply
@@ -515,247 +521,201 @@ const SavedJobs: FC<SavedJobsProps> = ({ onNavigateToFindJobs }) => {
                   </article>
                 )
               })
-            )}
-          </section>
-
-          {/* RIGHT COLUMN: Analytical Telemetry & Deadline Timeline */}
-          <aside className="saved-sidebar" aria-label="Market and Deadline Telemetry">
-            {/* Widget 1: Market Intelligence & Skills Density */}
-            <div className="analytics-widget">
-              <div className="widget-header">
-                <div className="widget-title-wrap">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                    <line x1="18" y1="20" x2="18" y2="10" />
-                    <line x1="12" y1="20" x2="12" y2="4" />
-                    <line x1="6" y1="20" x2="6" y2="14" />
-                  </svg>
-                  <h3 className="widget-title">Market Trends</h3>
-                </div>
-                <span className="widget-badge">Telemetry</span>
-              </div>
-
-              <div className="metric-box">
-                <span className="metric-label">Average Saved Compensation</span>
-                <div className="metric-main-row">
-                  <span className="metric-number">$138,500</span>
-                  <span className="metric-diff">+6.4% AEC Avg</span>
-                </div>
-                <p className="metric-subtext">
-                  Derived from {jobs.length} bookmarked positions across UK and US East Coast markets.
-                </p>
-              </div>
-
-              <div className="distribution-row">
-                <div className="dist-header">
-                  <span className="dist-title">Algorithmic Modeling</span>
-                  <span className="dist-metric">83% Occurrence</span>
-                </div>
-                <p className="dist-desc">
-                  5 of 6 saved roles demand Grasshopper or Dynamo computational workflows.
-                </p>
-              </div>
-
-              {/* Engineering Segmented Pressure Ruler */}
-              <div className="ruler-progress-container">
-                <div className="ruler-header">
-                  <span className="label">Computational BIM Hiring Pressure</span>
-                  <span className="rate">+18% MoM</span>
-                </div>
-                <div className="segmented-bar" aria-label="Hiring pressure 80%">
-                  <div className="bar-segment filled" />
-                  <div className="bar-segment filled" />
-                  <div className="bar-segment filled" />
-                  <div className="bar-segment filled" />
-                  <div className="bar-segment filled" />
-                  <div className="bar-segment filled" />
-                  <div className="bar-segment filled" />
-                  <div className="bar-segment mid" />
-                  <div className="bar-segment" />
-                  <div className="bar-segment" />
-                </div>
-                <div className="ruler-scale">
-                  <span>Q1 BASE</span>
-                  <span>MEDIAN</span>
-                  <span>PEAK (LOD-500)</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Widget 2: Upcoming Deadlines Checklist */}
-            <div className="analytics-widget">
-              <div className="widget-header">
-                <div className="widget-title-wrap">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                    <line x1="3" y1="10" x2="21" y2="10" />
-                  </svg>
-                  <h3 className="widget-title">Closing Deadlines</h3>
-                </div>
-                <span className="widget-badge pill">3 Active</span>
-              </div>
-
-              <div className="deadlines-list">
-                {UPCOMING_DEADLINES.map((dl) => (
-                  <div className="deadline-item" key={dl.id}>
-                    <div className="deadline-info">
-                      <strong className="deadline-company">{dl.company}</strong>
-                      <span className="deadline-role">{dl.role}</span>
-                    </div>
-                    <span className={`deadline-pill ${dl.urgency}`}>{dl.daysLeftText}</span>
+            )
+          ) : (
+            /* Saved Walk-in Drives View */
+            <div className="saved-drives-list">
+              {savedDrives.length === 0 ? (
+                <div className="empty-saved-state">
+                  <div className="empty-icon-wrap">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                      <line x1="16" y1="2" x2="16" y2="6" />
+                      <line x1="8" y1="2" x2="8" y2="6" />
+                      <line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
                   </div>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                className="btn-sync-calendar"
-                onClick={() => showToast('Deadlines synchronized with your calendar.')}
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
-                </svg>
-                Sync to BIM Workspace Calendar
-              </button>
-            </div>
-
-            {/* Widget 3: BIM Alert Rules */}
-            <div className="analytics-widget">
-              <div className="widget-header">
-                <div className="widget-title-wrap">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                  </svg>
-                  <h3 className="widget-title">BIM Alert Rule</h3>
+                  <h3 className="empty-title">No Saved Walk-in Drives</h3>
+                  <p className="empty-desc">
+                    You have not saved any upcoming walk-in hiring drives yet. Explore the Walk-in Drives section to bookmark in-person hiring events.
+                  </p>
                 </div>
-                <span className="widget-badge accent">CONFIG-09</span>
-              </div>
+              ) : (
+                savedDrives.map((drive: SavedDriveItem) => (
+                  <article key={drive.id} className="saved-job-card">
+                    <div className="job-card-top-row">
+                      <div className="job-brand-wrap">
+                        <div className="company-badge primary">{drive.companyInitials}</div>
+                        <div className="job-headline-info">
+                          <div className="job-title-row">
+                            <h2 className="job-title-text">{drive.title}</h2>
+                            {drive.isUrgent && <span className="closing-pill urgent">Urgent Hiring</span>}
+                          </div>
+                          <div className="job-meta-line">
+                            <span className="company-name">{drive.company}</span>
+                            <span className="meta-dot" aria-hidden="true" />
+                            <span className="loc-span">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                              </svg>
+                              {drive.location}
+                            </span>
+                            <span className="meta-dot" aria-hidden="true" />
+                            <span className="tech-badge-primary">{drive.numberOpenings} Openings</span>
+                          </div>
+                        </div>
+                      </div>
 
-              <p className="alert-desc">
-                Automatically index upcoming vacancies matching your Grasshopper, Revit LOD-400, and ISO-19650 credentials.
-              </p>
-
-              <div className="switch-row">
-                <span className="switch-label">Auto-match Notifications</span>
-                <label className="toggle-switch" aria-label="Toggle auto match notifications">
-                  <input
-                    type="checkbox"
-                    checked={autoMatchAlerts}
-                    onChange={(e) => {
-                      setAutoMatchAlerts(e.target.checked)
-                      showToast(
-                        e.target.checked
-                          ? 'Auto-match alerts enabled'
-                          : 'Auto-match alerts paused'
-                      )
-                    }}
-                  />
-                  <span className="toggle-slider" />
-                </label>
-              </div>
-
-              <div className="cadence-selector">
-                <span className="cadence-title">Dispatch Cadence</span>
-                <div className="cadence-grid">
-                  <button
-                    type="button"
-                    className={`cadence-btn ${alertCadence === 'daily' ? 'active' : ''}`}
-                    onClick={() => {
-                      setAlertCadence('daily')
-                      showToast('Cadence switched to Daily Digest.')
-                    }}
-                  >
-                    Daily Digest
-                  </button>
-                  <button
-                    type="button"
-                    className={`cadence-btn ${alertCadence === 'realtime' ? 'active' : ''}`}
-                    onClick={() => {
-                      setAlertCadence('realtime')
-                      showToast('Cadence switched to Real-time Alerts.')
-                    }}
-                  >
-                    Real-time
-                  </button>
-                </div>
-              </div>
-            </div>
-          </aside>
-        </main>
-      )}
-
-      {/* Archived & Expired Tab View */}
-      {activeTab === 'archived' && (
-        <section className="saved-stream" aria-label="Archived & Expired Listings">
-          {ARCHIVED_JOBS.map((job) => (
-            <article key={job.id} className="saved-job-card" style={{ opacity: 0.85 }}>
-              <div className="job-card-top-row">
-                <div className="job-brand-wrap">
-                  <div className={`company-badge ${job.companyColor}`}>{job.companyInitials}</div>
-                  <div className="job-headline-info">
-                    <div className="job-title-row">
-                      <h2 className="job-title-text">{job.title}</h2>
-                      <span className="closing-pill">{job.matchLabel}</span>
+                      <div className="fit-score-box">
+                        <span className="closing-pill urgent" style={{ fontSize: '12px' }}>
+                          📅 {drive.dateFormatted}
+                        </span>
+                        <span className="saved-time-tag">{drive.savedDate}</span>
+                      </div>
                     </div>
-                    <div className="job-meta-line">
-                      <span className="company-name">{job.company}</span>
-                      <span className="meta-dot" aria-hidden="true" />
-                      <span>{job.location}</span>
-                      <span className="meta-dot" aria-hidden="true" />
-                      <span className="salary-tag">{job.salary}</span>
+
+                    <div className="stack-strip">
+                      <span className="stack-label">REQUIRED SKILLS:</span>
+                      {drive.skills.map((s) => (
+                        <span className="stack-chip" key={s}>
+                          {s}
+                        </span>
+                      ))}
                     </div>
-                  </div>
-                </div>
-                <div className="fit-score-box">
-                  <span className="saved-time-tag">{job.savedDate}</span>
-                </div>
-              </div>
-              <div className="stack-strip">
-                <span className="stack-label">STACK:</span>
-                {job.stack.map((item) => (
-                  <span className="stack-chip" key={item}>
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </article>
-          ))}
+
+                    <div className="card-action-deck">
+                      <div className="action-deck-left">
+                        <button
+                          type="button"
+                          className="btn-action-danger"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            void removeSavedDrive(drive.id, drive.driveId, drive.title)
+                          }}
+                          aria-label={`Remove ${drive.title} from saved drives`}
+                          title="Remove bookmark"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      <div className="action-deck-right">
+                        <button
+                          type="button"
+                          className="btn-quick-apply"
+                          onClick={() => alert(`Venue details: ${drive.location}`)}
+                        >
+                          View Venue Info
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          )}
         </section>
-      )}
 
-      {/* Saved Companies Tab View */}
-      {activeTab === 'companies' && (
-        <section className="saved-stream" aria-label="Saved Firm Profiles">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
-            {SAVED_COMPANIES.map((comp) => (
-              <article key={comp.id} className="saved-job-card">
-                <div className="job-brand-wrap">
-                  <div className="company-badge primary">{comp.initials}</div>
-                  <div className="job-headline-info">
-                    <h2 className="job-title-text">{comp.name}</h2>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#424753' }}>{comp.industry}</p>
-                    <span style={{ fontSize: '12px', color: '#727784' }}>{comp.location}</span>
+        {/* RIGHT COLUMN: Analytical Telemetry & Real Deadlines */}
+        <aside className="saved-sidebar" aria-label="Market and Deadline Telemetry">
+          {loading ? (
+            <>
+              <div className="analytics-widget saved-shimmer-widget">
+                <div className="shimmer-elem shimmer-widget-header" />
+                <div className="shimmer-elem shimmer-widget-metric" />
+                <div className="shimmer-elem shimmer-widget-btn" />
+              </div>
+              <div className="analytics-widget saved-shimmer-widget">
+                <div className="shimmer-elem shimmer-widget-header" />
+                <div className="shimmer-elem shimmer-widget-item" />
+                <div className="shimmer-elem shimmer-widget-item" />
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Real Telemetry Overview Widget */}
+              <div className="analytics-widget">
+                <div className="widget-header">
+                  <div className="widget-title-wrap">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                    </svg>
+                    <h3 className="widget-title">Saved Overview</h3>
                   </div>
+                  <span className="widget-badge accent">LIVE</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #eee' }}>
-                  <span className="tech-badge-primary">{comp.openRolesCount} Open Positions</span>
+
+                <div className="metric-box">
+                  <span className="metric-label">Active Bookmarks</span>
+                  <div className="metric-main-row">
+                    <span className="metric-number">{activeJobs.length + savedDrives.length}</span>
+                    <span className="metric-diff" style={{ color: '#00418f' }}>
+                      {activeJobs.length} Jobs • {savedDrives.length} Drives
+                    </span>
+                  </div>
+                  <p className="metric-subtext">
+                    {appliedJobIds.length} application{appliedJobIds.length === 1 ? '' : 's'} submitted across saved positions.
+                  </p>
+                </div>
+
+                {onNavigateToFindJobs && (
                   <button
                     type="button"
                     className="btn-action-outline"
-                    onClick={() => showToast(`Viewing active openings at ${comp.name}`)}
+                    style={{ width: '100%', justifyContent: 'center', padding: '10px 14px' }}
+                    onClick={onNavigateToFindJobs}
                   >
-                    View Jobs
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    Browse More Openings
                   </button>
+                )}
+              </div>
+
+              {/* Real Closing Deadlines Widget */}
+              <div className="analytics-widget">
+                <div className="widget-header">
+                  <div className="widget-title-wrap">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                      <line x1="16" y1="2" x2="16" y2="6" />
+                      <line x1="8" y1="2" x2="8" y2="6" />
+                      <line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
+                    <h3 className="widget-title">Upcoming Dates</h3>
+                  </div>
+                  <span className="widget-badge pill">
+                    {upcomingDeadlines.length} Active
+                  </span>
                 </div>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
+
+                {upcomingDeadlines.length === 0 ? (
+                  <p style={{ margin: 0, fontSize: '13px', color: '#727784', lineHeight: '20px' }}>
+                    All bookmarked opportunities have open deadlines with no immediate closures.
+                  </p>
+                ) : (
+                  <div className="deadlines-list">
+                    {upcomingDeadlines.map((dl) => (
+                      <div className="deadline-item" key={dl.id}>
+                        <div className="deadline-info">
+                          <strong className="deadline-company">{dl.company}</strong>
+                          <span className="deadline-role">{dl.role}</span>
+                        </div>
+                        <span className={`deadline-pill ${dl.urgency}`}>{dl.daysLeftText}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </aside>
+      </main>
     </div>
   )
 }

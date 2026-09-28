@@ -6,6 +6,11 @@ interface YearPickerProps {
   onChange: (year: string) => void
   onBlur?: () => void
   hasError?: boolean
+  placeholder?: string
+  suffix?: string
+  ariaLabel?: string
+  maxYear?: number
+  minYear?: number
 }
 
 export const YearPicker: React.FC<YearPickerProps> = ({
@@ -14,9 +19,15 @@ export const YearPicker: React.FC<YearPickerProps> = ({
   onChange,
   onBlur,
   hasError,
+  placeholder = 'Select year...',
+  suffix = '',
+  ariaLabel = 'Select Year',
+  maxYear,
+  minYear = 1900,
 }) => {
   const [isOpen, setIsOpen] = useState(false)
   const currentYear = new Date().getFullYear()
+  const effectiveMaxYear = maxYear ?? currentYear
 
   // Base decade on currently selected year or current year
   const initialYear = value ? parseInt(value, 10) : currentYear
@@ -61,13 +72,13 @@ export const YearPicker: React.FC<YearPickerProps> = ({
 
   const handlePrevDecade = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
-    setDecadeStart((prev) => Math.max(1800, prev - 10))
-  }, [])
+    setDecadeStart((prev) => Math.max(Math.floor(minYear / 10) * 10, prev - 10))
+  }, [minYear])
 
   const handleNextDecade = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
-    setDecadeStart((prev) => Math.min(Math.floor(currentYear / 10) * 10, prev + 10))
-  }, [currentYear])
+    setDecadeStart((prev) => Math.min(Math.floor(effectiveMaxYear / 10) * 10, prev + 10))
+  }, [effectiveMaxYear])
 
   const handleSelectYear = (yearNum: number) => {
     onChange(yearNum.toString())
@@ -87,7 +98,7 @@ export const YearPicker: React.FC<YearPickerProps> = ({
         onClick={() => setIsOpen((prev) => !prev)}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
-        aria-label={value ? `Selected year: ${value}` : 'Select Establishment Year'}
+        aria-label={value ? `Selected year: ${value}` : ariaLabel}
       >
         <div className="year-picker-value">
           <svg className="calendar-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -97,7 +108,7 @@ export const YearPicker: React.FC<YearPickerProps> = ({
             <line x1="3" y1="10" x2="21" y2="10" />
           </svg>
           <span style={{ color: value ? '#111827' : '#9ca3af' }}>
-            {value ? `${value} (Established)` : 'Choose establishment year...'}
+            {value ? `${value}${suffix}` : placeholder}
           </span>
         </div>
 
@@ -125,7 +136,7 @@ export const YearPicker: React.FC<YearPickerProps> = ({
               type="button"
               className="decade-btn"
               onClick={handlePrevDecade}
-              disabled={decadeStart <= 1800}
+              disabled={decadeStart <= Math.floor(minYear / 10) * 10}
               aria-label="Previous Decade"
             >
               &lsaquo;
@@ -137,7 +148,7 @@ export const YearPicker: React.FC<YearPickerProps> = ({
               type="button"
               className="decade-btn"
               onClick={handleNextDecade}
-              disabled={decadeStart >= Math.floor(currentYear / 10) * 10}
+              disabled={decadeStart >= Math.floor(effectiveMaxYear / 10) * 10}
               aria-label="Next Decade"
             >
               &rsaquo;
@@ -146,7 +157,7 @@ export const YearPicker: React.FC<YearPickerProps> = ({
 
           <div className="year-grid">
             {years.map((y) => {
-              const isFuture = y > currentYear
+              const isOutOfRange = y > effectiveMaxYear || y < minYear
               const isSelected = value === y.toString()
 
               return (
@@ -154,7 +165,7 @@ export const YearPicker: React.FC<YearPickerProps> = ({
                   key={y}
                   type="button"
                   className={`year-btn ${isSelected ? 'selected' : ''}`}
-                  disabled={isFuture || y < 1800}
+                  disabled={isOutOfRange}
                   onClick={() => handleSelectYear(y)}
                   aria-pressed={isSelected}
                 >
@@ -168,7 +179,7 @@ export const YearPicker: React.FC<YearPickerProps> = ({
             <span style={{ fontSize: '11px', color: '#9ca3af', alignSelf: 'center', marginRight: '4px' }}>
               Quick:
             </span>
-            {[currentYear, 2020, 2015, 2010, 2000, 1990].map((quickYear) => (
+            {[currentYear, 2024, 2023, 2022, 2020, 2018].map((quickYear) => (
               <button
                 key={quickYear}
                 type="button"

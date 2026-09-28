@@ -481,17 +481,22 @@ const Certifications: FC<CertificationsProps> = () => {
             <div className="trust-gauge-box">
               <div className="trust-gauge-visual">
                 <svg viewBox="0 0 36 36" aria-hidden="true">
-                  <path
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="15.9155"
                     fill="none"
                     stroke="#e2e2e5"
                     strokeWidth="3"
                   />
-                  <path
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="15.9155"
                     fill="none"
                     stroke="#00418f"
-                    strokeDasharray={`${circumference}, ${circumference}`}
+                    strokeDasharray="100, 100"
+                    strokeDashoffset="0"
                     strokeLinecap="round"
                     strokeWidth="3"
                   />
