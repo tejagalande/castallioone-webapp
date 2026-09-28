@@ -88,19 +88,19 @@ export async function checkTalentProfile(userId?: string): Promise<CheckTalentPr
  */
 export async function uploadTalentAvatar(userId: string, file: File): Promise<string> {
   const fileExt = file.name.split('.').pop() || 'png'
-  const fileName = `avatar_${Date.now()}.${fileExt}`
-  const filePath = `${userId}/${fileName}`
+  const fileName = `profile_${Date.now()}.${fileExt}`
+  const filePath = `profiles/${userId}/${fileName}`
 
   try {
     const { error: uploadError } = await supabase.storage
-      .from('talent-avatars')
+      .from('profile-picture')
       .upload(filePath, file, {
         upsert: true,
         cacheControl: '3600',
       })
 
     if (!uploadError) {
-      const { data } = supabase.storage.from('talent-avatars').getPublicUrl(filePath)
+      const { data } = supabase.storage.from('profile-picture').getPublicUrl(filePath)
       return data.publicUrl
     }
   } catch {
@@ -123,18 +123,18 @@ export async function uploadTalentAvatar(userId: string, file: File): Promise<st
 export async function uploadTalentResume(userId: string, file: File): Promise<string> {
   const fileExt = file.name.split('.').pop() || 'pdf'
   const fileName = `resume_${Date.now()}.${fileExt}`
-  const filePath = `${userId}/${fileName}`
+  const filePath = `profiles/${userId}/${fileName}`
 
   try {
     const { error: uploadError } = await supabase.storage
-      .from('talent-resumes')
+      .from('profile-resume')
       .upload(filePath, file, {
         upsert: true,
         cacheControl: '3600',
       })
 
     if (!uploadError) {
-      const { data } = supabase.storage.from('talent-resumes').getPublicUrl(filePath)
+      const { data } = supabase.storage.from('profile-resume').getPublicUrl(filePath)
       return data.publicUrl
     }
   } catch {
@@ -159,14 +159,14 @@ export async function uploadTalentCertificateDoc(userId: string, file: File): Pr
 
   try {
     const { error: uploadError } = await supabase.storage
-      .from('talent-certificates')
+      .from('profile-certificates')
       .upload(filePath, file, {
         upsert: true,
         cacheControl: '3600',
       })
 
     if (!uploadError) {
-      const { data } = supabase.storage.from('talent-certificates').getPublicUrl(filePath)
+      const { data } = supabase.storage.from('profile-certificates').getPublicUrl(filePath)
       return data.publicUrl
     }
   } catch {

@@ -213,6 +213,8 @@ function App() {
         {/* Aliases for backwards compatibility */}
         <Route path="/employer-dashboard" element={<Navigate to="/employer" replace />} />
         <Route path="/talent-dashboard" element={<Navigate to="/talent" replace />} />
+        <Route path="/applications" element={<Navigate to="/talent?tab=applications" replace />} />
+        <Route path="/my-applications" element={<Navigate to="/talent?tab=applications" replace />} />
 
         {/* Catch-all fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

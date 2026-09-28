@@ -1,5 +1,5 @@
 import { useState, type FC } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import './TalentDashboard.css'
 import FindJobs from './FindJobs'
 import Applications from './Applications'
@@ -60,7 +60,24 @@ const menuItems: { id: MenuItem; label: string; icon: string }[] = [
 
 export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
   const navigate = useNavigate()
-  const [activeMenu, setActiveMenu] = useState<MenuItem>('dashboard')
+  const [searchParams] = useSearchParams()
+  const tabParam = searchParams.get('tab') as MenuItem | null
+
+  const [activeMenu, setActiveMenu] = useState<MenuItem>(() => {
+    if (tabParam && menuItems.some((m) => m.id === tabParam)) {
+      return tabParam
+    }
+    return 'dashboard'
+  })
+  const [prevTabParam, setPrevTabParam] = useState<MenuItem | null>(tabParam)
+
+  if (tabParam !== prevTabParam) {
+    setPrevTabParam(tabParam)
+    if (tabParam && menuItems.some((m) => m.id === tabParam)) {
+      setActiveMenu(tabParam)
+    }
+  }
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
 
@@ -218,8 +235,14 @@ export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
             />
           </div>
         ) : activeMenu === 'applications' ? (
-          <div className="talent-page-content">
-            <Applications />
+          <div className="talent-page-content find-jobs-page-wrapper">
+            <Applications
+              onNavigateToFindJobs={() => setActiveMenu('find-jobs')}
+              onNavigateToMessages={() => setActiveMenu('messages')}
+              onNavigateToInterviews={() => setActiveMenu('interviews')}
+              onNavigateToResume={() => setActiveMenu('resume')}
+              onNavigateToCertifications={() => setActiveMenu('certifications')}
+            />
           </div>
         ) : activeMenu === 'my-profile' ? (
           <div className="talent-page-content">
