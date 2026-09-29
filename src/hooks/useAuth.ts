@@ -64,6 +64,7 @@ export function useAuth(): UseAuthReturn {
   const signInWithGoogle = useCallback(async (role: UserRole = 'talent') => {
     setError(null)
     localStorage.setItem('castallio_signup_role', role)
+    localStorage.setItem('castallio_user_role', role)
     try {
       const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -90,6 +91,7 @@ export function useAuth(): UseAuthReturn {
   const signInWithLinkedIn = useCallback(async (role: UserRole = 'talent') => {
     setError(null)
     localStorage.setItem('castallio_signup_role', role)
+    localStorage.setItem('castallio_user_role', role)
     try {
       const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'linkedin_oidc',
@@ -128,6 +130,7 @@ export function useAuth(): UseAuthReturn {
         localStorage.removeItem('castallio_oauth_intent')
         localStorage.removeItem('castallio_signup_provider')
         localStorage.removeItem('castallio_signup_role')
+        localStorage.removeItem('castallio_user_role')
         sessionStorage.clear()
       } catch (storageErr) {
         console.warn('Storage cleanup notice:', storageErr)

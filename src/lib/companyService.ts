@@ -20,6 +20,8 @@ export interface CheckProfileResult {
  * Checks whether user_profiles has a record for the current user and whether onboarding is complete.
  */
 export async function checkUserProfile(userId: string): Promise<CheckProfileResult> {
+  const localCompleted = localStorage.getItem('castallio_enterprise_profile_completed') === 'true'
+
   try {
     const { data, error } = await supabase
       .from('user_profiles')
@@ -29,15 +31,36 @@ export async function checkUserProfile(userId: string): Promise<CheckProfileResu
 
     if (error) {
       console.error('Error fetching user_profiles:', error.message)
-      return { exists: false, profile: null, needsOnboarding: true, error: error.message }
+      return { exists: localCompleted, profile: null, needsOnboarding: !localCompleted, error: error.message }
     }
 
     if (!data) {
-      return { exists: false, profile: null, needsOnboarding: true }
+      // Check companies table directly
+      const { data: comp } = await supabase
+        .from('companies')
+        .select('id, is_profile_complete')
+        .eq('owner_id', userId)
+        .maybeSingle()
+
+      if (comp) {
+        return {
+          exists: true,
+          profile: null,
+          needsOnboarding: !comp.is_profile_complete && !localCompleted,
+        }
+      }
+
+      return { exists: localCompleted, profile: null, needsOnboarding: !localCompleted }
     }
 
     const profile = data as UserProfileRecord
-    const needsOnboarding = profile.role === 'company' && !profile.onboarding_complete
+
+    // If profile role is NOT 'company', this user is not an enterprise/company user!
+    if (profile.role !== 'company') {
+      return { exists: false, profile, needsOnboarding: true }
+    }
+
+    const needsOnboarding = !profile.onboarding_complete && !localCompleted
 
     return {
       exists: true,
@@ -47,7 +70,7 @@ export async function checkUserProfile(userId: string): Promise<CheckProfileResu
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error'
     console.error('checkUserProfile exception:', msg)
-    return { exists: false, profile: null, needsOnboarding: true, error: msg }
+    return { exists: localCompleted, profile: null, needsOnboarding: !localCompleted, error: msg }
   }
 }
 

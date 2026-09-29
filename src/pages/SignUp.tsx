@@ -44,6 +44,7 @@ function SignUp({ onNavigateToSignIn, onSignUpSuccess }: SignUpProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     console.log('Sign up:', { activeTab, fullName, email, password })
+    localStorage.setItem('castallio_user_role', activeTab)
     if (onSignUpSuccess) {
       onSignUpSuccess(activeTab)
     } else {
@@ -54,6 +55,7 @@ function SignUp({ onNavigateToSignIn, onSignUpSuccess }: SignUpProps) {
   const handleGoogleSignUp = async () => {
     try {
       setIsGoogleLoading(true)
+      localStorage.setItem('castallio_user_role', activeTab)
       await signInWithGoogle(activeTab)
     } finally {
       setIsGoogleLoading(false)
@@ -66,6 +68,7 @@ function SignUp({ onNavigateToSignIn, onSignUpSuccess }: SignUpProps) {
       localStorage.setItem('castallio_oauth_intent', 'signup')
       localStorage.setItem('castallio_signup_provider', 'linkedin')
       localStorage.setItem('castallio_signup_role', activeTab)
+      localStorage.setItem('castallio_user_role', activeTab)
       await signInWithLinkedIn(activeTab)
     } finally {
       setIsLinkedInLoading(false)
@@ -80,7 +83,10 @@ function SignUp({ onNavigateToSignIn, onSignUpSuccess }: SignUpProps) {
         <div className="sidebar-glow" />
 
         <div className="sidebar-content">
-          <div className="sidebar-brand">Castallio One</div>
+          <div className="sidebar-brand">
+            <img src="/app_icon.png" alt="Castallio One" className="sidebar-brand-icon" />
+            <span>Castallio One</span>
+          </div>
 
           <h1 className="sidebar-heading">
             Join the

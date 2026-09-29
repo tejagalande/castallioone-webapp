@@ -147,7 +147,10 @@ export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
 
       <aside className={`talent-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
-          <span className="sidebar-logo">Castallio One</span>
+          <div className="sidebar-brand-group">
+            <img src="/app_icon.png" alt="Castallio One" className="sidebar-brand-icon" />
+            <span className="sidebar-logo">Castallio One</span>
+          </div>
           <button
             className="sidebar-toggle"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}

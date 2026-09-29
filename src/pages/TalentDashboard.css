@@ -37,15 +37,68 @@
   border-bottom: 1px solid rgba(194, 198, 213, 0.3);
 }
 
+.sidebar-brand-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.sidebar-brand-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 65, 143, 0.15);
+}
+
 .sidebar-logo {
   font-family: 'Hanken Grotesk', sans-serif;
   font-size: 18px;
   font-weight: 700;
   color: #00418f;
+  white-space: nowrap;
+}
+
+.talent-sidebar.collapsed .sidebar-header {
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.talent-sidebar.collapsed .sidebar-brand-group {
+  justify-content: center;
+  width: 100%;
 }
 
 .talent-sidebar.collapsed .sidebar-logo {
   display: none;
+}
+
+.talent-sidebar.collapsed .sidebar-toggle {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #00418f;
+  transition: all 0.15s ease;
+}
+
+.talent-sidebar.collapsed .sidebar-toggle:hover {
+  background: #e2e8f0;
+  color: #00418f;
+}
+
+.talent-sidebar.collapsed .nav-item {
+  justify-content: center;
+  padding: 10px 0;
 }
 
 .sidebar-toggle {

@@ -153,6 +153,7 @@ export const AppPrivacyPolicy = () => {
         <div className="legal-header-container">
           <nav className="legal-nav-bar" aria-label="Breadcrumb and back navigation">
             <Link to="/" className="legal-brand-link" aria-label="Castallio One Home">
+              <img src="/app_icon.png" alt="Castallio One" className="legal-brand-icon" />
               <span className="legal-brand-name">Castallio One</span>
               <span className="legal-version-badge">v1.2.8 | App Store &amp; Play Compliant</span>
             </Link>

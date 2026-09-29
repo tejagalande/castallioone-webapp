@@ -652,6 +652,91 @@
   color: #39464f;
 }
 
+/* Specific Specialization Skill Hero Card */
+.specialization-hero-card {
+  background: linear-gradient(135deg, rgba(0, 65, 143, 0.04) 0%, rgba(248, 250, 252, 0.98) 100%);
+  border: 1px solid rgba(0, 65, 143, 0.18);
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.specialization-hero-card:hover {
+  border-color: rgba(0, 65, 143, 0.32);
+  box-shadow: 0 4px 16px rgba(0, 65, 143, 0.07);
+  transform: translateY(-1px);
+}
+
+.specialization-card-inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.specialization-badge-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #00418f 0%, #002c63 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 65, 143, 0.25);
+}
+
+.specialization-badge-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.specialization-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.specialization-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.specialization-title-text {
+  margin: 0;
+  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: #1a1c1e;
+  line-height: 1.35;
+}
+
+.specialization-pill-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: rgba(0, 65, 143, 0.09);
+  color: #00418f;
+  border: 1px solid rgba(0, 65, 143, 0.22);
+  white-space: nowrap;
+}
+
+.specialization-subtext {
+  margin: 0;
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 12.5px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
 .tools-grid-2col {
   display: grid;
   grid-template-columns: 1fr;
@@ -661,92 +746,177 @@
 .tools-grid-3col {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 10px;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .tools-grid-2col {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+
+  .tools-grid-3col {
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  }
+}
+
+@media (min-width: 1200px) {
+  .tools-grid-3col {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
 }
 
 .tool-meter-card {
-  background: #f3f3f6;
-  border: 1px solid rgba(194, 198, 213, 0.3);
+  background: #ffffff;
+  border: 1px solid rgba(194, 198, 213, 0.45);
   border-radius: 12px;
-  padding: 14px;
+  padding: 13px 15px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  transition: background 0.15s;
+  gap: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
 }
 
 .tool-meter-card:hover {
-  background: #e8e8ea;
+  background: #ffffff;
+  border-color: rgba(0, 65, 143, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 65, 143, 0.08);
 }
 
 .tool-card-top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 10px;
+  min-height: 36px;
 }
 
 .tool-badge-wrap {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
 }
 
 .tool-letter-badge {
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
   background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
 }
 
 .tool-letter-badge.primary {
+  background: rgba(0, 65, 143, 0.09);
   color: #00418f;
+  border: 1px solid rgba(0, 65, 143, 0.2);
 }
 
 .tool-letter-badge.tertiary {
-  color: #39464f;
+  background: rgba(30, 41, 59, 0.08);
+  color: #1e293b;
+  border: 1px solid rgba(30, 41, 59, 0.18);
 }
 
 .tool-letter-badge.secondary {
-  color: #b3272d;
+  background: rgba(16, 185, 129, 0.1);
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.tool-letter-badge.tech-badge {
+  background: rgba(2, 132, 199, 0.1);
+  color: #0284c7;
+  border: 1px solid rgba(2, 132, 199, 0.22);
 }
 
 .tool-letter-badge.neutral {
-  color: #727784;
+  background: rgba(100, 116, 139, 0.1);
+  color: #475569;
+  border: 1px solid rgba(100, 116, 139, 0.2);
 }
 
 .tool-name-text {
+  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 13.5px;
-  font-weight: 600;
+  font-weight: 700;
   color: #1a1c1e;
+  line-height: 1.35;
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.tool-status-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: rgba(0, 65, 143, 0.08);
+  color: #00418f;
+  border: 1px solid rgba(0, 65, 143, 0.2);
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.2;
+}
+
+.tool-status-pill.endorsed {
+  background: rgba(16, 185, 129, 0.1);
+  color: #047857;
+  border-color: rgba(16, 185, 129, 0.28);
 }
 
 .tool-score-num {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 700;
   color: #00418f;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.tool-meter-card.tech-skill-card .tool-score-num {
+  color: #0284c7;
+}
+
+.tool-meter-card.soft-skill-card .tool-score-num {
+  color: #047857;
 }
 
 .tool-ruler-progress {
   width: 100%;
   height: 6px;
   border-radius: 3px;
-  background: #e2e2e5;
+  background: #e8ecf1;
   overflow: hidden;
 }
 
 .tool-ruler-fill {
   height: 100%;
   border-radius: 3px;
-  background: #00418f;
-  transition: width 0.5s ease;
+  background: linear-gradient(90deg, #00418f 0%, #0070f3 100%);
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tool-ruler-fill.tech-fill {
+  background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%);
+}
+
+.tool-ruler-fill.secondary {
+  background: linear-gradient(90deg, #059669 0%, #10b981 100%);
 }
 
 .tool-card-bottom {
@@ -754,13 +924,12 @@
   align-items: center;
   justify-content: space-between;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10.5px;
-  color: #727784;
-}
-
-.tool-status-pill {
-  color: #00418f;
-  font-weight: 600;
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.3;
+  margin-top: 2px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(226, 232, 240, 0.7);
 }
 
 .standards-tag-cloud {
@@ -1645,11 +1814,11 @@
   }
 
   .tools-grid-2col {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   }
 
   .tools-grid-3col {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   }
 }
 

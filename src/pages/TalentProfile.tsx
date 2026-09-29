@@ -392,7 +392,7 @@ export const TalentProfile: FC = () => {
           </button>
           <div className="tp-header-divider" aria-hidden="true"></div>
           <div className="tp-brand-tag">
-            <span className="tp-beacon-dot" aria-hidden="true"></span>
+            <img src="/app_icon.png" alt="Castallio One" style={{ width: '22px', height: '22px', borderRadius: '5px', objectFit: 'cover' }} />
             <span>CASTALLIO ONE // VERIFIED AEC TALENT DOSSIER</span>
           </div>
         </div>

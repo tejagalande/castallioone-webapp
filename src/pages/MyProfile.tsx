@@ -37,10 +37,6 @@ const MyProfile: FC<MyProfileProps> = ({ onNavigateToPortfolio }) => {
     experiences,
     documents,
     credentials,
-    isViewerOpen,
-    activeViewerProject,
-    openModelViewer,
-    closeModelViewer,
     handleCopyPublicUrl,
     toggleExclusiveOffers,
     handleUploadResumeFile,
@@ -62,6 +58,7 @@ const MyProfile: FC<MyProfileProps> = ({ onNavigateToPortfolio }) => {
     closeManageSkills,
     manageSkillsDraft,
     openManageSkills,
+    updateDraftSpecificSkill,
     toggleDraftSkill,
     addCustomDraftSkill,
     saveSkillsMatrix,
@@ -182,7 +179,7 @@ const MyProfile: FC<MyProfileProps> = ({ onNavigateToPortfolio }) => {
             <span className="view-tag">[WORKSPACE VIEW]</span>
           </div>
           <p className="profile-subtext">
-            Manage your verified BIM credentials, technical software stack, academic qualifications, and career availability telemetry.
+            Manage your verified BIM credentials, technical software stack, academic qualifications, and career preferences & availability.
           </p>
         </div>
 
@@ -497,72 +494,103 @@ const MyProfile: FC<MyProfileProps> = ({ onNavigateToPortfolio }) => {
               </button>
             </div>
 
-            {/* Category 1: Core BIM & AEC Software Stack */}
+            {/* Sub-section 1: Specific Specialization Skill */}
             <div className="skill-category-block">
               <div className="category-label-row">
-                <span className="category-label">Core BIM & AEC Software Stack</span>
-                <span className="category-sublabel">ISO-19650 ALIGNED PRODUCTION</span>
+                <span className="category-label">Specific Specialization Skill</span>
+                <span className="category-sublabel">PRIMARY NICHE & EXPERTISE</span>
+              </div>
+              <div className="specialization-hero-card">
+                <div className="specialization-card-inner">
+                  <div className="specialization-badge-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                  </div>
+                  <div className="specialization-body">
+                    <div className="specialization-header-row">
+                      <h4 className="specialization-title-text">
+                        {profile.primarySkill || profile.roleTitle || 'LOD 400 BIM Coordination & Façade Dynamo Automation'}
+                      </h4>
+                      <span className="specialization-pill-badge">VERIFIED SPECIALIZATION</span>
+                    </div>
+                    <p className="specialization-subtext">
+                      Primary industry specialization focused on advanced AEC model federation, parametric scripting, and high-LOD production delivery.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Sub-section 2: Core Software */}
+            <div className="skill-category-block">
+              <div className="category-label-row">
+                <span className="category-label">Core Software</span>
+                <span className="category-sublabel">EVERYDAY DESIGN & ENGINEERING SOFTWARE</span>
               </div>
               <div className="tools-grid-2col">
                 {softwareSkills.length > 0 ? (
                   softwareSkills.map((skill: SoftwareSkill) => (
-                    <div className="tool-meter-card" key={skill.id}>
+                    <div className="tool-meter-card software-skill-card" key={skill.id}>
                       <div className="tool-card-top">
                         <div className="tool-badge-wrap">
-                          <div className={`tool-letter-badge ${skill.badgeColor}`}>{skill.badgeLetter}</div>
+                          <div className={`tool-letter-badge ${skill.badgeColor || 'primary'}`}>{skill.badgeLetter}</div>
                           <span className="tool-name-text">{skill.name}</span>
                         </div>
-                        <span className="tool-status-pill">{skill.statusLabel}</span>
+                        <span className="tool-status-pill">{skill.statusLabel || 'PRODUCTION'}</span>
                       </div>
-                      <div className="tool-ruler-progress">
-                        <div className="tool-ruler-fill" style={{ width: '95%' }} />
-                      </div>
-                      <div className="tool-card-bottom">
-                        <span>{skill.description}</span>
-                      </div>
+                      {skill.description && (
+                        <div className="tool-card-bottom">
+                          <span className="category-sublabel">{skill.description}</span>
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (
-                  <div className="empty-notice-card" style={{ gridColumn: 'span 2' }}>
+                  <div className="empty-notice-card" style={{ gridColumn: '1 / -1' }}>
                     No core software configured yet. Click "Manage Skills" to select your production tools.
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Category 2: Technical & Computational Capabilities */}
+            {/* Sub-section 3: Technical Skills */}
             <div className="skill-category-block">
               <div className="category-label-row">
-                <span className="category-label">Technical & Computational Capabilities</span>
-                <span className="category-sublabel">PARAMETRIC AUTOMATION & LOD</span>
+                <span className="category-label">Technical Skills</span>
+                <span className="category-sublabel">PARAMETRIC AUTOMATION & ADVANCED LOD</span>
               </div>
               <div className="tools-grid-3col">
                 {technicalSkills.length > 0 ? (
                   technicalSkills.map((skill: SoftwareSkill) => (
-                    <div className="tool-meter-card" key={skill.id}>
+                    <div className="tool-meter-card tech-skill-card" key={skill.id}>
                       <div className="tool-card-top">
-                        <span className="tool-name-text">{skill.name}</span>
-                        <span className="tool-status-pill">{skill.statusLabel}</span>
+                        <div className="tool-badge-wrap">
+                          <div className="tool-letter-badge tech-badge">{skill.badgeLetter || '⚙'}</div>
+                          <span className="tool-name-text">{skill.name}</span>
+                        </div>
+                        <span className="tool-status-pill">{skill.statusLabel || 'VERIFIED'}</span>
                       </div>
-                      <div className="tool-ruler-progress">
-                        <div className="tool-ruler-fill" style={{ width: '92%' }} />
-                      </div>
-                      <span className="category-sublabel">{skill.description}</span>
+                      {skill.description && (
+                        <div className="tool-card-bottom">
+                          <span className="category-sublabel">{skill.description}</span>
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (
-                  <div className="empty-notice-card" style={{ gridColumn: 'span 3' }}>
+                  <div className="empty-notice-card" style={{ gridColumn: '1 / -1' }}>
                     No technical skills registered yet. Click "Manage Skills" to add your capabilities.
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Category 3: Professional Competencies & Soft Skills */}
+            {/* Sub-section 4: Soft Skills */}
             <div className="skill-category-block">
               <div className="category-label-row">
-                <span className="category-label">Professional Competencies & Leadership</span>
-                <span className="category-sublabel">DELIVERY & CROSS-DISCIPLINARY</span>
+                <span className="category-label">Soft Skills</span>
+                <span className="category-sublabel">PROFESSIONAL COMPETENCIES & LEADERSHIP</span>
               </div>
               <div className="tools-grid-3col">
                 {softSkills.length > 0 ? (
@@ -575,21 +603,22 @@ const MyProfile: FC<MyProfileProps> = ({ onNavigateToPortfolio }) => {
                         </div>
                         <span className="tool-status-pill endorsed">ENDORSED</span>
                       </div>
-                      <div className="tool-ruler-progress">
-                        <div className="tool-ruler-fill secondary" style={{ width: '88%' }} />
-                      </div>
-                      <span className="category-sublabel">{skill.description}</span>
+                      {skill.description && (
+                        <div className="tool-card-bottom">
+                          <span className="category-sublabel">{skill.description}</span>
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (
-                  <div className="empty-notice-card" style={{ gridColumn: 'span 3' }}>
+                  <div className="empty-notice-card" style={{ gridColumn: '1 / -1' }}>
                     No soft skills added yet. Click "Manage Skills" to select your competencies.
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Category 4: CDE & Standards Badges */}
+            {/* Category 5: CDE & Standards Badges */}
             <div className="skill-category-block">
               <span className="category-label">CDE Environments & Interoperability Standards</span>
               <div className="standards-tag-cloud">
@@ -606,7 +635,7 @@ const MyProfile: FC<MyProfileProps> = ({ onNavigateToPortfolio }) => {
             </div>
           </article>
 
-          {/* 4. Featured AEC Projects & Model Showcase */}
+          {/* 4. Portfolio Repository Section (COMMENTED AS REQUESTED)
           <article className="profile-card">
             <div className="section-header-row">
               <div>
@@ -633,7 +662,6 @@ const MyProfile: FC<MyProfileProps> = ({ onNavigateToPortfolio }) => {
               </button>
             </div>
 
-            {/* Dynamic External Portfolio Banner */}
             {profile.portfolioUrl && (
               <div className="portfolio-banner-link">
                 <div className="portfolio-banner-left">
@@ -662,14 +690,8 @@ const MyProfile: FC<MyProfileProps> = ({ onNavigateToPortfolio }) => {
                 <div
                   key={proj.id}
                   className="project-showcase-item"
-                  onClick={() => openModelViewer(proj)}
                   role="button"
                   tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      openModelViewer(proj)
-                    }
-                  }}
                   aria-label={`Open 3D inspector for ${proj.title}`}
                 >
                   <div className="project-thumb-frame">
@@ -695,31 +717,8 @@ const MyProfile: FC<MyProfileProps> = ({ onNavigateToPortfolio }) => {
                 </div>
               ))}
             </div>
-
-            {/* WebGL Banner Action */}
-            <div className="webgl-viewer-banner">
-              <div className="webgl-banner-left">
-                <div className="webgl-icon-box" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                    <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                    <line x1="12" y1="22.08" x2="12" y2="12" />
-                  </svg>
-                </div>
-                <div className="webgl-title-block">
-                  <p className="webgl-title">Interactive 3D WebGL Model Viewer Enabled</p>
-                  <p className="webgl-subtitle">Recruiters can orbit, slice, and inspect verified IFC models live in-browser.</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="btn-launch-viewer"
-                onClick={() => openModelViewer(INITIAL_PORTFOLIO_PROJECTS[0])}
-              >
-                Launch Viewer
-              </button>
-            </div>
           </article>
+          */}
 
           {/* 5. Professional Experience & Milestones Timeline (Real student_experience) */}
           <article className="profile-card">
@@ -930,11 +929,11 @@ const MyProfile: FC<MyProfileProps> = ({ onNavigateToPortfolio }) => {
             </button>
           </div>
 
-          {/* 3. Career Preferences & Job Search Telemetry (Real DB Schema) */}
+          {/* 3. Career Preferences & Availability (Real DB Schema) */}
           <div className="profile-card">
             <div className="category-label-row">
               <h3 className="section-card-title" style={{ fontSize: '17px' }}>
-                Career Telemetry
+                Career Preferences & Availability
               </h3>
               <span className="category-sublabel">ACTIVE</span>
             </div>
@@ -1489,11 +1488,32 @@ const MyProfile: FC<MyProfileProps> = ({ onNavigateToPortfolio }) => {
             </div>
 
             <div className="modal-body">
-              {/* 1. Core Software */}
+              {/* 1. Specific Specialization Skill */}
+              <div className="modal-form-group">
+                <div className="label-row">
+                  <label className="modal-label" htmlFor="manageSpecificSkillInput">
+                    Specific Specialization Skill
+                  </label>
+                  <span className="modal-badge-count">PRIMARY NICHE</span>
+                </div>
+                <input
+                  id="manageSpecificSkillInput"
+                  type="text"
+                  className="modal-input"
+                  placeholder="e.g. LOD 400 BIM Coordination & Façade Dynamo Automation"
+                  value={manageSkillsDraft.specificSkill}
+                  onChange={(e) => updateDraftSpecificSkill(e.target.value)}
+                />
+                <span style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                  Your primary niche (e.g. LOD-400 Clash Coordinator, Rhino Dynamo Façade Specialist)
+                </span>
+              </div>
+
+              {/* 2. Core Software */}
               <div className="modal-form-group">
                 <div className="label-row">
                   <label className="modal-label">
-                    Core BIM & AEC Software Stack
+                    Core Software
                   </label>
                   <span className="modal-badge-count">{manageSkillsDraft.coreSoftware.length} SELECTED</span>
                 </div>
@@ -1560,11 +1580,11 @@ const MyProfile: FC<MyProfileProps> = ({ onNavigateToPortfolio }) => {
                 </div>
               </div>
 
-              {/* 2. Technical Skills */}
+              {/* 3. Technical Skills */}
               <div className="modal-form-group">
                 <div className="label-row">
                   <label className="modal-label">
-                    Technical & Computational Capabilities
+                    Technical Skills
                   </label>
                   <span className="modal-badge-count">{manageSkillsDraft.technicalSkills.length} SELECTED</span>
                 </div>
@@ -1629,11 +1649,11 @@ const MyProfile: FC<MyProfileProps> = ({ onNavigateToPortfolio }) => {
                 </div>
               </div>
 
-              {/* 3. Soft Skills */}
+              {/* 4. Soft Skills */}
               <div className="modal-form-group">
                 <div className="label-row">
                   <label className="modal-label">
-                    Professional Competencies & Soft Skills
+                    Soft Skills
                   </label>
                   <span className="modal-badge-count">{manageSkillsDraft.softSkills.length} SELECTED</span>
                 </div>
@@ -1915,71 +1935,6 @@ const MyProfile: FC<MyProfileProps> = ({ onNavigateToPortfolio }) => {
               >
                 Add Credential
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── MODAL 5: 3D WebGL Model Viewer Modal ── */}
-      {isViewerOpen && (
-        <div className="profile-modal-backdrop" role="dialog" aria-modal="true" aria-label="3D Model Viewer">
-          <div className="webgl-modal-dialog">
-            <div className="webgl-modal-header">
-              <div>
-                <h3 style={{ margin: 0, fontSize: '16px', fontFamily: 'Hanken Grotesk' }}>
-                  {activeViewerProject.title}
-                </h3>
-                <span style={{ fontSize: '11px', color: '#94a3b8', fontFamily: 'JetBrains Mono' }}>
-                  IFC4x3 FEDERATED MODEL // {activeViewerProject.badge}
-                </span>
-              </div>
-              <button
-                type="button"
-                className="modal-close-btn"
-                style={{ color: '#fff' }}
-                onClick={closeModelViewer}
-                aria-label="Close 3D viewer"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '20px', height: '20px' }}>
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="webgl-viewport">
-              <div className="viewport-overlay-ui">
-                <span>FPS: 60.0 (WebGL2)</span>
-                <span>ELEMENTS: 42,890 IFC ENTITIES</span>
-                <span>LOD: 400 FABRICATION</span>
-                <span>STATUS: NO ACTIVE CLASHES</span>
-              </div>
-
-              <div className="viewport-wireframe-sim">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="1" style={{ width: '64px', height: '64px' }}>
-                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                  <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                  <line x1="12" y1="22.08" x2="12" y2="12" />
-                </svg>
-                <span style={{ fontSize: '12px', fontFamily: 'JetBrains Mono', color: '#94a3b8' }}>
-                  [Interactive Orbit Mode Active]
-                </span>
-              </div>
-
-              <div className="viewport-controls-bottom">
-                <button type="button" className="viewport-btn" onClick={() => showToast('Section slice tool enabled.')}>
-                  Section Slice
-                </button>
-                <button type="button" className="viewport-btn" onClick={() => showToast('Clash detection overlay toggled.')}>
-                  Clash Overlay
-                </button>
-                <button type="button" className="viewport-btn" onClick={() => showToast('Discipline filter: Structural & MEP isolated.')}>
-                  Filter Disciplines
-                </button>
-                <button type="button" className="viewport-btn" onClick={() => showToast('Reset camera view.')}>
-                  Reset Camera
-                </button>
-              </div>
             </div>
           </div>
         </div>

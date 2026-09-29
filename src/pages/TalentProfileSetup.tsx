@@ -116,7 +116,7 @@ export const TalentProfileSetup: React.FC<TalentProfileSetupProps> = ({
         <header className="setup-header">
           <div className="setup-header-top">
             <div className="setup-brand">
-              <span className="brand-dot" />
+              <img src="/app_icon.png" alt="Castallio One" className="setup-brand-icon" />
               <span>Castallio One</span>
               <span className="setup-badge">Talent Onboarding</span>
             </div>

@@ -44,7 +44,8 @@ export const CompanyProfileSetup: React.FC<CompanyProfileSetupProps> = ({
         <header className="setup-header">
           <div className="setup-header-top">
             <div className="setup-brand">
-              Castallio One
+              <img src="/app_icon.png" alt="Castallio One" className="setup-brand-icon" />
+              <span>Castallio One</span>
               <span className="setup-badge">Enterprise Onboarding</span>
             </div>
             <button

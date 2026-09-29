@@ -16,6 +16,7 @@ import { useAuth } from './hooks/useAuth'
 import { useToast } from './hooks/useToast'
 import { checkUserProfile } from './lib/companyService'
 import { checkTalentProfile } from './lib/talentService'
+import { setUserRole, clearUserRole } from './lib/roleService'
 
 function App() {
   const { user, loading, signOut } = useAuth()
@@ -23,6 +24,7 @@ function App() {
   const navigate = useNavigate()
 
   const handleSignInSuccess = async (type: 'talent' | 'employers') => {
+    setUserRole(type)
     if (type === 'employers') {
       if (user) {
         const { exists, needsOnboarding } = await checkUserProfile(user.id)
@@ -55,6 +57,7 @@ function App() {
   }
 
   const handleSignUpSuccess = (type: 'talent' | 'employers') => {
+    setUserRole(type)
     if (type === 'employers') {
       showSuccess('Enterprise account created! Please complete your company verification.', 'Account Created')
       navigate('/company-setup')
@@ -65,6 +68,7 @@ function App() {
   }
 
   const handleCompanySetupSuccess = () => {
+    setUserRole('employers')
     localStorage.setItem('castallio_enterprise_profile_completed', 'true')
     localStorage.removeItem('castallio_oauth_intent')
     localStorage.removeItem('castallio_signup_provider')
@@ -73,6 +77,7 @@ function App() {
   }
 
   const handleTalentSetupSuccess = () => {
+    setUserRole('talent')
     localStorage.setItem('castallio_talent_profile_completed', 'true')
     localStorage.removeItem('castallio_oauth_intent')
     localStorage.removeItem('castallio_signup_provider')
@@ -81,6 +86,7 @@ function App() {
   }
 
   const handleLogout = async () => {
+    clearUserRole()
     await signOut()
     showInfo('You have been logged out.', 'Signed Out')
     navigate('/signin', { replace: true })

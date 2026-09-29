@@ -23,6 +23,7 @@ function SignIn({ onNavigateToSignUp, onSignInSuccess }: SignInProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     console.log('Sign in:', { activeTab, email, password })
+    localStorage.setItem('castallio_user_role', activeTab)
     if (onSignInSuccess) {
       onSignInSuccess(activeTab)
     } else {
@@ -33,6 +34,7 @@ function SignIn({ onNavigateToSignUp, onSignInSuccess }: SignInProps) {
   const handleGoogleSignIn = async () => {
     try {
       setIsGoogleLoading(true)
+      localStorage.setItem('castallio_user_role', activeTab)
       await signInWithGoogle(activeTab)
     } finally {
       setIsGoogleLoading(false)
@@ -43,6 +45,7 @@ function SignIn({ onNavigateToSignUp, onSignInSuccess }: SignInProps) {
     try {
       setIsLinkedInLoading(true)
       localStorage.setItem('castallio_oauth_intent', 'signin')
+      localStorage.setItem('castallio_user_role', activeTab)
       await signInWithLinkedIn(activeTab)
     } finally {
       setIsLinkedInLoading(false)
@@ -54,7 +57,10 @@ function SignIn({ onNavigateToSignUp, onSignInSuccess }: SignInProps) {
       <div className="signin-card">
         <div className="signin-left">
           <div className="signin-brand">
-            <h1 className="signin-logo">Castallio One</h1>
+            <div className="signin-brand-header">
+              <img src="/app_icon.png" alt="Castallio One" className="signin-app-icon" />
+              <h1 className="signin-logo">Castallio One</h1>
+            </div>
             <p className="signin-version">v1.2.8 | BIM-Standardized Auth</p>
           </div>
 

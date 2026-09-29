@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { checkUserProfile } from '../lib/companyService'
 import { checkTalentProfile } from '../lib/talentService'
+import { resolveUserRole } from '../lib/roleService'
 
 interface RootRedirectProps {
   showToast?: (message: string, type: 'success' | 'error' | 'info' | 'warning', title?: string) => void
@@ -28,17 +29,19 @@ export const RootRedirect: React.FC<RootRedirectProps> = ({ showToast }) => {
       const isLinkedIn = user.app_metadata?.provider?.includes('linkedin') || signupProvider === 'linkedin'
       const isLinkedInSignUp = oauthIntent === 'signup' && isLinkedIn
 
+      const role = await resolveUserRole(user.id, user.user_metadata?.role)
+      if (!isMounted) return
+
       if (isLinkedInSignUp) {
-        showToast?.('LinkedIn authentication verified! Please set up your company profile.', 'success', 'Welcome')
-        navigate('/company-setup', { replace: true })
+        if (role === 'employers') {
+          showToast?.('LinkedIn authentication verified! Please set up your company profile.', 'success', 'Welcome')
+          navigate('/company-setup', { replace: true })
+        } else {
+          showToast?.('LinkedIn authentication verified! Please set up your talent profile.', 'success', 'Welcome')
+          navigate('/talent-setup', { replace: true })
+        }
         return
       }
-
-      const urlParams = new URLSearchParams(window.location.search)
-      const urlRole = urlParams.get('role')
-      const role = (urlRole || user.user_metadata?.role || localStorage.getItem('castallio_signup_role') || 'employers') as
-        | 'talent'
-        | 'employers'
 
       if (role === 'employers') {
         const { exists, needsOnboarding } = await checkUserProfile(user.id)
@@ -51,7 +54,6 @@ export const RootRedirect: React.FC<RootRedirectProps> = ({ showToast }) => {
           navigate('/employer', { replace: true })
         }
       } else {
-        if (!isMounted) return
         const { exists, needsOnboarding } = await checkTalentProfile(user.id)
         if (!isMounted) return
 

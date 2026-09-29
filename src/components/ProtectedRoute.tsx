@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { checkUserProfile } from '../lib/companyService'
 import { checkTalentProfile } from '../lib/talentService'
+import { resolveUserRole } from '../lib/roleService'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -17,33 +18,34 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { user, loading } = useAuth()
   const location = useLocation()
-  const [profileChecking, setProfileChecking] = useState<boolean>(requireCompletedProfile)
+  const [profileChecking, setProfileChecking] = useState<boolean>(true)
+  const [userRole, setUserRole] = useState<'talent' | 'employers' | null>(null)
   const [needsProfileSetup, setNeedsProfileSetup] = useState<boolean>(false)
 
   useEffect(() => {
     let isMounted = true
 
-    const verifyProfile = async () => {
-      if (!user || !requireCompletedProfile) {
+    const verify = async () => {
+      if (!user) {
         if (isMounted) setProfileChecking(false)
         return
       }
 
       try {
-        const urlParams = new URLSearchParams(window.location.search)
-        const urlRole = urlParams.get('role')
-        const role = (urlRole || user.user_metadata?.role || localStorage.getItem('castallio_signup_role') || requiredRole || 'employers') as
-          | 'talent'
-          | 'employers'
+        const role = await resolveUserRole(user.id, user.user_metadata?.role)
+        if (!isMounted) return
+        setUserRole(role)
 
-        if (role === 'talent') {
-          const { exists, needsOnboarding } = await checkTalentProfile(user.id)
-          if (!isMounted) return
-          setNeedsProfileSetup(!exists || needsOnboarding)
-        } else {
-          const { exists, needsOnboarding } = await checkUserProfile(user.id)
-          if (!isMounted) return
-          setNeedsProfileSetup(!exists || needsOnboarding)
+        if (requireCompletedProfile) {
+          if (role === 'talent') {
+            const { exists, needsOnboarding } = await checkTalentProfile(user.id)
+            if (!isMounted) return
+            setNeedsProfileSetup(!exists || needsOnboarding)
+          } else {
+            const { exists, needsOnboarding } = await checkUserProfile(user.id)
+            if (!isMounted) return
+            setNeedsProfileSetup(!exists || needsOnboarding)
+          }
         }
       } catch (err) {
         console.error('Failed to verify profile status:', err)
@@ -55,7 +57,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
 
     if (!loading) {
-      verifyProfile()
+      verify()
     }
 
     return () => {
@@ -100,15 +102,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/signin" state={{ from: location }} replace />
   }
 
-  // Resolve user role
-  const urlParams = new URLSearchParams(window.location.search)
-  const urlRole = urlParams.get('role')
-  const userRole = (urlRole || user.user_metadata?.role || localStorage.getItem('castallio_signup_role') || requiredRole || 'employers') as
-    | 'talent'
-    | 'employers'
-
   // Check role if specified
-  if (requiredRole && userRole !== requiredRole) {
+  if (requiredRole && userRole && userRole !== requiredRole) {
     return <Navigate to={userRole === 'employers' ? '/employer' : '/talent'} replace />
   }
 

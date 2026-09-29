@@ -49,8 +49,9 @@ export async function checkTalentProfile(userId?: string): Promise<CheckTalentPr
       console.warn('student_profile check notice:', spError.message)
     }
 
+    const isProfessional = userProfile?.role === 'professional'
     const hasCompletedFlag = 
-      userProfile?.onboarding_complete === true || 
+      (isProfessional && userProfile?.onboarding_complete === true) || 
       studentProfile?.is_profile_complete === true ||
       localCompleted
 
@@ -64,8 +65,8 @@ export async function checkTalentProfile(userId?: string): Promise<CheckTalentPr
         : localCompleteness || (hasCompletedFlag ? 100 : 25)
 
     return {
-      exists: Boolean(userProfile || studentProfile || localCompleted),
-      profile: (studentProfile || userProfile || null) as Record<string, unknown> | null,
+      exists: Boolean((isProfessional && userProfile) || studentProfile || localCompleted),
+      profile: (studentProfile || (isProfessional ? userProfile : null)) as Record<string, unknown> | null,
       needsOnboarding,
       completeness,
     }
