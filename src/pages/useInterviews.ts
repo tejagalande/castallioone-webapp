@@ -8,7 +8,10 @@ export interface InterviewSession {
   candidateName: string
   candidateRole: string
   candidateAvatar?: string
+  companyId?: string
   companyName: string
+  companyLogoUrl?: string
+  companyLocation?: string
   interviewDate: string // YYYY-MM-DD
   interviewTime: string // e.g. "11:00 AM"
   interviewType: 'Technical Review' | 'Portfolio Deep-Dive' | 'Cultural Fit' | 'Final Round'
@@ -49,6 +52,7 @@ export function useInterviews() {
   const [interviews, setInterviews] = useState<InterviewSession[]>([])
   const [availableCandidates, setAvailableCandidates] = useState<CandidateOption[]>([])
   const [loading, setLoading] = useState<boolean>(true)
+  const [userRole, setUserRole] = useState<'employer' | 'talent' | 'guest'>('guest')
   const [activeTab, setActiveTab] = useState<InterviewTabFilter>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [formatFilter, setFormatFilter] = useState<string>('all')
@@ -93,6 +97,11 @@ export function useInterviews() {
           cId = comp.id
           if (!cName) cName = comp.name
         }
+      }
+
+      const isEmployer = !!cId
+      if (isMounted) {
+        setUserRole(isEmployer ? 'employer' : 'talent')
       }
 
       // 2. Resolve Student Profile (for talent account)
@@ -245,18 +254,24 @@ export function useInterviews() {
         }
       }
 
-      // Query company names
-      const companyMap: Record<string, string> = {}
+      // Query company details (names, logos, locations)
+      const companyMap: Record<string, { name: string; logoUrl?: string; location?: string }> = {}
       const companyIdList = Array.from(companyIdSet)
       if (companyIdList.length > 0) {
         const { data: comps } = await supabase
           .from('companies')
-          .select('id, name')
+          .select('id, name, logo_url, location')
           .in('id', companyIdList)
 
         if (comps) {
           comps.forEach((c) => {
-            if (c.name) companyMap[c.id] = c.name
+            if (c.name) {
+              companyMap[c.id] = {
+                name: c.name,
+                logoUrl: c.logo_url || undefined,
+                location: c.location || undefined,
+              }
+            }
           })
         }
       }
@@ -267,7 +282,8 @@ export function useInterviews() {
         const candInfo = candId ? candidatesMap[candId] : null
         const jId = iv.job_application_id ? appsJobMap[iv.job_application_id] : null
         const roleTitle = (jId && jobTitleMap[jId]) || candInfo?.discipline || 'Applied Candidate'
-        const compTitle = (iv.company_id && companyMap[iv.company_id]) || cName || 'Enterprise Studio'
+        const compData = iv.company_id ? companyMap[iv.company_id] : null
+        const compTitle = compData?.name || cName || 'AEC Studio Partner'
 
         return {
           id: iv.id,
@@ -276,7 +292,10 @@ export function useInterviews() {
           candidateName: candInfo?.name || iv.candidate_name || 'Applicant Candidate',
           candidateRole: roleTitle,
           candidateAvatar: candInfo?.avatar,
+          companyId: iv.company_id || undefined,
           companyName: compTitle,
+          companyLogoUrl: compData?.logoUrl,
+          companyLocation: compData?.location,
           interviewDate: iv.interview_date,
           interviewTime: iv.interview_time || '10:00 AM',
           interviewType: (iv.interview_type as InterviewSession['interviewType']) || 'Technical Review',
@@ -547,8 +566,8 @@ export function useInterviews() {
     const events = upcoming
       .map(
         (iv) => `BEGIN:VEVENT
-SUMMARY:Interview: ${iv.candidateName} - ${iv.candidateRole}
-DESCRIPTION:Format: ${iv.interviewType} | Mode: ${iv.locationType} (${iv.locationValue})
+SUMMARY:Interview: ${iv.companyName} - ${iv.candidateRole}
+DESCRIPTION:Round: ${iv.interviewType} | Mode: ${iv.locationType} (${iv.locationValue})
 LOCATION:${iv.locationValue}
 STATUS:CONFIRMED
 END:VEVENT`
@@ -557,7 +576,7 @@ END:VEVENT`
 
     const icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Castallio One//Employer Interviews Calendar//EN
+PRODID:-//Castallio One//Interviews Calendar//EN
 ${events}
 END:VCALENDAR`
 
@@ -572,6 +591,91 @@ END:VCALENDAR`
     URL.revokeObjectURL(url)
     showToast('Interview calendar exported as Castallio_Interviews_Schedule.ics')
   }, [interviews, showToast])
+
+  // Download Single Session .ics
+  const handleDownloadSingleICS = useCallback(
+    (session: InterviewSession) => {
+      const stampStr = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+      const startDateTime = new Date(`${session.interviewDate}T10:00:00Z`)
+      const startStr = isNaN(startDateTime.getTime())
+        ? stampStr
+        : startDateTime.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+      const endDateTime = new Date(startDateTime.getTime() + (session.durationMinutes || 45) * 60000)
+      const endStr = isNaN(endDateTime.getTime())
+        ? stampStr
+        : endDateTime.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+
+      const icsLines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Castallio One//Talent Interview Calendar//EN',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        'BEGIN:VEVENT',
+        `UID:castallio-iv-${session.id}@castallio.one`,
+        `DTSTAMP:${stampStr}`,
+        `DTSTART:${startStr}`,
+        `DTEND:${endStr}`,
+        `SUMMARY:${session.interviewType}: ${session.companyName} (${session.candidateRole})`,
+        `DESCRIPTION:AEC Technical Round for ${session.candidateRole} with ${session.companyName}.\\nChannel: ${session.locationType} (${session.locationValue})`,
+        `LOCATION:${session.locationValue}`,
+        'STATUS:CONFIRMED',
+        'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\r\n')
+
+      const blob = new Blob([icsLines], { type: 'text/calendar;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `${session.companyName.replace(/\s+/g, '_')}_Interview.ics`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      showToast(`Calendar invite (.ics) downloaded for ${session.companyName}.`)
+    },
+    [showToast]
+  )
+
+  // Candidate Alternate Slot Request
+  const handleRequestAlternateSlot = useCallback(
+    async (sessionId: string, newDate: string, newTime: string, reason?: string) => {
+      const targetSession = interviews.find((i) => i.id === sessionId)
+      const formattedReason = `Candidate requested alternate slot: ${newDate} at ${newTime}${
+        reason ? ` (${reason})` : ''
+      }`
+
+      setInterviews((prev) =>
+        prev.map((iv) => {
+          if (iv.id === sessionId) {
+            const updatedNotes = iv.interviewerNotes
+              ? `${iv.interviewerNotes} • [Reschedule Requested]: ${formattedReason}`
+              : `[Reschedule Requested]: ${formattedReason}`
+            return { ...iv, interviewerNotes: updatedNotes }
+          }
+          return iv
+        })
+      )
+
+      try {
+        await supabase
+          .from('interviews')
+          .update({
+            notes: formattedReason,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', sessionId)
+      } catch (err) {
+        console.warn('Could not update interview with reschedule request:', err)
+      }
+
+      showToast(`Reschedule request submitted to ${targetSession?.companyName || 'studio'}.`)
+      setSelectedSessionForReschedule(null)
+    },
+    [interviews, showToast]
+  )
 
   // Filtered interview list
   const filteredInterviews = useMemo(() => {
@@ -603,11 +707,13 @@ END:VCALENDAR`
     const today = upcoming.filter((i) => i.interviewDate === todayStr || i.interviewDate.includes('today'))
     const completed = interviews.filter((i) => i.status === 'completed')
     const needsFeedback = completed.filter((i) => !i.score)
+    const awaitingDecision = completed.filter((i) => !i.recommendation)
 
     return {
       upcomingCount: upcoming.length,
       todayCount: today.length,
       needsFeedbackCount: needsFeedback.length,
+      awaitingDecisionCount: awaitingDecision.length,
       completedCount: completed.length,
     }
   }, [interviews])
@@ -633,6 +739,7 @@ END:VCALENDAR`
     setRoleFilter,
     uniqueRoles,
     kpis,
+    userRole,
     availableCandidates,
     selectedSessionForFeedback,
     setSelectedSessionForFeedback,
@@ -644,9 +751,11 @@ END:VCALENDAR`
     showToast,
     handleScheduleNewInterview,
     handleReschedule,
+    handleRequestAlternateSlot,
     handleSaveEvaluation,
     handleCancelInterview,
     handleSyncCalendar,
+    handleDownloadSingleICS,
     refreshInterviews: fetchInterviews,
   }
 }

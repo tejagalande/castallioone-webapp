@@ -570,6 +570,21 @@ export function generateOfficialResumeDossier(
       `).join('') : '<div style="color:#64748b; font-size:12px;">Grasshopper, Dynamo Studio, Python, LOD 400 Modeling, Clash Detection</div>'}
     </div>
 
+    ${softSkillsList.length > 0 ? `
+      <div class="sec-title">Professional Competencies & Soft Skills</div>
+      <div class="grid-2">
+        ${softSkillsList.map(s => `
+          <div class="card-skill">
+            <div class="card-head">
+              <span>${s.name}</span>
+              <span class="badge-pill" style="background:#dcfce7; color:#15803d;">${s.statusLabel || 'ENDORSED'}</span>
+            </div>
+            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">${s.description}</div>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
+
     ${experiences.length > 0 ? `
       <div class="sec-title">Industry Experience & Milestone Delivery</div>
       ${experiences.map(e => `
@@ -1023,6 +1038,7 @@ export function useMyProfile() {
       const tech = loadedSkills.filter((s) => s.category === 'technical').map((s) => s.name)
       const soft = loadedSkills.filter((s) => s.category === 'soft').map((s) => s.name)
       setManageSkillsDraft({
+        specificSkill: workingProfile.primarySkill || workingProfile.roleTitle || '',
         coreSoftware: core,
         technicalSkills: tech,
         softSkills: soft,

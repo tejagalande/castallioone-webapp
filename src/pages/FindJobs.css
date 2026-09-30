@@ -727,6 +727,59 @@
   color: #00418f;
 }
 
+.btn-inspector-msg.disabled,
+.btn-inspector-msg:disabled {
+  opacity: 0.6;
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.btn-inspector-msg.disabled:hover,
+.btn-inspector-msg:disabled:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #64748b;
+}
+
+.btn-inspector-msg.enabled {
+  background: #edf5ff;
+  border-color: #00418f;
+  color: #00418f;
+  font-weight: 700;
+}
+
+.btn-inspector-msg.enabled:hover {
+  background: #00418f;
+  color: #ffffff;
+}
+
+.inspector-msg-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.inspector-msg-hint.locked {
+  background: rgba(100, 116, 139, 0.08);
+  border: 1px dashed rgba(100, 116, 139, 0.3);
+  color: #64748b;
+}
+
+.inspector-msg-hint.active {
+  background: rgba(0, 65, 143, 0.08);
+  border: 1px solid rgba(0, 65, 143, 0.25);
+  color: #00418f;
+  font-weight: 600;
+}
+
 /* Key Metrics 4-Box Grid */
 .inspector-metrics-grid {
   display: grid;

@@ -4,11 +4,31 @@ import { supabase } from '../lib/supabase'
 
 export type UserRole = 'talent' | 'employers'
 
+export interface SignUpResult {
+  user: User | null
+  session: Session | null
+  needsEmailVerification: boolean
+  error?: string
+}
+
+export interface SignInResult {
+  user: User | null
+  session: Session | null
+  error?: string
+}
+
 export interface UseAuthReturn {
   user: User | null
   session: Session | null
   loading: boolean
   error: string | null
+  setError: (err: string | null) => void
+  clearError: () => void
+  signUpWithEmail: (email: string, password: string, fullName: string, role?: UserRole) => Promise<SignUpResult>
+  signInWithPassword: (email: string, password: string, role?: UserRole) => Promise<SignInResult>
+  resendVerificationEmail: (email: string) => Promise<{ success: boolean; error?: string }>
+  sendPasswordResetEmail: (email: string) => Promise<{ success: boolean; error?: string }>
+  updatePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>
   signInWithGoogle: (role?: UserRole) => Promise<void>
   signInWithLinkedIn: (role?: UserRole) => Promise<void>
   signOut: () => Promise<void>
@@ -19,6 +39,10 @@ export function useAuth(): UseAuthReturn {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
+
+  const clearError = useCallback(() => {
+    setError(null)
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -59,6 +83,16 @@ export function useAuth(): UseAuthReturn {
       }
     }
     return `${origin}?role=${role}`
+  }
+
+  const getResetPasswordUrl = () => {
+    let origin = window.location.origin
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      if (origin.startsWith('http://')) {
+        origin = origin.replace('http://', 'https://')
+      }
+    }
+    return `${origin}/reset-password`
   }
 
   const signInWithGoogle = useCallback(async (role: UserRole = 'talent') => {
@@ -111,6 +145,151 @@ export function useAuth(): UseAuthReturn {
     }
   }, [])
 
+  const signUpWithEmail = useCallback(
+    async (
+      email: string,
+      password: string,
+      fullName: string,
+      role: UserRole = 'talent'
+    ): Promise<SignUpResult> => {
+      setError(null)
+      localStorage.setItem('castallio_signup_role', role)
+      localStorage.setItem('castallio_user_role', role)
+      const dbRole = role === 'employers' ? 'company' : 'professional'
+
+      try {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            data: {
+              full_name: fullName.trim(),
+              name: fullName.trim(),
+              role: dbRole,
+              user_role: role,
+            },
+            emailRedirectTo: getRedirectUrl(role),
+          },
+        })
+
+        if (signUpError) {
+          throw signUpError
+        }
+
+        // Supabase returns user and optionally session
+        // If identities is empty array, it indicates the user already exists (Supabase security feature)
+        if (data?.user && (!data.user.identities || data.user.identities.length === 0)) {
+          const userExistsMsg = 'An account with this email address already exists. Please sign in.'
+          setError(userExistsMsg)
+          return {
+            user: null,
+            session: null,
+            needsEmailVerification: false,
+            error: userExistsMsg,
+          }
+        }
+
+        const needsEmailVerification = !data?.session && Boolean(data?.user)
+
+        if (data?.session) {
+          setSession(data.session)
+          setUser(data.user)
+        }
+
+        return {
+          user: data?.user ?? null,
+          session: data?.session ?? null,
+          needsEmailVerification,
+        }
+      } catch (err: unknown) {
+        const authErr = err as AuthError
+        const errorMessage = authErr.message || 'Failed to create account.'
+        setError(errorMessage)
+        console.error('Email Sign-Up Error:', errorMessage)
+        return {
+          user: null,
+          session: null,
+          needsEmailVerification: false,
+          error: errorMessage,
+        }
+      }
+    },
+    []
+  )
+
+  const signInWithPassword = useCallback(
+    async (email: string, password: string, role: UserRole = 'talent'): Promise<SignInResult> => {
+      setError(null)
+      localStorage.setItem('castallio_user_role', role)
+      try {
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        })
+        if (signInError) throw signInError
+        setSession(data.session)
+        setUser(data.user)
+        return { user: data.user, session: data.session }
+      } catch (err: unknown) {
+        const authErr = err as AuthError
+        const errorMessage = authErr.message || 'Invalid email or password.'
+        setError(errorMessage)
+        console.error('Password Sign-In Error:', errorMessage)
+        return { user: null, session: null, error: errorMessage }
+      }
+    },
+    []
+  )
+
+  const resendVerificationEmail = useCallback(async (email: string): Promise<{ success: boolean; error?: string }> => {
+    setError(null)
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email: email.trim(),
+      })
+      if (resendError) throw resendError
+      return { success: true }
+    } catch (err: unknown) {
+      const authErr = err as AuthError
+      const errorMessage = authErr.message || 'Failed to resend confirmation email.'
+      setError(errorMessage)
+      return { success: false, error: errorMessage }
+    }
+  }, [])
+
+  const sendPasswordResetEmail = useCallback(async (email: string): Promise<{ success: boolean; error?: string }> => {
+    setError(null)
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: getResetPasswordUrl(),
+      })
+      if (resetError) throw resetError
+      return { success: true }
+    } catch (err: unknown) {
+      const authErr = err as AuthError
+      const errorMessage = authErr.message || 'Failed to send password reset email.'
+      setError(errorMessage)
+      return { success: false, error: errorMessage }
+    }
+  }, [])
+
+  const updatePassword = useCallback(async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
+    setError(null)
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+      })
+      if (updateError) throw updateError
+      return { success: true }
+    } catch (err: unknown) {
+      const authErr = err as AuthError
+      const errorMessage = authErr.message || 'Failed to update password.'
+      setError(errorMessage)
+      return { success: false, error: errorMessage }
+    }
+  }, [])
+
   const signOut = useCallback(async () => {
     setError(null)
     try {
@@ -143,6 +322,13 @@ export function useAuth(): UseAuthReturn {
     session,
     loading,
     error,
+    setError,
+    clearError,
+    signUpWithEmail,
+    signInWithPassword,
+    resendVerificationEmail,
+    sendPasswordResetEmail,
+    updatePassword,
     signInWithGoogle,
     signInWithLinkedIn,
     signOut,

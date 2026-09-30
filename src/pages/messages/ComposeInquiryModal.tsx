@@ -1,4 +1,4 @@
-import { useState, type FC, useEffect } from 'react'
+import { useState, type FC } from 'react'
 import type { RecipientOption } from './types'
 
 interface ComposeInquiryModalProps {
@@ -20,16 +20,12 @@ export const ComposeInquiryModal: FC<ComposeInquiryModalProps> = ({
   const [customSubject, setCustomSubject] = useState<string>('Parametric Facade Optimization & LOD-400 Coordination')
   const [messageBody, setMessageBody] = useState<string>('')
 
-  useEffect(() => {
-    if (availableRecipients.length > 0 && !selectedRecipientId) {
-      setSelectedRecipientId(availableRecipients[0].id)
-    }
-  }, [availableRecipients, selectedRecipientId])
-
   if (!isOpen) return null
 
+  const effectiveRecipientId = selectedRecipientId || (availableRecipients[0]?.id ?? '')
+
   const handleDispatch = () => {
-    const selected = availableRecipients.find((r) => r.id === selectedRecipientId) || availableRecipients[0]
+    const selected = availableRecipients.find((r) => r.id === effectiveRecipientId) || availableRecipients[0]
     if (!selected) {
       onClose()
       return
@@ -69,7 +65,7 @@ export const ComposeInquiryModal: FC<ComposeInquiryModalProps> = ({
             </label>
             {availableRecipients.length > 0 ? (
               <select
-                value={selectedRecipientId}
+                value={effectiveRecipientId}
                 onChange={(e) => setSelectedRecipientId(e.target.value)}
                 style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #c2c6d5', fontSize: '14px', fontFamily: 'inherit' }}
               >
@@ -79,16 +75,22 @@ export const ComposeInquiryModal: FC<ComposeInquiryModalProps> = ({
                   </option>
                 ))}
               </select>
+            ) : userRole === 'talent' ? (
+              <div style={{ padding: '14px', borderRadius: '8px', background: '#f8fafc', border: '1px dashed #cbd5e1', textAlign: 'center' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '24px', color: '#64748b', marginBottom: '4px' }}>
+                  lock
+                </span>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                  Messaging Unlocks Upon Application
+                </p>
+                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
+                  You can chat with companies once you apply for their open positions. Explore positions in Find Jobs and submit an application to start chatting.
+                </p>
+              </div>
             ) : (
-              <select
-                value="Foster + Partners"
-                disabled
-                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #c2c6d5', fontSize: '14px', fontFamily: 'inherit' }}
-              >
-                <option value="Foster + Partners">Foster + Partners (Applied R&amp;D Practice)</option>
-                <option value="Zaha Hadid CODE">Zaha Hadid CODE (Computation &amp; Design)</option>
-                <option value="Arup Advanced Digital">Arup Advanced Digital (Structural &amp; Computational)</option>
-              </select>
+              <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+                No active candidate applicants found.
+              </p>
             )}
           </div>
 
@@ -138,8 +140,10 @@ export const ComposeInquiryModal: FC<ComposeInquiryModalProps> = ({
             type="button"
             className="btn-msg-primary"
             onClick={handleDispatch}
+            disabled={availableRecipients.length === 0}
+            title={availableRecipients.length === 0 ? 'Apply to a position first to message a studio' : 'Send inquiry'}
           >
-            Dispatch Transmission
+            {availableRecipients.length === 0 ? 'Apply to a Studio First' : 'Dispatch Transmission'}
           </button>
         </div>
       </div>

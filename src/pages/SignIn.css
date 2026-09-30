@@ -337,6 +337,100 @@
   font-weight: 500;
 }
 
+/* ── Forgot Password Panel ── */
+.forgot-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.forgot-back-btn {
+  background: none;
+  border: none;
+  color: #0b5bd3;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 20px;
+  font-family: 'Manrope', sans-serif;
+  transition: color 0.15s;
+  align-self: flex-start;
+}
+
+.forgot-back-btn:hover {
+  color: #00418f;
+  text-decoration: underline;
+}
+
+.forgot-header {
+  margin-bottom: 20px;
+}
+
+.forgot-title {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 6px;
+}
+
+.forgot-desc {
+  font-size: 13.5px;
+  color: #6b7280;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.forgot-success-card {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.forgot-success-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #16a34a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+}
+
+.forgot-success-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.forgot-success-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #15803d;
+  margin: 0 0 6px;
+}
+
+.forgot-success-desc {
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.forgot-email-highlight {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: #0f766e;
+}
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .signin-card {

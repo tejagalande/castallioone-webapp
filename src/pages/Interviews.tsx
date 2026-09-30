@@ -8,6 +8,7 @@ import './Interviews.css'
 
 export interface InterviewsProps {
   onNavigateToFindJobs?: () => void
+  onNavigateToMessages?: (companyName?: string, companyId?: string) => void
 }
 
 const FORMAT_OPTIONS: SortOptionItem<string>[] = [
@@ -56,7 +57,7 @@ const QUICK_TIME_SLOTS = [
   { label: '05:00 PM', time24: '17:00' },
 ]
 
-export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
+export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs, onNavigateToMessages }) => {
   const {
     interviews,
     filteredInterviews,
@@ -80,11 +81,14 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
     setIsScheduleNewModalOpen,
     toastMessage,
     showToast,
+    userRole,
     handleScheduleNewInterview,
     handleReschedule,
+    handleRequestAlternateSlot,
     handleSaveEvaluation,
     handleCancelInterview,
     handleSyncCalendar,
+    handleDownloadSingleICS,
   } = useInterviews()
 
   const todayStr = useMemo(() => {
@@ -210,7 +214,11 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
     const initialDate = session.interviewDate >= todayStr ? session.interviewDate : todayStr
     setRescheduleDate(initialDate)
     setRescheduleTime(parseTimeTo24Hour(session.interviewTime))
-    setRescheduleReason('Candidate requested alternate slot')
+    setRescheduleReason(
+      userRole === 'talent'
+        ? 'Academic / Examination conflict'
+        : 'Candidate requested alternate slot'
+    )
   }
 
   // Open Feedback Modal
@@ -230,17 +238,26 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
     })),
   ]
 
-  // Submit Reschedule
-  const onSubmitReschedule = (e: FormEvent) => {
+  // Submit Reschedule / Alternate Slot Request
+  const onSubmitReschedule = async (e: FormEvent) => {
     e.preventDefault()
     if (!selectedSessionForReschedule || !rescheduleValidation.valid) return
     const formatted12h = formatTimeTo12Hour(rescheduleTime)
-    handleReschedule(
-      selectedSessionForReschedule.id,
-      rescheduleDate,
-      formatted12h,
-      rescheduleReason.trim() || undefined
-    )
+    if (userRole === 'talent') {
+      await handleRequestAlternateSlot(
+        selectedSessionForReschedule.id,
+        rescheduleDate,
+        formatted12h,
+        rescheduleReason.trim() || undefined
+      )
+    } else {
+      handleReschedule(
+        selectedSessionForReschedule.id,
+        rescheduleDate,
+        formatted12h,
+        rescheduleReason.trim() || undefined
+      )
+    }
   }
 
   // Submit Evaluation Scorecard
@@ -272,19 +289,26 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
         <div>
           <div className="int-overline-badge">
             <span className="material-symbols-outlined" style={{ fontSize: '15px' }} aria-hidden="true">
-              event_available
+              {userRole === 'talent' ? 'school' : 'event_available'}
             </span>
-            <span>INTERVIEW OPERATIONS &amp; CANDIDATE EVALUATIONS</span>
+            <span>
+              {userRole === 'talent'
+                ? 'CANDIDATE DEFENSE SCHEDULE & REVIEWS'
+                : 'INTERVIEW OPERATIONS & CANDIDATE EVALUATIONS'}
+            </span>
           </div>
-          <h1 className="int-header-title">Interviews &amp; Technical Rounds</h1>
+          <h1 className="int-header-title">
+            {userRole === 'talent' ? 'My Interviews & Technical Defenses' : 'Interviews & Technical Rounds'}
+          </h1>
           <p className="int-header-desc">
-            Coordinate upcoming candidate rounds, manage video meeting links, and submit reviewer evaluation scorecards
-            across all active requisitions.
+            {userRole === 'talent'
+              ? 'Prepare for upcoming technical rounds, access direct meeting links, coordinate alternate schedules, and view official studio evaluations.'
+              : 'Coordinate upcoming candidate rounds, manage video meeting links, and submit reviewer evaluation scorecards across all active requisitions.'}
           </p>
         </div>
 
         <div className="int-header-actions">
-          <button
+          {/* <button
             type="button"
             className="btn-int-secondary"
             onClick={handleSyncCalendar}
@@ -294,19 +318,21 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
               calendar_month
             </span>
             <span>Sync Calendar (.ics)</span>
-          </button>
+          </button> */}
 
-          <button
-            type="button"
-            className="btn-int-primary"
-            onClick={() => setIsScheduleNewModalOpen(true)}
-            title="Schedule a New Interview Round"
-          >
-            <span className="material-symbols-outlined" aria-hidden="true">
-              add_circle
-            </span>
-            <span>Schedule New Interview</span>
-          </button>
+          {userRole !== 'talent' && (
+            <button
+              type="button"
+              className="btn-int-primary"
+              onClick={() => setIsScheduleNewModalOpen(true)}
+              title="Schedule a New Interview Round"
+            >
+              <span className="material-symbols-outlined" aria-hidden="true">
+                add_circle
+              </span>
+              <span>Schedule New Interview</span>
+            </button>
+          )}
         </div>
       </section>
 
@@ -315,7 +341,7 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
         {/* KPI 1 */}
         <article className="int-metric-card">
           <div className="int-metric-top">
-            <span className="int-metric-label">Upcoming Rounds</span>
+            <span className="int-metric-label">{userRole === 'talent' ? 'Upcoming Defenses' : 'Upcoming Rounds'}</span>
             <div className="int-metric-icon-box">
               <span className="material-symbols-outlined" style={{ fontSize: '18px' }} aria-hidden="true">
                 event_upcoming
@@ -324,12 +350,16 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
           </div>
           <div className="int-metric-val-row">
             <span className="int-metric-num">{kpis.upcomingCount}</span>
-            <span className="int-metric-subtext">Active Scheduled</span>
+            <span className="int-metric-subtext">{userRole === 'talent' ? 'Confirmed Rounds' : 'Active Scheduled'}</span>
           </div>
-          <p className="int-metric-desc">Candidates awaiting technical evaluation</p>
+          <p className="int-metric-desc">
+            {userRole === 'talent' ? 'Live AEC studio interviews scheduled' : 'Candidates awaiting technical evaluation'}
+          </p>
           <div className="int-metric-footer-pill">
             <span>STATUS:</span>
-            <span style={{ color: '#00418f', fontWeight: 700 }}>PIPELINE ACTIVE</span>
+            <span style={{ color: '#00418f', fontWeight: 700 }}>
+              {userRole === 'talent' ? 'READY TO DEFEND' : 'PIPELINE ACTIVE'}
+            </span>
           </div>
         </article>
 
@@ -349,11 +379,13 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
             </span>
             <span className="int-metric-subtext">Scheduled Today</span>
           </div>
-          <p className="int-metric-desc">Live rounds scheduled on current date</p>
+          <p className="int-metric-desc">
+            {userRole === 'talent' ? 'Active sessions on your calendar today' : 'Live rounds scheduled on current date'}
+          </p>
           <div className="int-metric-footer-pill">
             <span>AGENDA:</span>
             <span style={{ color: '#1d4ed8', fontWeight: 700 }}>
-              {kpis.todayCount > 0 ? `${kpis.todayCount} PANELS READY` : 'NO SESSIONS TODAY'}
+              {kpis.todayCount > 0 ? `${kpis.todayCount} SESSION${kpis.todayCount > 1 ? 'S' : ''} TODAY` : 'NO SESSIONS TODAY'}
             </span>
           </div>
         </article>
@@ -361,23 +393,27 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
         {/* KPI 3 */}
         <article className="int-metric-card">
           <div className="int-metric-top">
-            <span className="int-metric-label">Pending Feedback</span>
+            <span className="int-metric-label">{userRole === 'talent' ? 'Awaiting Decision' : 'Pending Feedback'}</span>
             <div className="int-metric-icon-box" style={{ background: '#fffbeb', color: '#b45309' }}>
               <span className="material-symbols-outlined" style={{ fontSize: '18px' }} aria-hidden="true">
-                rate_review
+                {userRole === 'talent' ? 'hourglass_top' : 'rate_review'}
               </span>
             </div>
           </div>
           <div className="int-metric-val-row">
             <span className="int-metric-num" style={{ color: '#b45309' }}>
-              {kpis.needsFeedbackCount}
+              {userRole === 'talent' ? (kpis.awaitingDecisionCount ?? kpis.needsFeedbackCount) : kpis.needsFeedbackCount}
             </span>
-            <span className="int-metric-subtext">Needs Review</span>
+            <span className="int-metric-subtext">{userRole === 'talent' ? 'Under Studio Review' : 'Needs Review'}</span>
           </div>
-          <p className="int-metric-desc">Completed sessions awaiting scorecard</p>
+          <p className="int-metric-desc">
+            {userRole === 'talent' ? 'Completed rounds pending final firm verdict' : 'Completed sessions awaiting scorecard'}
+          </p>
           <div className="int-metric-footer-pill">
-            <span>SCORECARDS:</span>
-            <span style={{ color: '#b45309', fontWeight: 700 }}>AWAITING INPUT</span>
+            <span>{userRole === 'talent' ? 'STATUS:' : 'SCORECARDS:'}</span>
+            <span style={{ color: '#b45309', fontWeight: 700 }}>
+              {userRole === 'talent' ? 'IN PROGRESS' : 'AWAITING INPUT'}
+            </span>
           </div>
         </article>
 
@@ -395,12 +431,18 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
             <span className="int-metric-num" style={{ color: '#15803d' }}>
               {kpis.completedCount}
             </span>
-            <span className="int-metric-subtext">Evaluated</span>
+            <span className="int-metric-subtext">{userRole === 'talent' ? 'Evaluated' : 'Evaluated'}</span>
           </div>
-          <p className="int-metric-desc">Finished rounds with evaluation dossiers</p>
+          <p className="int-metric-desc">
+            {userRole === 'talent'
+              ? 'Finished rounds with evaluation dossiers'
+              : 'Finished rounds with evaluation dossiers'}
+          </p>
           <div className="int-metric-footer-pill">
-            <span>DECISION ARCHIVE:</span>
-            <span style={{ color: '#15803d', fontWeight: 700 }}>LOGGED</span>
+            <span>{userRole === 'talent' ? 'RECORD:' : 'DECISION ARCHIVE:'}</span>
+            <span style={{ color: '#15803d', fontWeight: 700 }}>
+              {userRole === 'talent' ? 'ARCHIVED' : 'LOGGED'}
+            </span>
           </div>
         </article>
       </section>
@@ -444,7 +486,7 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
             </span>
             <input
               type="text"
-              placeholder="Search candidate, role, or format..."
+              placeholder={userRole === 'talent' ? 'Search studio, role, or format...' : 'Search candidate, role, or format...'}
               value={searchQuery}
               onChange={handleSearchChange}
               aria-label="Search interviews"
@@ -564,8 +606,12 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
               <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#727784' }}>
                 event_busy
               </span>
-              <h3>No Interviews Found</h3>
-              <p>No candidate interview sessions match your current filter criteria.</p>
+              <h3>{userRole === 'talent' ? 'No Scheduled Interviews Yet' : 'No Interviews Found'}</h3>
+              <p>
+                {userRole === 'talent'
+                  ? 'When architectural studios and engineering firms schedule a technical defense or portfolio review for your applications, they will appear right here.'
+                  : 'No candidate interview sessions match your current filter criteria.'}
+              </p>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                 <button
                   type="button"
@@ -645,9 +691,21 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
                         </span>
                       </div>
 
-                      {/* Candidate Avatar, Name & Role */}
+                      {/* Avatar, Name & Role: Studio branding for talent, Candidate profile for employer */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '2px' }}>
-                        {session.candidateAvatar ? (
+                        {userRole === 'talent' ? (
+                          session.companyLogoUrl ? (
+                            <img
+                              src={session.companyLogoUrl}
+                              alt={session.companyName}
+                              className="int-studio-logo"
+                            />
+                          ) : (
+                            <div className="int-studio-avatar-placeholder">
+                              {(session.companyName || 'S').charAt(0).toUpperCase()}
+                            </div>
+                          )
+                        ) : session.candidateAvatar ? (
                           <img
                             src={session.candidateAvatar}
                             alt={session.candidateName}
@@ -683,10 +741,21 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
                           </div>
                         )}
                         <div>
-                          <h2 className="int-card-firm-title" style={{ margin: 0 }}>{session.candidateName}</h2>
+                          <h2 className="int-card-firm-title" style={{ margin: 0 }}>
+                            {userRole === 'talent' ? (session.companyName || 'AEC Studio') : session.candidateName}
+                          </h2>
                           <p className="int-card-studio-line" style={{ margin: '2px 0 0 0' }}>
-                            Applied for: <strong style={{ color: '#00418f' }}>{session.candidateRole}</strong> •{' '}
-                            <span>{session.companyName}</span>
+                            {userRole === 'talent' ? (
+                              <>
+                                Technical Defense for: <strong style={{ color: '#00418f' }}>{session.candidateRole}</strong>
+                                {session.companyLocation && <span> • {session.companyLocation}</span>}
+                              </>
+                            ) : (
+                              <>
+                                Applied for: <strong style={{ color: '#00418f' }}>{session.candidateRole}</strong> •{' '}
+                                <span>{session.companyName}</span>
+                              </>
+                            )}
                           </p>
                         </div>
                       </div>
@@ -797,56 +866,122 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
                             <span>Join Meeting Room ↗</span>
                           </a>
 
-                          <button
-                            type="button"
-                            className="btn-int-secondary"
-                            onClick={() => openFeedbackModal(session)}
-                            title="Submit Evaluation Scorecard"
-                          >
-                            <span className="material-symbols-outlined text-primary" aria-hidden="true">
-                              rate_review
-                            </span>
-                            <span>Submit Scorecard</span>
-                          </button>
+                          {userRole === 'talent' ? (
+                            <>
+                              <button
+                                type="button"
+                                className="btn-int-secondary"
+                                onClick={() => handleDownloadSingleICS(session)}
+                                title="Add this session to your calendar (.ics)"
+                              >
+                                <span className="material-symbols-outlined text-primary" aria-hidden="true">
+                                  calendar_add_on
+                                </span>
+                                <span>Add to Calendar</span>
+                              </button>
 
-                          <button
-                            type="button"
-                            className="btn-int-secondary"
-                            onClick={() => openRescheduleModal(session)}
-                            title="Reschedule this session"
-                          >
-                            <span className="material-symbols-outlined text-primary" aria-hidden="true">
-                              edit_calendar
-                            </span>
-                            <span>Reschedule</span>
-                          </button>
+                              {onNavigateToMessages && (
+                                <button
+                                  type="button"
+                                  className="btn-int-secondary"
+                                  onClick={() => onNavigateToMessages(session.companyName, session.companyId)}
+                                  title="Message the studio recruitment team"
+                                >
+                                  <span className="material-symbols-outlined text-primary" aria-hidden="true">
+                                    chat
+                                  </span>
+                                  <span>Message Studio</span>
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                className="btn-int-secondary"
+                                onClick={() => openRescheduleModal(session)}
+                                title="Propose an alternate time slot"
+                              >
+                                <span className="material-symbols-outlined text-primary" aria-hidden="true">
+                                  schedule
+                                </span>
+                                <span>Request Alternate Slot</span>
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                className="btn-int-secondary"
+                                onClick={() => openFeedbackModal(session)}
+                                title="Submit Evaluation Scorecard"
+                              >
+                                <span className="material-symbols-outlined text-primary" aria-hidden="true">
+                                  rate_review
+                                </span>
+                                <span>Submit Scorecard</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                className="btn-int-secondary"
+                                onClick={() => openRescheduleModal(session)}
+                                title="Reschedule this session"
+                              >
+                                <span className="material-symbols-outlined text-primary" aria-hidden="true">
+                                  edit_calendar
+                                </span>
+                                <span>Reschedule</span>
+                              </button>
+                            </>
+                          )}
                         </>
                       )}
 
                       {isCompleted && (
-                        <button
-                          type="button"
-                          className="btn-int-secondary"
-                          onClick={() => openFeedbackModal(session)}
-                          title="View / Edit Evaluation Dossier"
-                        >
-                          <span className="material-symbols-outlined text-primary" aria-hidden="true">
-                            assignment_turned_in
-                          </span>
-                          <span>View Evaluation Scorecard</span>
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            className="btn-int-secondary"
+                            onClick={() => openFeedbackModal(session)}
+                            title={userRole === 'talent' ? 'View Official Studio Feedback' : 'View / Edit Evaluation Dossier'}
+                          >
+                            <span className="material-symbols-outlined text-primary" aria-hidden="true">
+                              {userRole === 'talent' ? 'verified' : 'assignment_turned_in'}
+                            </span>
+                            <span>{userRole === 'talent' ? 'View Studio Evaluation' : 'View Evaluation Scorecard'}</span>
+                          </button>
+
+                          {userRole === 'talent' && onNavigateToMessages && (
+                            <button
+                              type="button"
+                              className="btn-int-secondary"
+                              onClick={() => onNavigateToMessages(session.companyName, session.companyId)}
+                              title="Message the studio team"
+                            >
+                              <span className="material-symbols-outlined text-primary" aria-hidden="true">
+                                chat
+                              </span>
+                              <span>Message Studio</span>
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
 
                     {isScheduled && (
-                      <button
-                        type="button"
-                        style={{ background: 'none', border: 'none', color: '#b91c1c', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}
-                        onClick={() => handleCancelInterview(session.id)}
-                        title="Cancel this interview round"
-                      >
-                        Cancel Session
-                      </button>
+                      userRole === 'talent' ? (
+                        <span style={{ fontSize: '12px', color: '#727784' }}>
+                          Need to adjust schedule? Request an alternate slot or message the studio.
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          style={{ background: 'none', border: 'none', color: '#b91c1c', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}
+                          onClick={() => handleCancelInterview(session.id)}
+                          title="Cancel this interview round"
+                        >
+                          Cancel Session
+                        </button>
+                      )
                     )}
                   </div>
                 </article>
@@ -912,56 +1047,112 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
 
         {/* RIGHT COLUMN: INTERVIEW DESK SIDEBAR (4 Cols) */}
         <aside className="int-sidebar-column">
-          {/* Widget 1: Evaluation Standard Rubric */}
-          <div className="int-sidebar-card">
-            <div className="int-sidebar-header">
-              <div className="int-sidebar-title">
-                <span className="material-symbols-outlined" aria-hidden="true">
-                  checklist
-                </span>
-                <span>Evaluation Rubric</span>
-              </div>
-              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', background: '#d8e2ff', color: '#00418f', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                STANDARD
-              </span>
-            </div>
+          {userRole === 'talent' ? (
+            <>
+              {/* Talent Widget 1: Technical Defense Checklist */}
+              <div className="int-sidebar-card">
+                <div className="int-sidebar-header">
+                  <div className="int-sidebar-title">
+                    <span className="material-symbols-outlined" aria-hidden="true">
+                      checklist
+                    </span>
+                    <span>Defense Checklist</span>
+                  </div>
+                  <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', background: '#d8e2ff', color: '#00418f', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                    PREP GUIDE
+                  </span>
+                </div>
 
-            <p style={{ margin: 0, fontSize: '13px', color: '#424753', lineHeight: 1.45 }}>
-              Benchmark candidate competencies across standard architectural and engineering criteria:
-            </p>
+                <p style={{ margin: 0, fontSize: '13px', color: '#424753', lineHeight: 1.45 }}>
+                  Key items to prepare before joining your technical round with studio leadership:
+                </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div className="int-focus-item">
-                <span style={{ fontWeight: 500 }}>Technical &amp; BIM Mastery</span>
-                <span className="int-focus-priority High">Weight 40%</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div className="int-focus-item">
+                    <span style={{ fontWeight: 500 }}>Portfolio &amp; BIM sheets open</span>
+                    <span className="int-focus-priority High">Critical</span>
+                  </div>
+                  <div className="int-focus-item">
+                    <span style={{ fontWeight: 500 }}>Mic, camera &amp; screen share tested</span>
+                    <span className="int-focus-priority High">Required</span>
+                  </div>
+                  <div className="int-focus-item">
+                    <span style={{ fontWeight: 500 }}>2-3 questions for the studio team</span>
+                    <span className="int-focus-priority Medium">Recommended</span>
+                  </div>
+                </div>
               </div>
-              <div className="int-focus-item">
-                <span style={{ fontWeight: 500 }}>Project &amp; Code Execution</span>
-                <span className="int-focus-priority High">Weight 30%</span>
-              </div>
-              <div className="int-focus-item">
-                <span style={{ fontWeight: 500 }}>Communication &amp; Team Fit</span>
-                <span className="int-focus-priority Medium">Weight 30%</span>
-              </div>
-            </div>
-          </div>
 
-          {/* Widget 3: Interview Hiring Tip */}
-          <div className="int-sidebar-card" style={{ background: '#f8faff', borderColor: 'rgba(0, 88, 188, 0.2)' }}>
-            <div className="int-sidebar-header">
-              <div className="int-sidebar-title" style={{ color: '#00418f' }}>
-                <span className="material-symbols-outlined" aria-hidden="true">
-                  lightbulb
-                </span>
-                <span>Recruitment Velocity</span>
-              </div>
-            </div>
+              {/* Talent Widget 2: Defense Tip */}
+              <div className="int-sidebar-card" style={{ background: '#f8faff', borderColor: 'rgba(0, 88, 188, 0.2)' }}>
+                <div className="int-sidebar-header">
+                  <div className="int-sidebar-title" style={{ color: '#00418f' }}>
+                    <span className="material-symbols-outlined" aria-hidden="true">
+                      lightbulb
+                    </span>
+                    <span>Studio Insight</span>
+                  </div>
+                </div>
 
-            <p style={{ margin: 0, fontSize: '12.5px', color: '#334155', lineHeight: 1.45 }}>
-              Candidates respond <strong>2.8x faster</strong> when evaluation scorecards and next-stage decisions are logged
-              within 24 hours of round completion.
-            </p>
-          </div>
+                <p style={{ margin: 0, fontSize: '12.5px', color: '#334155', lineHeight: 1.45 }}>
+                  AEC interview panels value <strong>narrative and structural reasoning</strong>. Walk through your design decisions, drawing detailing choices, and code compliance steps with clarity.
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Widget 1: Evaluation Standard Rubric */}
+              <div className="int-sidebar-card">
+                <div className="int-sidebar-header">
+                  <div className="int-sidebar-title">
+                    <span className="material-symbols-outlined" aria-hidden="true">
+                      checklist
+                    </span>
+                    <span>Evaluation Rubric</span>
+                  </div>
+                  <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', background: '#d8e2ff', color: '#00418f', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                    STANDARD
+                  </span>
+                </div>
+
+                <p style={{ margin: 0, fontSize: '13px', color: '#424753', lineHeight: 1.45 }}>
+                  Benchmark candidate competencies across standard architectural and engineering criteria:
+                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div className="int-focus-item">
+                    <span style={{ fontWeight: 500 }}>Technical &amp; BIM Mastery</span>
+                    <span className="int-focus-priority High">Weight 40%</span>
+                  </div>
+                  <div className="int-focus-item">
+                    <span style={{ fontWeight: 500 }}>Project &amp; Code Execution</span>
+                    <span className="int-focus-priority High">Weight 30%</span>
+                  </div>
+                  <div className="int-focus-item">
+                    <span style={{ fontWeight: 500 }}>Communication &amp; Team Fit</span>
+                    <span className="int-focus-priority Medium">Weight 30%</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Widget 3: Interview Hiring Tip */}
+              <div className="int-sidebar-card" style={{ background: '#f8faff', borderColor: 'rgba(0, 88, 188, 0.2)' }}>
+                <div className="int-sidebar-header">
+                  <div className="int-sidebar-title" style={{ color: '#00418f' }}>
+                    <span className="material-symbols-outlined" aria-hidden="true">
+                      lightbulb
+                    </span>
+                    <span>Recruitment Velocity</span>
+                  </div>
+                </div>
+
+                <p style={{ margin: 0, fontSize: '12.5px', color: '#334155', lineHeight: 1.45 }}>
+                  Candidates respond <strong>2.8x faster</strong> when evaluation scorecards and next-stage decisions are logged
+                  within 24 hours of round completion.
+                </p>
+              </div>
+            </>
+          )}
         </aside>
       </section>
 
@@ -975,7 +1166,9 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
         >
           <div className="int-modal-window" style={{ maxWidth: '480px' }} onClick={(e) => e.stopPropagation()}>
             <div className="int-modal-header">
-              <h3 className="int-modal-title">Reschedule Interview Round</h3>
+              <h3 className="int-modal-title">
+                {userRole === 'talent' ? 'Request Alternate Interview Slot' : 'Reschedule Interview Round'}
+              </h3>
               <button
                 type="button"
                 className="btn-card-icon"
@@ -1009,13 +1202,19 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
                 </div>
               </div>
 
-              {/* Candidate & Round summary */}
+              {/* Candidate / Studio & Round summary */}
               <div>
                 <strong style={{ fontSize: '14.5px', color: '#1a1c1e' }}>
-                  {selectedSessionForReschedule.candidateName}
+                  {userRole === 'talent'
+                    ? (selectedSessionForReschedule.companyName || 'AEC Studio')
+                    : selectedSessionForReschedule.candidateName}
                 </strong>
                 <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#727784' }}>
-                  {selectedSessionForReschedule.candidateRole} • {selectedSessionForReschedule.interviewType} ({selectedSessionForReschedule.durationMinutes} min round)
+                  {userRole === 'talent' ? (
+                    <>Technical Defense: {selectedSessionForReschedule.candidateRole} • {selectedSessionForReschedule.interviewType} ({selectedSessionForReschedule.durationMinutes} min round)</>
+                  ) : (
+                    <>{selectedSessionForReschedule.candidateRole} • {selectedSessionForReschedule.interviewType} ({selectedSessionForReschedule.durationMinutes} min round)</>
+                  )}
                 </p>
               </div>
 
@@ -1082,19 +1281,33 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
               {/* Reason for Reschedule */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1a1c1e' }}>
-                  Reason for Rescheduling
+                  {userRole === 'talent' ? 'Reason for Proposing Alternate Slot' : 'Reason for Rescheduling'}
                 </label>
-                <select
-                  className="int-input-box"
-                  value={rescheduleReason}
-                  onChange={(e) => setRescheduleReason(e.target.value)}
-                >
-                  <option value="Candidate requested alternate slot">Candidate requested alternate slot</option>
-                  <option value="Interviewer / Panelist schedule conflict">Interviewer / Panelist schedule conflict</option>
-                  <option value="Internal technical round alignment">Internal technical round alignment</option>
-                  <option value="Urgent operational rescheduling">Urgent operational rescheduling</option>
-                  <option value="Other / Mutual consensus">Other / Mutual consensus</option>
-                </select>
+                {userRole === 'talent' ? (
+                  <select
+                    className="int-input-box"
+                    value={rescheduleReason}
+                    onChange={(e) => setRescheduleReason(e.target.value)}
+                  >
+                    <option value="Academic / Examination conflict">Academic / Examination conflict</option>
+                    <option value="Project submission / Studio crit deadline">Project submission / Studio crit deadline</option>
+                    <option value="Emergency / Urgent personal conflict">Emergency / Urgent personal conflict</option>
+                    <option value="Technical / Connectivity issue">Technical / Connectivity issue</option>
+                    <option value="Other / Propose mutual time">Other / Propose mutual time</option>
+                  </select>
+                ) : (
+                  <select
+                    className="int-input-box"
+                    value={rescheduleReason}
+                    onChange={(e) => setRescheduleReason(e.target.value)}
+                  >
+                    <option value="Candidate requested alternate slot">Candidate requested alternate slot</option>
+                    <option value="Interviewer / Panelist schedule conflict">Interviewer / Panelist schedule conflict</option>
+                    <option value="Internal technical round alignment">Internal technical round alignment</option>
+                    <option value="Urgent operational rescheduling">Urgent operational rescheduling</option>
+                    <option value="Other / Mutual consensus">Other / Mutual consensus</option>
+                  </select>
+                )}
               </div>
 
               {/* Validation Feedback: Error Banner */}
@@ -1136,7 +1349,7 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
                   <span className="material-symbols-outlined" style={{ fontSize: '16px' }} aria-hidden="true">
                     schedule_send
                   </span>
-                  <span>Confirm Reschedule</span>
+                  <span>{userRole === 'talent' ? 'Send Alternate Slot Request' : 'Confirm Reschedule'}</span>
                 </button>
               </div>
             </form>
@@ -1154,7 +1367,9 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
         >
           <div className="int-modal-window" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
             <div className="int-modal-header">
-              <h3 className="int-modal-title">Candidate Evaluation Scorecard</h3>
+              <h3 className="int-modal-title">
+                {userRole === 'talent' ? 'Official Studio Evaluation & Feedback' : 'Candidate Evaluation Scorecard'}
+              </h3>
               <button
                 type="button"
                 className="btn-card-icon"
@@ -1165,87 +1380,164 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs }) => {
               </button>
             </div>
 
-            <form onSubmit={onSubmitEvaluation} className="int-modal-body">
-              <div>
-                <strong style={{ fontSize: '15px', color: '#1a1c1e' }}>
-                  {selectedSessionForFeedback.candidateName}
-                </strong>
-                <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#727784' }}>
-                  {selectedSessionForFeedback.candidateRole} • {selectedSessionForFeedback.interviewType}
-                </p>
-              </div>
+            {userRole === 'talent' ? (
+              <div className="int-modal-body">
+                <div>
+                  <strong style={{ fontSize: '15px', color: '#1a1c1e' }}>
+                    {selectedSessionForFeedback.companyName || 'AEC Studio'}
+                  </strong>
+                  <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#727784' }}>
+                    Technical Defense for: <strong>{selectedSessionForFeedback.candidateRole}</strong> • {selectedSessionForFeedback.interviewType}
+                  </p>
+                </div>
 
-              {/* Overall Score (0-100) */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1a1c1e' }}>
-                  Overall Assessment Score (0 - 100): <strong>{evalScore}%</strong>
-                </label>
-                <input
-                  type="range"
-                  min={40}
-                  max={100}
-                  value={evalScore}
-                  onChange={(e) => setEvalScore(Number(e.target.value))}
-                  style={{ width: '100%', accentColor: '#00418f' }}
-                />
-              </div>
+                <div className="int-dossier-card">
+                  <div className="int-dossier-stat-row">
+                    <div className="int-dossier-stat-box">
+                      <span className="int-dossier-stat-label">Evaluation Score</span>
+                      <span className="int-dossier-stat-val">
+                        {selectedSessionForFeedback.score != null ? `${selectedSessionForFeedback.score}%` : 'Pending'}
+                      </span>
+                    </div>
 
-              {/* Hiring Recommendation */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1a1c1e' }}>
-                  Hiring Recommendation
-                </label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  {(['Strong Hire', 'Hire', 'Hold', 'Decline'] as InterviewSession['recommendation'][]).map(
-                    (rec) => (
-                      <button
-                        key={rec}
-                        type="button"
-                        className={`int-tab-btn ${evalRecommendation === rec ? 'active' : ''}`}
-                        onClick={() => setEvalRecommendation(rec)}
-                        style={{ flex: 1, padding: '7px 4px', fontSize: '12px' }}
+                    <div className="int-dossier-stat-box">
+                      <span className="int-dossier-stat-label">Studio Verdict</span>
+                      <span
+                        className="int-dossier-stat-val"
+                        style={{
+                          fontSize: '15px',
+                          color:
+                            selectedSessionForFeedback.recommendation === 'Strong Hire' ||
+                            selectedSessionForFeedback.recommendation === 'Hire'
+                              ? '#15803d'
+                              : selectedSessionForFeedback.recommendation === 'Decline'
+                              ? '#b91c1c'
+                              : '#b45309',
+                        }}
                       >
-                        {rec}
-                      </button>
-                    )
+                        {selectedSessionForFeedback.recommendation || 'Under Review'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="int-dossier-notes-box">
+                    <span className="int-dossier-stat-label">Official Reviewer Feedback &amp; Notes</span>
+                    <p style={{ margin: 0, fontSize: '13.5px', color: '#1a1c1e', lineHeight: 1.5 }}>
+                      {selectedSessionForFeedback.interviewerNotes ||
+                        'The evaluation dossier has been logged. Specific feedback will be discussed in your follow-up stage or direct message.'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="int-modal-footer" style={{ justifyContent: 'flex-end', gap: '10px' }}>
+                  {onNavigateToMessages && (
+                    <button
+                      type="button"
+                      className="btn-int-secondary"
+                      onClick={() => {
+                        const s = selectedSessionForFeedback
+                        setSelectedSessionForFeedback(null)
+                        onNavigateToMessages(s.companyName, s.companyId)
+                      }}
+                    >
+                      <span className="material-symbols-outlined text-primary" aria-hidden="true">
+                        chat
+                      </span>
+                      <span>Message Studio</span>
+                    </button>
                   )}
+                  <button
+                    type="button"
+                    className="btn-int-primary"
+                    onClick={() => setSelectedSessionForFeedback(null)}
+                  >
+                    Close
+                  </button>
                 </div>
               </div>
+            ) : (
+              <form onSubmit={onSubmitEvaluation} className="int-modal-body">
+                <div>
+                  <strong style={{ fontSize: '15px', color: '#1a1c1e' }}>
+                    {selectedSessionForFeedback.candidateName}
+                  </strong>
+                  <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#727784' }}>
+                    {selectedSessionForFeedback.candidateRole} • {selectedSessionForFeedback.interviewType}
+                  </p>
+                </div>
 
-              {/* Notes */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1a1c1e' }}>
-                  Reviewer Notes &amp; Observations
-                </label>
-                <textarea
-                  className="int-input-box"
-                  rows={4}
-                  placeholder="Document candidate problem-solving, strengths, and alignment with requisition requirements..."
-                  value={evalNotes}
-                  onChange={(e) => setEvalNotes(e.target.value)}
-                  style={{ resize: 'vertical' }}
-                />
-              </div>
+                {/* Overall Score (0-100) */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1a1c1e' }}>
+                    Overall Assessment Score (0 - 100): <strong>{evalScore}%</strong>
+                  </label>
+                  <input
+                    type="range"
+                    min={40}
+                    max={100}
+                    value={evalScore}
+                    onChange={(e) => setEvalScore(Number(e.target.value))}
+                    style={{ width: '100%', accentColor: '#00418f' }}
+                  />
+                </div>
 
-              <div className="int-modal-footer" style={{ justifyContent: 'flex-end', gap: '10px' }}>
-                <button
-                  type="button"
-                  className="btn-int-secondary"
-                  onClick={() => setSelectedSessionForFeedback(null)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn-int-primary">
-                  Save Scorecard
-                </button>
-              </div>
-            </form>
+                {/* Hiring Recommendation */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1a1c1e' }}>
+                    Hiring Recommendation
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {(['Strong Hire', 'Hire', 'Hold', 'Decline'] as InterviewSession['recommendation'][]).map(
+                      (rec) => (
+                        <button
+                          key={rec}
+                          type="button"
+                          className={`int-tab-btn ${evalRecommendation === rec ? 'active' : ''}`}
+                          onClick={() => setEvalRecommendation(rec)}
+                          style={{ flex: 1, padding: '7px 4px', fontSize: '12px' }}
+                        >
+                          {rec}
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1a1c1e' }}>
+                    Reviewer Notes &amp; Observations
+                  </label>
+                  <textarea
+                    className="int-input-box"
+                    rows={4}
+                    placeholder="Document candidate problem-solving, strengths, and alignment with requisition requirements..."
+                    value={evalNotes}
+                    onChange={(e) => setEvalNotes(e.target.value)}
+                    style={{ resize: 'vertical' }}
+                  />
+                </div>
+
+                <div className="int-modal-footer" style={{ justifyContent: 'flex-end', gap: '10px' }}>
+                  <button
+                    type="button"
+                    className="btn-int-secondary"
+                    onClick={() => setSelectedSessionForFeedback(null)}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn-int-primary">
+                    Save Scorecard
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
 
-      {/* ── MODAL 3: Schedule New Interview Modal ── */}
-      {isScheduleNewModalOpen && (
+      {/* ── MODAL 3: Schedule New Interview Modal (Employers Only) ── */}
+      {userRole !== 'talent' && isScheduleNewModalOpen && (
         <div
           className="int-modal-overlay"
           role="dialog"

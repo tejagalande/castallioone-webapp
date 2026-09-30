@@ -205,7 +205,12 @@ const DEMO_CONVERSATIONS: ConversationThread[] = [
   },
 ]
 
-export function useMessages() {
+export interface UseMessagesOptions {
+  targetCompany?: { id?: string; name?: string } | null
+  onClearTargetCompany?: () => void
+}
+
+export function useMessages(options?: UseMessagesOptions) {
   const [conversations, setConversations] = useState<ConversationThread[]>([])
   const [selectedThreadId, setSelectedThreadId] = useState<string>('')
   const [activeFilter, setActiveFilter] = useState<MessageFilterType>('all')
@@ -218,6 +223,8 @@ export function useMessages() {
   const [userRole, setUserRole] = useState<'employer' | 'talent' | 'guest'>('guest')
   const [myCompanyId, setMyCompanyId] = useState<string | null>(null)
   const [availableRecipients, setAvailableRecipients] = useState<RecipientOption[]>([])
+  const [hasAppliedPositions, setHasAppliedPositions] = useState<boolean>(true)
+  const [appliedPositionsCount, setAppliedPositionsCount] = useState<number>(0)
 
   // Modals
   const [isComposeModalOpen, setIsComposeModalOpen] = useState<boolean>(false)
@@ -228,6 +235,11 @@ export function useMessages() {
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   const isMountedRef = useRef(true)
+  const optionsRef = useRef(options)
+
+  useEffect(() => {
+    optionsRef.current = options
+  })
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg)
@@ -243,6 +255,7 @@ export function useMessages() {
     isMountedRef.current = true
 
     const loadConversations = async () => {
+    const opts = optionsRef.current
     try {
       const { data: userData } = await supabase.auth.getUser()
       const user = userData?.user
@@ -306,9 +319,58 @@ export function useMessages() {
       }
 
       if (!rawMessages || rawMessages.length === 0) {
+        if (!isEmployer) {
+          const candidateClauses = [`candidate_id.eq.${user.id}`]
+          const { data: student } = await supabase
+            .from('student_profile')
+            .select('id')
+            .eq('user_id', user.id)
+            .maybeSingle()
+          if (student?.id && student.id !== user.id) {
+            candidateClauses.push(`candidate_id.eq.${student.id}`)
+          }
+
+          const { data: userApps } = await supabase
+            .from('job_applications')
+            .select('id, company_id')
+            .or(candidateClauses.join(','))
+
+          const appCount = userApps?.length || 0
+          if (isMountedRef.current) {
+            setAppliedPositionsCount(appCount)
+            setHasAppliedPositions(appCount > 0)
+          }
+        }
+
         if (isMountedRef.current) {
-          setConversations([])
-          setSelectedThreadId('')
+          if (opts?.targetCompany && (opts.targetCompany.id || opts.targetCompany.name)) {
+            const firmTitle = opts.targetCompany.name || 'AEC Studio Partner'
+            const initialThread: ConversationThread = {
+              id: `thread-${opts.targetCompany.id || 'direct-' + Date.now()}`,
+              partnerId: opts.targetCompany.id || 'company-target',
+              candidateId: user.id,
+              companyId: opts.targetCompany.id || 'company-target',
+              name: firmTitle,
+              avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firmTitle)}&background=00418f&color=fff`,
+              roleOrDiscipline: 'Hiring Team & Studio Leadership',
+              firmOrSchool: firmTitle,
+              lastMessage: 'Direct communication initialized for your applied position.',
+              lastMessageTime: 'Just now',
+              lastMessageTimestamp: Date.now(),
+              unreadCount: 0,
+              isOnline: true,
+              isVerified: true,
+              matchScore: 95,
+              fitLabel: 'APPLIED',
+              messages: [],
+            }
+            setConversations([initialThread])
+            setSelectedThreadId(initialThread.id)
+            opts.onClearTargetCompany?.()
+          } else {
+            setConversations([])
+            setSelectedThreadId('')
+          }
           setLoading(false)
         }
         return
@@ -488,12 +550,75 @@ export function useMessages() {
         }
       }
 
-      // Sort threads by most recent message
-      builtThreads.sort((a, b) => b.lastMessageTimestamp - a.lastMessageTimestamp)
+      if (!isEmployer) {
+        const candidateClauses = [`candidate_id.eq.${user.id}`]
+        const { data: student } = await supabase
+          .from('student_profile')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle()
+        if (student?.id && student.id !== user.id) {
+          candidateClauses.push(`candidate_id.eq.${student.id}`)
+        }
+
+        const { data: userApps } = await supabase
+          .from('job_applications')
+          .select('id, company_id')
+          .or(candidateClauses.join(','))
+
+        const appCount = userApps?.length || 0
+        if (isMountedRef.current) {
+          setAppliedPositionsCount(appCount)
+          setHasAppliedPositions(appCount > 0)
+        }
+      }
+
+      let selectedToActivate: string | null = null
+
+      // Check if targetCompany was requested
+      if (opts?.targetCompany && (opts.targetCompany.id || opts.targetCompany.name)) {
+        const targetId = opts.targetCompany.id
+        const targetName = opts.targetCompany.name?.toLowerCase()
+        const existing = builtThreads.find(
+          (t) =>
+            (targetId && (t.companyId === targetId || t.partnerId === targetId)) ||
+            (targetName && t.firmOrSchool.toLowerCase().includes(targetName)) ||
+            (targetName && t.name.toLowerCase().includes(targetName))
+        )
+
+        if (existing) {
+          selectedToActivate = existing.id
+        } else {
+          const firmTitle = opts.targetCompany.name || 'AEC Studio Partner'
+          const newThread: ConversationThread = {
+            id: `thread-${targetId || 'direct-' + Date.now()}`,
+            partnerId: targetId || 'company-target',
+            candidateId: user.id,
+            companyId: targetId || 'company-target',
+            name: firmTitle,
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firmTitle)}&background=00418f&color=fff`,
+            roleOrDiscipline: 'Hiring Team & Studio Leadership',
+            firmOrSchool: firmTitle,
+            lastMessage: 'Direct communication initialized for your applied position.',
+            lastMessageTime: 'Just now',
+            lastMessageTimestamp: Date.now(),
+            unreadCount: 0,
+            isOnline: true,
+            isVerified: true,
+            matchScore: 95,
+            fitLabel: 'APPLIED',
+            messages: [],
+          }
+          builtThreads.unshift(newThread)
+          selectedToActivate = newThread.id
+        }
+        opts.onClearTargetCompany?.()
+      }
 
       if (isMountedRef.current) {
         setConversations(builtThreads)
         setSelectedThreadId((prev) => {
+          if (selectedToActivate) return selectedToActivate
           if (prev && builtThreads.some((t) => t.id === prev)) return prev
           return builtThreads[0]?.id || ''
         })
@@ -572,23 +697,69 @@ export function useMessages() {
             }
           }
         } else {
-          // Fetch companies for talent
-          const { data: companies } = await supabase
-            .from('companies')
-            .select('id, name, logo_url, size')
-            .limit(15)
+          // Fetch ONLY companies where candidate has submitted a job application
+          const candidateClauses = [`candidate_id.eq.${user.id}`]
+          const { data: student } = await supabase
+            .from('student_profile')
+            .select('id')
+            .eq('user_id', user.id)
+            .maybeSingle()
+          if (student?.id && student.id !== user.id) {
+            candidateClauses.push(`candidate_id.eq.${student.id}`)
+          }
 
-          if (companies && isMounted) {
-            setAvailableRecipients(
-              companies.map((c) => ({
-                id: c.id,
-                candidateId: user.id,
-                companyId: c.id,
-                name: c.name,
-                subtitle: `${c.size || 'AEC'} Studio`,
-                avatar: c.logo_url,
-              }))
-            )
+          const { data: applications } = await supabase
+            .from('job_applications')
+            .select('id, company_id, job_id, status')
+            .or(candidateClauses.join(','))
+
+          const appliedCompanyIds = Array.from(
+            new Set((applications || []).map((a) => a.company_id).filter(Boolean))
+          ) as string[]
+
+          if (isMounted) {
+            setAppliedPositionsCount(applications?.length || 0)
+            setHasAppliedPositions(appliedCompanyIds.length > 0)
+          }
+
+          if (appliedCompanyIds.length > 0) {
+            const { data: companies } = await supabase
+              .from('companies')
+              .select('id, name, logo_url, size')
+              .in('id', appliedCompanyIds)
+
+            const jobIds = Array.from(
+              new Set((applications || []).map((a) => a.job_id).filter(Boolean))
+            ) as string[]
+            const jobMap = new Map<string, string>()
+            if (jobIds.length > 0) {
+              const { data: jobs } = await supabase
+                .from('create_job_post')
+                .select('id, title, company_id')
+                .in('id', jobIds)
+              jobs?.forEach((j) => {
+                if (j.company_id && !jobMap.has(j.company_id)) {
+                  jobMap.set(j.company_id, j.title)
+                }
+              })
+            }
+
+            if (companies && isMounted) {
+              setAvailableRecipients(
+                companies.map((c) => ({
+                  id: c.id,
+                  candidateId: user.id,
+                  companyId: c.id,
+                  name: c.name,
+                  subtitle: jobMap.has(c.id) ? `Applied: ${jobMap.get(c.id)}` : 'Applied Studio Partner',
+                  avatar: c.logo_url,
+                }))
+              )
+            }
+          } else {
+            if (isMounted) {
+              setAvailableRecipients([])
+            }
           }
         }
       } catch (err) {
@@ -876,6 +1047,8 @@ export function useMessages() {
     loading,
     userRole,
     availableRecipients,
+    hasAppliedPositions,
+    appliedPositionsCount,
     isComposeModalOpen,
     setIsComposeModalOpen,
     isCallModalOpen,

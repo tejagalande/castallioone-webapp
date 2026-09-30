@@ -2,7 +2,6 @@ import { useState, useMemo, useRef, type FC, type ChangeEvent } from 'react'
 import './MyProfile.css'
 import {
   useMyProfile,
-  INITIAL_PORTFOLIO_PROJECTS,
   CDE_STANDARDS_TAGS,
   PREDEFINED_CORE_SOFTWARE,
   PREDEFINED_TECH_SKILLS,
@@ -15,7 +14,6 @@ import {
   POPULAR_LOCATIONS,
   formatIndianNumber,
   type SoftwareSkill,
-  type PortfolioProject,
   type CredentialItem,
   type AttachedDocument,
 } from './useMyProfile'
@@ -24,7 +22,7 @@ interface MyProfileProps {
   onNavigateToPortfolio?: () => void
 }
 
-const MyProfile: FC<MyProfileProps> = ({ onNavigateToPortfolio }) => {
+const MyProfile: FC<MyProfileProps> = () => {
   const {
     profile,
     editForm,
@@ -168,15 +166,15 @@ const MyProfile: FC<MyProfileProps> = ({ onNavigateToPortfolio }) => {
         <div className="profile-header-left">
           <div className="profile-telemetry-row">
             <span className="talent-id-badge">TALENT_ID // {profile.talentId}</span>
-            <span className="talent-verified-tag">
+            {/* <span className="talent-verified-tag">
               <span className="pulse-dot" aria-hidden="true" />
               VERIFIED AEC PRACTITIONER | {profile.discipline ? profile.discipline.toUpperCase() : 'BIM SPECIALIST'}
             </span>
-            <span className="schema-tag">SCHEMA: IFC4x3</span>
+            <span className="schema-tag">SCHEMA: IFC4x3</span> */}
           </div>
           <div className="profile-title-row">
             <h1 className="profile-main-title">My Profile</h1>
-            <span className="view-tag">[WORKSPACE VIEW]</span>
+            {/* <span className="view-tag">[WORKSPACE VIEW]</span> */}
           </div>
           <p className="profile-subtext">
             Manage your verified BIM credentials, technical software stack, academic qualifications, and career preferences & availability.
@@ -185,7 +183,7 @@ const MyProfile: FC<MyProfileProps> = ({ onNavigateToPortfolio }) => {
 
         {/* Action Buttons */}
         <div className="profile-actions-row">
-          <button
+          {/* <button
             type="button"
             className="btn-preview-public"
             onClick={handleCopyPublicUrl}
@@ -196,7 +194,7 @@ const MyProfile: FC<MyProfileProps> = ({ onNavigateToPortfolio }) => {
               <circle cx="12" cy="12" r="3" />
             </svg>
             Preview Public View
-          </button>
+          </button> */}
 
           <button
             type="button"
@@ -619,7 +617,7 @@ const MyProfile: FC<MyProfileProps> = ({ onNavigateToPortfolio }) => {
             </div>
 
             {/* Category 5: CDE & Standards Badges */}
-            <div className="skill-category-block">
+            {/* <div className="skill-category-block">
               <span className="category-label">CDE Environments & Interoperability Standards</span>
               <div className="standards-tag-cloud">
                 {CDE_STANDARDS_TAGS.map((tag: string) => (
@@ -632,7 +630,7 @@ const MyProfile: FC<MyProfileProps> = ({ onNavigateToPortfolio }) => {
                   </span>
                 ))}
               </div>
-            </div>
+            </div> */}
           </article>
 
           {/* 4. Portfolio Repository Section (COMMENTED AS REQUESTED)
@@ -1033,7 +1031,7 @@ const MyProfile: FC<MyProfileProps> = ({ onNavigateToPortfolio }) => {
               </button>
             </div>
 
-            <div className="qr-passport-row">
+            {/* <div className="qr-passport-row">
               <div className="simulated-qr" aria-hidden="true">
                 <div className="qr-row">
                   <div className="qr-dot" />
@@ -1051,7 +1049,7 @@ const MyProfile: FC<MyProfileProps> = ({ onNavigateToPortfolio }) => {
                 <span className="qr-title">Digital Card / CV QR</span>
                 <span className="qr-desc">Scan directly for mobile AEC credential passport.</span>
               </div>
-            </div>
+            </div> */}
           </div>
         </aside>
       </main>

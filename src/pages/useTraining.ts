@@ -4,38 +4,44 @@ export interface CourseModule {
   id: string
   title: string
   duration: string
+  description?: string
   isCompleted?: boolean
 }
+
+export type CourseCategory =
+  | 'all'
+  | 'bim-iso'
+  | 'computational'
+  | 'vdc-coordination'
+  | 'automation-api'
+
+export type CourseLevel = 'All' | 'Beginner' | 'Intermediate' | 'Advanced' | 'Executive'
 
 export interface CourseItem {
   id: string
   title: string
   provider: string
-  collaboration?: string
-  isFlagship?: boolean
-  isEnrolled?: boolean
-  progressPercent?: number
-  matchScore?: number
-  matchReason?: string
-  matchReasonType?: 'ai-gap' | 'compliance' | 'market-demand' | 'career-velocity'
-  category: 'computational' | 'bim-iso' | 'vdc-synchro' | 'revit-python'
-  stacks: string[]
-  totalHours: number
-  modulesCount: number
-  cpdPoints: number
-  rating: number
-  reviewsCount: number
+  category: CourseCategory
   level: 'Beginner' | 'Intermediate' | 'Advanced' | 'Executive'
-  instructor?: {
+  instructor: {
     name: string
     title: string
     initials: string
+    organization?: string
   }
-  isFreeForPro: boolean
-  isBuildingSmartCertified?: boolean
-  hasSandbox?: boolean
-  description?: string
-  syllabus?: CourseModule[]
+  stacks: string[]
+  totalHours: number
+  modulesCount: number
+  rating: number
+  reviewsCount: number
+  certificateTitle: string
+  description: string
+  profileBoostImpact: string
+  isFlagship?: boolean
+  isEnrolled?: boolean
+  progressPercent?: number
+  accreditation?: string
+  syllabus: CourseModule[]
 }
 
 export interface LearningPathStep {
@@ -47,291 +53,381 @@ export interface LearningPathStep {
   note: string
 }
 
-export interface WorkshopSession {
+export interface LiveWorkshopSession {
   id: string
   title: string
   dateText: string
+  timeText: string
   instructor: string
+  instructorRole: string
   description: string
   seatsRemaining: number
-  isFreeForPro: boolean
+  platform: string
   isReserved?: boolean
 }
 
-export type CategoryFilter = 'all' | 'recommended' | 'computational' | 'bim-iso' | 'vdc-synchro' | 'revit-python'
+const LOCAL_STORAGE_COURSES_KEY = 'castallio_training_courses'
+const LOCAL_STORAGE_WORKSHOP_KEY = 'castallio_training_workshop'
 
-const INITIAL_COURSES: CourseItem[] = [
+// Official Curated Courses Offered by Castallio (the training & certification academy)
+const OFFICIAL_CASTALLIO_COURSES: CourseItem[] = [
   {
-    id: 'crs-flagship',
-    title: 'Advanced Computational BIM & pyRevit Plugin Engineering for Large-Scale Infrastructure',
-    provider: 'Castallio Masterclass // Executive Series',
+    id: 'crs-flagship-bim',
+    title: 'Castallio Executive BIM Management & ISO 19650-2 Masterclass',
+    provider: 'Castallio Academy',
+    category: 'bim-iso',
+    level: 'Executive',
     isFlagship: true,
     isEnrolled: false,
-    category: 'computational',
-    level: 'Advanced',
     instructor: {
-      name: 'Dr. Julian Croft',
-      title: 'Partner & Head of Applied R&D, ex-Foster + Partners & Castallio Core Team',
-      initials: 'JC',
+      name: 'Ar. Marcus Vance',
+      title: 'Global Head of BIM Practice & Castallio Fellow',
+      initials: 'MV',
+      organization: 'ex-Foster + Partners / Castallio Advisory',
     },
-    stacks: ['Rhino.Inside', 'pyRevit', 'C# / .NET', 'IFC 4x3', 'Speckle Core'],
+    stacks: ['ISO 19650-2', 'EIR & BEP Strategy', 'CDE Federation', 'COBie Auditing', 'OpenBIM IFC4'],
     totalHours: 18,
     modulesCount: 8,
-    cpdPoints: 18,
     rating: 4.98,
-    reviewsCount: 512,
-    isFreeForPro: true,
-    isBuildingSmartCertified: true,
-    hasSandbox: true,
+    reviewsCount: 640,
+    accreditation: 'buildingSMART & UK BIM Framework Aligned',
+    certificateTitle: 'Castallio Certified ISO 19650 BIM Manager',
+    profileBoostImpact: 'Boosts candidate search ranking by +35% for Senior BIM Coordinator and BIM Manager vacancies on Castallio One.',
     description:
-      'Deep-dive into custom C#/.NET Revit API plugins, Rhino.Inside Revit automation pipelines, and multi-tenant IFC 4x3 cloud schema synchronizations for Tier-1 airport and rail interchanges.',
+      'The definitive professional program for AEC project leads. Master the practical setup of Common Data Environments (CDE), decomposition of Exchange Information Requirements (EIR), multi-discipline BEP compilation, and automated COBie schema validation across international commercial and healthcare infrastructure.',
     syllabus: [
-      { id: 'm1', title: 'Revit API Internal Architecture & Transaction Management', duration: '2h 15m' },
-      { id: 'm2', title: 'pyRevit Custom UI Ribbon & WPF XAML GUI Development', duration: '2h 45m' },
-      { id: 'm3', title: 'Rhino.Inside Revit Headless Pipeline Orchestration', duration: '2h 30m' },
-      { id: 'm4', title: 'IFC4x3 Alignment Schema Mapping for Rail Interchanges', duration: '2h 10m' },
-      { id: 'm5', title: 'High-Performance Double-Curved Facade Panelization', duration: '2h 50m' },
-      { id: 'm6', title: 'Multi-Tenant Cloud Data Streaming with Speckle 2.0', duration: '2h 00m' },
-      { id: 'm7', title: 'CI/CD Unit Testing for Firmwide pyRevit Deployment', duration: '1h 50m' },
-      { id: 'm8', title: 'Capstone: Airport Terminal B Geometry Automation Defense', duration: '1h 40m' },
+      { id: 'm1', title: 'ISO 19650 Information Governance Framework & Delivery Cycles', duration: '2h 15m' },
+      { id: 'm2', title: 'Authoring Pre-Award and Post-Award BIM Execution Plans (BEP)', duration: '2h 45m' },
+      { id: 'm3', title: 'Common Data Environment (CDE) Workflow States & Metadata Structures', duration: '2h 30m' },
+      { id: 'm4', title: 'Automated COBie Table Generation & Information Delivery Verification', duration: '2h 10m' },
+      { id: 'm5', title: 'Federation Strategies across Architecture, Structure & MEP Systems', duration: '2h 50m' },
+      { id: 'm6', title: 'Model View Definition (MVD) & IFC 4x3 Mapping Conventions', duration: '2h 00m' },
+      { id: 'm7', title: 'Project Information Protocol Auditing & Legal Risk Mitigation', duration: '1h 50m' },
+      { id: 'm8', title: 'Capstone: Airport Terminal Expansion Project Information Model Defense', duration: '1h 40m' },
     ],
   },
   {
-    id: 'crs-1',
-    title: 'Automated LOD-400 Façade Panelization & Clash Elimination',
+    id: 'crs-computational-grasshopper',
+    title: 'Computational BIM & Algorithmic Geometry with Grasshopper and Rhino.Inside',
     provider: 'Castallio Engineering Labs',
-    collaboration: 'In Collaboration with Zaha Hadid Architects CODE',
     category: 'computational',
     level: 'Advanced',
-    matchScore: 98,
-    matchReason: 'Targeted to bridge your gap for Foster + Partners Lead Computational Designer role.',
-    matchReasonType: 'ai-gap',
-    stacks: ['Grasshopper', 'Kangaroo 2', 'Karamba FEA', 'GFRC Panel Schedules'],
-    totalHours: 14,
+    isEnrolled: false,
+    instructor: {
+      name: 'Elena Rostova',
+      title: 'Principal Computational Architect & Instructor',
+      initials: 'ER',
+      organization: 'Castallio Computational Studio',
+    },
+    stacks: ['Rhino 8', 'Grasshopper', 'Rhino.Inside Revit', 'Kangaroo 2', 'NURBS Rationalization'],
+    totalHours: 16,
     modulesCount: 6,
-    cpdPoints: 12,
-    rating: 4.9,
-    reviewsCount: 340,
-    isFreeForPro: true,
-    hasSandbox: true,
+    rating: 4.94,
+    reviewsCount: 420,
+    accreditation: 'Autodesk Authorized AEC Developer Network',
+    certificateTitle: 'Castallio Certified Computational BIM Specialist',
+    profileBoostImpact: 'High-priority skill tag requested by Tier-1 design practices including Zaha Hadid, Foster, and Gensler.',
+    description:
+      'Learn parametric panel rationalization, complex double-curved envelope fabrication, and seamless bidirectional data piping between Grasshopper and Autodesk Revit 2025 using headless Rhino.Inside workflows.',
     syllabus: [
-      { id: 'c1-1', title: 'NURBS Surface Analysis and Curvature Rationalization', duration: '2h 30m' },
-      { id: 'c1-2', title: 'Kangaroo 2 Dynamic Relaxation & Panel Flattening', duration: '2h 15m' },
-      { id: 'c1-3', title: 'Karamba 3D Stress Distribution on Façade Substructures', duration: '2h 45m' },
-      { id: 'c1-4', title: 'LOD-400 Fabrication Tolerances & CNC Export Automation', duration: '2h 30m' },
-      { id: 'c1-5', title: 'Automated Clash Avoidance with Structural Mullions', duration: '2h 00m' },
-      { id: 'c1-6', title: 'Interactive WebGL Client Presentation Defense', duration: '2h 00m' },
+      { id: 'cg-1', title: 'Mathematical Foundation of NURBS Curves & Surface Curvature', duration: '2h 30m' },
+      { id: 'cg-2', title: 'Dynamic Form-Finding with Kangaroo 2 & Structural Relaxation', duration: '2h 45m' },
+      { id: 'cg-3', title: 'GFRC & Metal Facade Panel Flattening & Fabrication Scheduling', duration: '2h 30m' },
+      { id: 'cg-4', title: 'Rhino.Inside Revit Live Pipeline: Instantiating Native Revit Elements', duration: '3h 00m' },
+      { id: 'cg-5', title: 'Clash Avoidance and Parameter Linking across Computational Blueprints', duration: '2h 45m' },
+      { id: 'cg-6', title: 'Capstone Defense: High-Rise Canopy Optimization and Parameter Export', duration: '2h 30m' },
     ],
   },
   {
-    id: 'crs-2',
-    title: 'ISO 19650-2 CDE Implementation & Information Management Protocol',
+    id: 'crs-revit-python',
+    title: 'Revit Plugin Development with pyRevit & Python for BIM Automation',
     provider: 'Castallio Academy',
-    collaboration: 'Approved by BRE Academy',
-    category: 'bim-iso',
+    category: 'automation-api',
     level: 'Intermediate',
     isEnrolled: true,
-    progressPercent: 64,
-    matchReason: 'Required prerequisite for UK Tier-1 Rail (HS2 Phase 1) contracts.',
-    matchReasonType: 'compliance',
-    stacks: ['CDE Federation', 'EIR/BEP Creation', 'COBie Drop Tables', 'IFC 4x3 MVD'],
+    progressPercent: 65,
+    instructor: {
+      name: 'Devon Chen',
+      title: 'Lead AEC Software Architect',
+      initials: 'DC',
+      organization: 'Castallio Automation Practice',
+    },
+    stacks: ['pyRevit', 'Python 3.10', 'Revit API', 'Custom UI Ribbons', 'WPF / XAML'],
+    totalHours: 12,
+    modulesCount: 5,
+    rating: 4.89,
+    reviewsCount: 385,
+    certificateTitle: 'Castallio Certified AEC Automation Developer',
+    profileBoostImpact: 'Accelerates talent matching by +28% for Digital Delivery Lead and Computational Specialist roles.',
+    description:
+      'Transition from visual Dynamo scripts into modular, production-ready Python plugins. Build firmwide custom ribbon interfaces, automate batch sheet generation, audit model parameter compliance, and export custom Excel/JSON deliverables.',
+    syllabus: [
+      { id: 'rp-1', title: 'Revit Database Architecture: Elements, Parameters & Filtered Collectors', duration: '2h 30m', isCompleted: true },
+      { id: 'rp-2', title: 'pyRevit Environment Setup, Bundle Hierarchy & Extension Deployment', duration: '2h 15m', isCompleted: true },
+      { id: 'rp-3', title: 'Developing Custom WPF/XAML Windows for Interactive User Input', duration: '2h 45m', isCompleted: true },
+      { id: 'rp-4', title: 'Batch View Sheet Creation & Automated Titleblock Annotation', duration: '2h 30m', isCompleted: false },
+      { id: 'rp-5', title: 'Packaging, Distributing & Version Controlling Plugins with Git', duration: '2h 00m', isCompleted: false },
+    ],
+  },
+  {
+    id: 'crs-vdc-synchro',
+    title: '4D/5D VDC Construction Scheduling & Logistics in Synchro 4D and Navisworks',
+    provider: 'Castallio Academy',
+    category: 'vdc-coordination',
+    level: 'Advanced',
+    isEnrolled: false,
+    instructor: {
+      name: 'Sarah Jenkins',
+      title: 'Director of Virtual Design & Construction',
+      initials: 'SJ',
+      organization: 'Castallio VDC Institute',
+    },
+    stacks: ['Synchro 4D Pro', 'Navisworks Manage', 'Primavera P6', 'Heavy Civil Phasing', 'LOD 400'],
+    totalHours: 15,
+    modulesCount: 6,
+    rating: 4.86,
+    reviewsCount: 310,
+    certificateTitle: 'Castallio Certified 4D Construction Logistics Specialist',
+    profileBoostImpact: 'Required credential for Tier-1 Contractor EPC projects and mega infrastructure bids on Castallio One.',
+    description:
+      'Bridging design models into physical construction sequence simulation. Master linking Primavera P6 schedule baselines, simulating tower crane clearances, visualizing site logistics zones, and resolving temporal spatial conflicts before groundbreaking.',
+    syllabus: [
+      { id: 'vs-1', title: 'Spatial Grid Federation & Schedule Parameter Mapping', duration: '2h 15m' },
+      { id: 'vs-2', title: 'Primavera P6 Logic Tree Linking & Task Generation', duration: '2h 30m' },
+      { id: 'vs-3', title: 'Crane Radius Analysis & Temporary Work Zone Safety Verification', duration: '2h 45m' },
+      { id: 'vs-4', title: 'Dynamic 4D Clash Detection over Construction Timeline Milestones', duration: '2h 30m' },
+      { id: 'vs-5', title: 'Earned Value Cost Tracking (5D) Associated to Model Quantities', duration: '2h 30m' },
+      { id: 'vs-6', title: 'High-Fidelity 4D Animation Rendering for Client Stakeholder Reviews', duration: '2h 30m' },
+    ],
+  },
+  {
+    id: 'crs-openbim-ifc',
+    title: 'OpenBIM Standards, IFC 4x3 Schema Architecture & BCF Coordination',
+    provider: 'Castallio Academy',
+    category: 'bim-iso',
+    level: 'Intermediate',
+    isEnrolled: false,
+    instructor: {
+      name: 'Dr. Julian Croft',
+      title: 'Partner & Head of Applied R&D',
+      initials: 'JC',
+      organization: 'Castallio Academic Council',
+    },
+    stacks: ['OpenBIM', 'IFC 4x3', 'Solibri Model Checker', 'BCF 2.1', 'Speckle Streams'],
     totalHours: 10,
     modulesCount: 4,
-    cpdPoints: 10,
-    rating: 4.8,
-    reviewsCount: 890,
-    isFreeForPro: true,
-    isBuildingSmartCertified: true,
-    syllabus: [
-      { id: 'c2-1', title: 'ISO 19650-1 & 2 Core Principles & Information Delivery Cycles', duration: '2h 30m', isCompleted: true },
-      { id: 'c2-2', title: 'EIR Decomposition & Pre/Post Award BEP Development', duration: '2h 30m', isCompleted: true },
-      { id: 'c2-3', title: 'Common Data Environment (CDE) Workflow States & Metadata', duration: '2h 30m', isCompleted: true },
-      { id: 'c2-4', title: 'COBie Data Auditing & Schema Validation Checks', duration: '2h 30m', isCompleted: false },
-    ],
-  },
-  {
-    id: 'crs-3',
-    title: 'Speckle 2.0 & OpenBIM Cloud Data Pipelines for AEC',
-    provider: 'Castallio Innovation Hub',
-    collaboration: 'OpenBIM Spec',
-    category: 'computational',
-    level: 'Intermediate',
-    matchScore: 94,
-    matchReason: 'Trending tool among your saved engineering practices (Buro Happold, SOM).',
-    matchReasonType: 'market-demand',
-    stacks: ['Speckle Server', 'GraphQL API', 'Python SDK', 'WebGL Model Delivery'],
-    totalHours: 8,
-    modulesCount: 3,
-    cpdPoints: 8,
     rating: 4.95,
-    reviewsCount: 210,
-    isFreeForPro: true,
-    hasSandbox: true,
+    reviewsCount: 275,
+    accreditation: 'buildingSMART International Certified Training Program',
+    certificateTitle: 'Castallio Certified OpenBIM Professional',
+    profileBoostImpact: 'Crucial for candidates pursuing UK, European, and Middle East rail and transit developments.',
+    description:
+      'Learn vendor-neutral interoperability through buildingSMART OpenBIM standards. Understand the modern IFC 4x3 spatial hierarchy for infrastructure, execute rule-based quality auditing in Solibri, and exchange cloud issue records with BCF.',
     syllabus: [
-      { id: 'c3-1', title: 'Speckle Architecture & Stream Management', duration: '2h 30m' },
-      { id: 'c3-2', title: 'GraphQL Filtering & Automated Geometry Extraction', duration: '3h 00m' },
-      { id: 'c3-3', title: 'Deploying Custom WebGL Model Review Portals', duration: '2h 30m' },
+      { id: 'ob-1', title: 'Evolution of OpenBIM: Industry Foundation Classes (IFC) 2x3 to 4x3', duration: '2h 30m' },
+      { id: 'ob-2', title: 'Creating Solibri Rule Sets for Spatial Integrity & Egress Compliance', duration: '2h 30m' },
+      { id: 'ob-3', title: 'BCF 2.1 Cloud Integration with Revizto and BIM Track', duration: '2h 30m' },
+      { id: 'ob-4', title: 'Speckle Data Connectors for Real-Time Heterogeneous Model Aggregation', duration: '2h 30m' },
     ],
   },
   {
-    id: 'crs-4',
-    title: '4D Construction Simulation & Logistics in Synchro Pro & Navisworks',
-    provider: 'Castallio Infrastructure Academy',
-    collaboration: 'VDC Practice',
-    category: 'vdc-synchro',
-    level: 'Advanced',
-    matchScore: 91,
-    matchReason: 'Fast-track requirement for Senior VDC Coordinator and Project Lead classifications.',
-    matchReasonType: 'career-velocity',
-    stacks: ['Synchro 4D', 'Primavera P6 Link', 'Heavy Civil Phasing', 'Navisworks Manage'],
-    totalHours: 16,
-    modulesCount: 8,
-    cpdPoints: 16,
-    rating: 4.7,
-    reviewsCount: 420,
-    isFreeForPro: true,
+    id: 'crs-structural-tekla',
+    title: 'Advanced Structural Modeling, Tekla Structures & Automated LOD-400 Detailing',
+    provider: 'Castallio Engineering Labs',
+    category: 'vdc-coordination',
+    level: 'Intermediate',
+    isEnrolled: false,
+    instructor: {
+      name: 'Vikram Kulkarni',
+      title: 'Chief Structural Modeling Specialist',
+      initials: 'VK',
+      organization: 'Castallio Structural Center',
+    },
+    stacks: ['Tekla Structures', 'Revit Structure', 'LOD 400 Steel', 'Bar Bending Schedules (BBS)', 'CNC DSTV'],
+    totalHours: 14,
+    modulesCount: 5,
+    rating: 4.88,
+    reviewsCount: 290,
+    certificateTitle: 'Castallio Certified Structural Modeling Specialist',
+    profileBoostImpact: 'Boosts candidate placement rate for Structural Engineering & Detailing consultancies on Castallio One.',
+    description:
+      'Produce fabrication-accurate structural steel connections, automated rebar placement, bar bending schedules, and direct CNC DSTV exports for precast and steel processing plants.',
     syllabus: [
-      { id: 'c4-1', title: '3D Geometry Ingestion and Spatial Grid Alignment', duration: '2h 00m' },
-      { id: 'c4-2', title: 'Primavera P6 & MS Project Resource Logic Integration', duration: '2h 00m' },
-      { id: 'c4-3', title: 'Automated 4D Task Assignment by Parameter Rules', duration: '2h 00m' },
-      { id: 'c4-4', title: 'Site Crane Radius Clearance & Equipment Simulation', duration: '2h 00m' },
-      { id: 'c4-5', title: 'Clash Resolution Over Construction Timeline', duration: '2h 00m' },
-      { id: 'c4-6', title: 'Earned Value S-Curve Analysis Linked to Model Elements', duration: '2h 00m' },
-      { id: 'c4-7', title: 'High-Fidelity Rendered Phasing Sequence Animations', duration: '2h 00m' },
-      { id: 'c4-8', title: 'Real-Time Site Logistics Defense for Project Stakeholders', duration: '2h 00m' },
+      { id: 'st-1', title: 'Tekla Model Hierarchy, Profiles & Parametric Connection Components', duration: '2h 45m' },
+      { id: 'st-2', title: '3D Rebar Detailing: Shape Codes, Couplers & Pour Management', duration: '2h 45m' },
+      { id: 'st-3', title: 'Generating Automated Shop Drawings & Assembly Part Lists', duration: '2h 30m' },
+      { id: 'st-4', title: 'Revit to Tekla Bidirectional Round-Trip Coordination', duration: '2h 45m' },
+      { id: 'st-5', title: 'Exporting CNC Files and Quality Checking for Workshop Fabrication', duration: '3h 15m' },
     ],
   },
 ]
 
-const LEARNING_PATH_STEPS: LearningPathStep[] = [
+const DEFAULT_PATH_STEPS: LearningPathStep[] = [
   {
     id: 1,
-    title: 'Step 1: ISO 19650 Lead',
+    title: 'ISO 19650 Information Management',
     status: 'done',
     progressPercent: 100,
-    subtext: 'Done',
-    note: 'BRE Academy credential verified on-chain',
+    subtext: 'Completed',
+    note: 'Verified Castallio Certificate added to your profile',
   },
   {
     id: 2,
-    title: 'Step 2: pyRevit & Automation',
+    title: 'Revit API & Python Automation',
     status: 'in-progress',
-    progressPercent: 70,
-    subtext: '70%',
-    note: 'Current Module: Dynamo-to-C# migration',
+    progressPercent: 65,
+    subtext: 'In Progress (65%)',
+    note: 'Current Module: Batch View & Sheet Creation',
   },
   {
     id: 3,
-    title: 'Step 3: OpenBIM Architecture',
+    title: 'Computational BIM & Rhino.Inside',
     status: 'locked',
-    subtext: 'Locked',
-    note: 'Requires completion of Step 2',
+    subtext: 'Next Up',
+    note: 'Recommended for Senior Coordinator roles',
   },
   {
     id: 4,
-    title: 'Step 4: VDC Leadership Defense',
+    title: '4D VDC Simulation & Executive Defense',
     status: 'capstone',
     subtext: 'Capstone',
-    note: 'Live jury defense with global BIM leaders',
+    note: 'Portfolio capstone verified by studio recruiters',
   },
 ]
 
-const INITIAL_WORKSHOP: WorkshopSession = {
-  id: 'ws-1',
-  title: 'Algorithmic Façade Rationalization AMA',
-  dateText: 'NOV 14 • 17:00 GMT',
-  instructor: 'Dr. Julian Croft (Partner & Head of Applied R&D)',
-  description: 'Direct interactive session with Dr. Julian Croft. Live model troubleshooting and portfolio review.',
-  seatsRemaining: 42,
-  isFreeForPro: true,
+const DEFAULT_WORKSHOP: LiveWorkshopSession = {
+  id: 'ws-upcoming-façade',
+  title: 'Algorithmic Façade Rationalization & Production Delivery Masterclass',
+  dateText: 'Saturday, Nov 14',
+  timeText: '04:30 PM – 06:30 PM IST',
+  instructor: 'Dr. Julian Croft',
+  instructorRole: 'Partner & Head of Applied R&D, ex-Foster + Partners',
+  description:
+    'Exclusive live masterclass hosted by Castallio Academy. Explore real project case studies from Foster + Partners and Grimshaw, troubleshooting live Grasshopper scripts and discussing portfolio readiness for international roles.',
+  seatsRemaining: 24,
+  platform: 'Live Video Session (Google Meet)',
   isReserved: false,
 }
 
 export function useTraining() {
-  const [courses, setCourses] = useState<CourseItem[]>(INITIAL_COURSES)
-  const [activeCategory, setActiveCategory] = useState<CategoryFilter>('all')
-  const [searchQuery, setSearchQuery] = useState<string>('')
-  const [filterFreeForPro, setFilterFreeForPro] = useState<boolean>(false)
-  const [filterBuildingSmart, setFilterBuildingSmart] = useState<boolean>(false)
-  const [filterUnder10h, setFilterUnder10h] = useState<boolean>(false)
-  const [filterWithSandbox, setFilterWithSandbox] = useState<boolean>(false)
+  // Courses state with localStorage persistence
+  const [courses, setCourses] = useState<CourseItem[]>(() => {
+    try {
+      const cached = localStorage.getItem(LOCAL_STORAGE_COURSES_KEY)
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {
+      // fallback
+    }
+    return OFFICIAL_CASTALLIO_COURSES
+  })
 
-  // Learning path state
-  const [pathSteps] = useState<LearningPathStep[]>(LEARNING_PATH_STEPS)
-  const [workshop, setWorkshop] = useState<WorkshopSession>(INITIAL_WORKSHOP)
+  const [activeCategory, setActiveCategory] = useState<CourseCategory>('all')
+  const [levelFilter, setLevelFilter] = useState<CourseLevel>('All')
+  const [searchQuery, setSearchQuery] = useState<string>('')
+  const [filterEnrolledOnly, setFilterEnrolledOnly] = useState<boolean>(false)
+
+  // Learning path & workshop
+  const [pathSteps] = useState<LearningPathStep[]>(DEFAULT_PATH_STEPS)
+  const [workshop, setWorkshop] = useState<LiveWorkshopSession>(() => {
+    try {
+      const cached = localStorage.getItem(LOCAL_STORAGE_WORKSHOP_KEY)
+      if (cached) return JSON.parse(cached)
+    } catch {
+      // fallback
+    }
+    return DEFAULT_WORKSHOP
+  })
 
   // Modals state
   const [selectedCourseForPreview, setSelectedCourseForPreview] = useState<CourseItem | null>(null)
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState<boolean>(false)
-  const [isCreditModalOpen, setIsCreditModalOpen] = useState<boolean>(false)
-  const [isSandboxModalOpen, setIsSandboxModalOpen] = useState<boolean>(false)
-  const [creditCodeInput, setCreditCodeInput] = useState<string>('')
 
-  // Terminal state for sandbox
-  const [terminalLines, setTerminalLines] = useState<string[]>([
-    'TERMINAL // POD-ALPHA-04 [INITIALIZED]',
-    'LATENCY: 14ms • NVIDIA RTX 4090 CLOUD GPU ACTIVE',
-    '$ import pyrevit.forms as forms',
-    '$ speckle_client.authenticate_session(AUTH_TOKEN)',
-    '>> Geometry stream linked: IFC4x3_AIRPORT_TERMINAL_B.ifc',
-  ])
+  const [selectedCourseForEnroll, setSelectedCourseForEnroll] = useState<CourseItem | null>(null)
+  const [isEnrollModalOpen, setIsEnrollModalOpen] = useState<boolean>(false)
 
   // Toast notification
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg)
-    setTimeout(() => {
-      setToastMessage((current) => (current === msg ? null : current))
-    }, 3500)
+    const timer = setTimeout(() => {
+      setToastMessage((curr) => (curr === msg ? null : curr))
+    }, 3800)
+    return () => clearTimeout(timer)
   }, [])
 
   // Filtered courses
   const filteredCourses = useMemo(() => {
     return courses.filter((c) => {
-      // Category filter
-      if (activeCategory === 'recommended' && (!c.matchScore || c.matchScore < 90)) return false
-      if (activeCategory === 'computational' && c.category !== 'computational') return false
-      if (activeCategory === 'bim-iso' && c.category !== 'bim-iso') return false
-      if (activeCategory === 'vdc-synchro' && c.category !== 'vdc-synchro') return false
-      if (activeCategory === 'revit-python' && c.category !== 'computational') return false
+      // 1. Enrolled filter
+      if (filterEnrolledOnly && !c.isEnrolled) return false
 
-      // Quick filter chips
-      if (filterFreeForPro && !c.isFreeForPro) return false
-      if (filterBuildingSmart && !c.isBuildingSmartCertified) return false
-      if (filterUnder10h && c.totalHours >= 10) return false
-      if (filterWithSandbox && !c.hasSandbox) return false
+      // 2. Category filter
+      if (activeCategory !== 'all' && c.category !== activeCategory) return false
 
-      // Search Query
+      // 3. Level filter
+      if (levelFilter !== 'All' && c.level !== levelFilter) return false
+
+      // 4. Search query
       if (searchQuery.trim() !== '') {
-        const q = searchQuery.toLowerCase()
+        const q = searchQuery.toLowerCase().trim()
         const matchTitle = c.title.toLowerCase().includes(q)
-        const matchProvider = c.provider.toLowerCase().includes(q)
-        const matchStack = c.stacks.some((s) => s.toLowerCase().includes(q))
-        const matchDesc = c.description?.toLowerCase().includes(q)
-        const matchInstructor = c.instructor?.name.toLowerCase().includes(q)
-        if (!matchTitle && !matchProvider && !matchStack && !matchDesc && !matchInstructor) {
+        const matchInstructor = c.instructor.name.toLowerCase().includes(q)
+        const matchDesc = c.description.toLowerCase().includes(q)
+        const matchStacks = c.stacks.some((s) => s.toLowerCase().includes(q))
+        const matchCert = c.certificateTitle.toLowerCase().includes(q)
+        if (!matchTitle && !matchInstructor && !matchDesc && !matchStacks && !matchCert) {
           return false
         }
       }
 
       return true
     })
-  }, [
-    courses,
-    activeCategory,
-    filterFreeForPro,
-    filterBuildingSmart,
-    filterUnder10h,
-    filterWithSandbox,
-    searchQuery,
-  ])
+  }, [courses, filterEnrolledOnly, activeCategory, levelFilter, searchQuery])
+
+  // Flagship course
+  const flagshipCourse = useMemo(() => {
+    return courses.find((c) => c.isFlagship) || courses[0]
+  }, [courses])
+
+  // Metrics
+  const metrics = useMemo(() => {
+    const enrolledCount = courses.filter((c) => c.isEnrolled).length
+    const completedCount = courses.filter((c) => c.progressPercent === 100).length
+    const totalHoursLearned = courses.reduce((acc, c) => {
+      if (c.isEnrolled && c.progressPercent) {
+        return acc + Math.round((c.totalHours * c.progressPercent) / 100)
+      }
+      return acc
+    }, 0)
+
+    return {
+      activeTracks: enrolledCount > 0 ? enrolledCount : 1,
+      completedCertifications: completedCount,
+      totalHoursLearned: totalHoursLearned > 0 ? totalHoursLearned : 8,
+      visibilityBoost: '+35%',
+    }
+  }, [courses])
+
+  // Category counts
+  const categoryCounts = useMemo(() => {
+    return {
+      all: courses.length,
+      'bim-iso': courses.filter((c) => c.category === 'bim-iso').length,
+      computational: courses.filter((c) => c.category === 'computational').length,
+      'vdc-coordination': courses.filter((c) => c.category === 'vdc-coordination').length,
+      'automation-api': courses.filter((c) => c.category === 'automation-api').length,
+    }
+  }, [courses])
 
   // Handlers
   const handleEnrollCourse = useCallback(
     (id: string) => {
-      setCourses((prev) =>
-        prev.map((c) => {
+      setCourses((prev) => {
+        const updated = prev.map((c) => {
           if (c.id === id) {
             return {
               ...c,
@@ -341,8 +437,14 @@ export function useTraining() {
           }
           return c
         })
-      )
-      showToast('Successfully enrolled! Course workspace & syllabus added to dashboard.')
+        try {
+          localStorage.setItem(LOCAL_STORAGE_COURSES_KEY, JSON.stringify(updated))
+        } catch {
+          // ignore
+        }
+        return updated
+      })
+      showToast('Enrolled in Castallio course! Your talent passport on Castallio One has been updated.')
     },
     [showToast]
   )
@@ -352,77 +454,73 @@ export function useTraining() {
     setIsPreviewModalOpen(true)
   }, [])
 
+  const handleOpenEnrollModal = useCallback((course: CourseItem) => {
+    setSelectedCourseForEnroll(course)
+    setIsEnrollModalOpen(true)
+  }, [])
+
+  const handleConfirmEnrollment = useCallback(() => {
+    if (!selectedCourseForEnroll) return
+    handleEnrollCourse(selectedCourseForEnroll.id)
+    setIsEnrollModalOpen(false)
+    setSelectedCourseForEnroll(null)
+  }, [selectedCourseForEnroll, handleEnrollCourse])
+
   const handleReserveWorkshopSeat = useCallback(() => {
     if (workshop.isReserved) {
-      showToast('Seat already reserved for Live Workshop on Nov 14.')
+      showToast('You are already registered for this live Castallio masterclass!')
       return
     }
-    setWorkshop((prev) => ({
-      ...prev,
-      seatsRemaining: Math.max(0, prev.seatsRemaining - 1),
+    const updated: LiveWorkshopSession = {
+      ...workshop,
+      seatsRemaining: Math.max(0, workshop.seatsRemaining - 1),
       isReserved: true,
-    }))
-    showToast('Seat reserved for Algorithmic Façade Rationalization AMA! Added to calendar.')
-  }, [workshop.isReserved, showToast])
-
-  const handleLaunchSandbox = useCallback(() => {
-    setIsSandboxModalOpen(true)
-    setTerminalLines((prev) => [
-      ...prev,
-      `>> [${new Date().toLocaleTimeString()}] Spawning cloud WebGL viewport for user Alex Morgan...`,
-      '>> WebGL 2.0 Shader pipeline loaded. Ready for real-time Revit/Grasshopper streaming.',
-    ])
-    showToast('Sandbox modeling environment active on RTX 4090 Cloud Pod.')
-  }, [showToast])
-
-  const handleRedeemCredit = useCallback(() => {
-    if (!creditCodeInput.trim()) {
-      showToast('Please enter a valid voucher or enterprise training code.')
-      return
     }
-    setIsCreditModalOpen(false)
-    setCreditCodeInput('')
-    showToast(`Redeemed credit voucher "${creditCodeInput.toUpperCase()}": 150 CR added!`)
-  }, [creditCodeInput, showToast])
+    setWorkshop(updated)
+    try {
+      localStorage.setItem(LOCAL_STORAGE_WORKSHOP_KEY, JSON.stringify(updated))
+    } catch {
+      // ignore
+    }
+    showToast('Seat reserved for Castallio Live Masterclass! Video meeting link will be dispatched to your notifications.')
+  }, [workshop, showToast])
 
-  const handleAddPath = useCallback((courseTitle: string) => {
-    showToast(`Added "${courseTitle}" to your active BIM Director learning path.`)
-  }, [showToast])
+  const handleAddPath = useCallback(
+    (courseTitle: string) => {
+      showToast(`Added "${courseTitle}" to your active Castallio career specialization pathway.`)
+    },
+    [showToast]
+  )
 
   return {
     courses,
     filteredCourses,
+    flagshipCourse,
     activeCategory,
     setActiveCategory,
+    levelFilter,
+    setLevelFilter,
     searchQuery,
     setSearchQuery,
-    filterFreeForPro,
-    setFilterFreeForPro,
-    filterBuildingSmart,
-    setFilterBuildingSmart,
-    filterUnder10h,
-    setFilterUnder10h,
-    filterWithSandbox,
-    setFilterWithSandbox,
+    filterEnrolledOnly,
+    setFilterEnrolledOnly,
     pathSteps,
     workshop,
     selectedCourseForPreview,
     isPreviewModalOpen,
     setIsPreviewModalOpen,
-    isCreditModalOpen,
-    setIsCreditModalOpen,
-    isSandboxModalOpen,
-    setIsSandboxModalOpen,
-    creditCodeInput,
-    setCreditCodeInput,
-    terminalLines,
+    selectedCourseForEnroll,
+    isEnrollModalOpen,
+    setIsEnrollModalOpen,
     toastMessage,
+    metrics,
+    categoryCounts,
     showToast,
     handleEnrollCourse,
     handleOpenPreview,
+    handleOpenEnrollModal,
+    handleConfirmEnrollment,
     handleReserveWorkshopSeat,
-    handleLaunchSandbox,
-    handleRedeemCredit,
     handleAddPath,
   }
 }

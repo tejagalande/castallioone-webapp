@@ -63,8 +63,6 @@ const Certifications: FC<CertificationsProps> = () => {
     { id: 'expiring', label: 'Expiring Soon (1)', alert: true },
   ]
 
-  const circumference = 2 * Math.PI * 15.9155
-
   return (
     <div className="certifications-page">
       {/* Toast Alert */}

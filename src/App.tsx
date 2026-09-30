@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import SignIn from './pages/SignIn'
 import SignUp from './pages/SignUp'
+import { ResetPassword } from './pages/ResetPassword'
 import EmployerDashboard from './pages/EmployerDashboard'
 import TalentDashboard from './pages/TalentDashboard'
 import { CompanyProfileSetup } from './pages/CompanyProfileSetup'
@@ -121,6 +122,7 @@ function App() {
             )
           }
         />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Public Legal Pages (supports all manual URL entry variations) */}
         <Route path="/terms" element={<TermsConditions />} />

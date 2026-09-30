@@ -8,7 +8,7 @@ import './Applications.css'
 
 export interface ApplicationsProps {
   onNavigateToFindJobs?: () => void
-  onNavigateToMessages?: () => void
+  onNavigateToMessages?: (companyName?: string, companyId?: string) => void
   onNavigateToInterviews?: () => void
   onNavigateToResume?: () => void
   onNavigateToCertifications?: () => void
@@ -114,7 +114,7 @@ export const Applications: FC<ApplicationsProps> = ({
       )}
 
       {/* 1. Telemetry Sub-Header Strip */}
-      <section className="app-telemetry-strip" aria-label="System Telemetry">
+      {/* <section className="app-telemetry-strip" aria-label="System Telemetry">
         <div className="app-telemetry-left">
           <span className="app-telemetry-tag">
             <span className="app-pulse-dot" aria-hidden="true"></span>
@@ -139,14 +139,14 @@ export const Applications: FC<ApplicationsProps> = ({
             {loading ? 'SYNCING DATABASE...' : 'LIVE DATABASE SYNCED'}
           </span>
         </div>
-      </section>
+      </section> */}
 
       {/* 2. Hero / Title & Primary Dossier Actions */}
       <header className="app-hero-wrap">
         <div className="app-hero-info">
           <div className="app-hero-badge-row">
             <span className="app-hero-badge">Talent Applications Gateway</span>
-            <span className="app-hero-cycle">LIVE SYNCHRONIZATION</span>
+            {/* <span className="app-hero-cycle">LIVE SYNCHRONIZATION</span> */}
           </div>
           <h1 className="app-hero-title">
             Application Tracker &amp; Real-Time Studio Updates
@@ -1783,7 +1783,7 @@ export const Applications: FC<ApplicationsProps> = ({
                   className="app-btn-outline"
                   onClick={() => {
                     setIsMessageModalOpen(false)
-                    onNavigateToMessages()
+                    onNavigateToMessages(selectedApp?.studio, selectedApp?.companyId)
                   }}
                   style={{ marginRight: 'auto' }}
                 >

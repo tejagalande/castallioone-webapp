@@ -1,840 +1,635 @@
 import type { FC } from 'react'
-import './Training.css'
 import {
   useTraining,
   type CourseItem,
   type CourseModule,
   type LearningPathStep,
+  type CourseCategory,
+  type CourseLevel,
 } from './useTraining'
+import './Training.css'
 
 interface TrainingProps {
   onNavigateToFindJobs?: () => void
 }
 
-const Training: FC<TrainingProps> = () => {
+const CATEGORY_TABS: { id: CourseCategory; label: string }[] = [
+  { id: 'all', label: 'All Courses' },
+  { id: 'bim-iso', label: 'BIM & ISO 19650' },
+  { id: 'computational', label: 'Computational Design' },
+  { id: 'vdc-coordination', label: '4D/5D VDC & Logistics' },
+  { id: 'automation-api', label: 'Revit API & Python' },
+]
+
+export const Training: FC<TrainingProps> = ({ onNavigateToFindJobs }) => {
   const {
-    courses,
     filteredCourses,
+    flagshipCourse,
     activeCategory,
     setActiveCategory,
+    levelFilter,
+    setLevelFilter,
     searchQuery,
     setSearchQuery,
-    filterFreeForPro,
-    setFilterFreeForPro,
-    filterBuildingSmart,
-    setFilterBuildingSmart,
-    filterUnder10h,
-    setFilterUnder10h,
-    filterWithSandbox,
-    setFilterWithSandbox,
+    filterEnrolledOnly,
+    setFilterEnrolledOnly,
     pathSteps,
     workshop,
     selectedCourseForPreview,
     isPreviewModalOpen,
     setIsPreviewModalOpen,
-    isCreditModalOpen,
-    setIsCreditModalOpen,
-    isSandboxModalOpen,
-    setIsSandboxModalOpen,
-    creditCodeInput,
-    setCreditCodeInput,
-    terminalLines,
+    selectedCourseForEnroll,
+    isEnrollModalOpen,
+    setIsEnrollModalOpen,
     toastMessage,
-    showToast,
+    metrics,
+    categoryCounts,
     handleEnrollCourse,
     handleOpenPreview,
+    handleOpenEnrollModal,
+    handleConfirmEnrollment,
     handleReserveWorkshopSeat,
-    handleLaunchSandbox,
-    handleRedeemCredit,
     handleAddPath,
   } = useTraining()
 
-  const flagshipCourse = courses.find((c) => c.isFlagship) || courses[0]
-
   return (
-    <div className="training-page">
-      {/* Toast Alert */}
+    <main className="training-page" aria-label="Castallio Academy Technical Courses & Certifications">
+      {/* Toast Notification */}
       {toastMessage && (
         <aside className="trn-toast" role="status" aria-live="polite">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-            <polyline points="22 4 12 14.01 9 11.01" />
-          </svg>
+          <span className="material-symbols-outlined" aria-hidden="true">
+            school
+          </span>
           <span>{toastMessage}</span>
         </aside>
       )}
 
-      {/* 1. Telemetry Ribbon Bar */}
-      <section className="trn-telemetry-strip" aria-label="AEC Academy Telemetry">
+      {/* 1. Telemetry & Partnership Strip */}
+      {/* <section className="trn-telemetry-bar" aria-label="Academy Accreditation Ribbon">
         <div className="trn-telemetry-left">
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#00418f', fontWeight: 600 }}>
-            <span className="pulse-dot-trn" aria-hidden="true" />
-            TALENT_WORKSPACE // ACADEMY-LEARNING-V2.8
+            <span className="trn-pulse-dot" aria-hidden="true" />
+            CASTALLIO ACADEMY // PROFESSIONAL ACCREDITATION
           </span>
           <span style={{ color: '#c2c6d5' }}>•</span>
-          <span style={{ color: '#39464f' }}>CONTINUOUS ACCREDITATION ENGINE</span>
+          <span>
+            CURRICULUM: <strong style={{ color: '#00418f' }}>ISO 19650 &amp; OPENBIM CORE</strong>
+          </span>
           <span style={{ color: '#c2c6d5' }}>•</span>
-          <span style={{ color: '#424753' }}>RECOGNISED BY buildingSMART &amp; UK BIM FRAMEWORK</span>
+          <span>
+            CREDENTIAL SYNC: <strong style={{ color: '#059669' }}>CASTALLIO ONE TALENT PASSPORT</strong>
+          </span>
         </div>
 
         <div className="trn-telemetry-right">
-          <span style={{ color: '#424753' }}>SKILL GRAPH SYNC:</span>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#ffffff', padding: '2px 10px', borderRadius: '20px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-            <span style={{ fontFamily: 'JetBrains Mono', color: '#00418f', fontWeight: 700 }}>94.2%</span>
-            <svg viewBox="0 0 24 24" fill="#00418f" stroke="#00418f" strokeWidth="1" style={{ width: '13px', height: '13px' }} aria-hidden="true">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-            </svg>
-          </div>
+          <span className="trn-telemetry-badge">
+            INDUSTRY CERTIFICATION PORTAL
+          </span>
         </div>
-      </section>
+      </section> */}
 
-      {/* 2. Page Header & Action Controls */}
-      <header className="trn-header-section">
-        <div className="trn-title-wrapper">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span className="trn-radar-badge">ISO 19650 &amp; OpenBIM Core</span>
-            <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>REV // 2025.Q1</span>
+      {/* 2. Header Area */}
+      <header className="trn-header-area">
+        <div>
+          <div className="trn-overline-badge">
+            <span className="material-symbols-outlined" style={{ fontSize: '15px' }} aria-hidden="true">
+              verified
+            </span>
+            <span>PROGRAMS BY CASTALLIO • VERIFIED ON CASTALLIO ONE</span>
           </div>
-          <h1 className="trn-main-heading">AEC Technical Training &amp; Certifications</h1>
-          <p className="trn-lead-description">
-            Upskill in computational design, ISO 19650 workflows, LOD-400 fabrication modeling, and API development with verified Castallio Masterclasses and accredited partner curricula.
+          <h1 className="trn-header-title">Technical Training &amp; Certifications</h1>
+          <p className="trn-header-desc">
+            Advance your AEC technical expertise with certified masterclasses designed and taught by <strong>Castallio</strong>. Every completed certification instantly boosts your verified talent passport and hiring ranking on <strong>Castallio One</strong>.
           </p>
         </div>
 
-        <div className="trn-action-cluster">
+        <div className="trn-header-actions">
           <button
             type="button"
-            className="btn-trn-light"
-            onClick={() => {
-              setActiveCategory('all')
-              setSearchQuery('')
-              showToast('Browsing full AEC course catalog.')
-            }}
+            className={`btn-trn-secondary ${filterEnrolledOnly ? 'active' : ''}`}
+            onClick={() => setFilterEnrolledOnly(!filterEnrolledOnly)}
+            title="Filter your enrolled courses"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" aria-hidden="true">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-            </svg>
-            <span>Browse Full Catalog</span>
+            <span className="material-symbols-outlined text-primary" aria-hidden="true">
+              school
+            </span>
+            <span>{filterEnrolledOnly ? 'Showing Enrolled' : 'My Enrolled Courses'}</span>
           </button>
 
-          <button
-            type="button"
-            className="btn-trn-light"
-            onClick={() => {
-              setActiveCategory('recommended')
-              showToast('Filtered 3 active enrolled courses.')
-            }}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="#0058bc" strokeWidth="2" aria-hidden="true">
-              <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
-              <path d="M6 12v5c3 3 9 3 12 0v-5" />
-            </svg>
-            <span>My Enrolled Courses (3)</span>
-          </button>
-
-          <button
-            type="button"
-            className="btn-trn-primary"
-            onClick={() => setIsCreditModalOpen(true)}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <rect x="2" y="4" width="20" height="16" rx="2" />
-              <line x1="12" y1="8" x2="12" y2="16" />
-              <line x1="8" y1="12" x2="16" y2="12" />
-            </svg>
-            <span>+ Redeem Firm Training Credit</span>
-          </button>
+          {onNavigateToFindJobs && (
+            <button
+              type="button"
+              className="btn-trn-primary"
+              onClick={onNavigateToFindJobs}
+              title="Explore AEC opportunities matching your skills"
+            >
+              <span className="material-symbols-outlined" aria-hidden="true">
+                work
+              </span>
+              <span>Matched Job Openings</span>
+            </button>
+          )}
         </div>
       </header>
 
-      {/* 3. Learning Metric Cards (4 Cards) */}
-      <section className="trn-metrics-grid" aria-label="Learning Metrics">
-        {/* Card 1 */}
+      {/* 3. KPI Metrics Summary Cards */}
+      <section className="trn-metrics-grid" aria-label="Learning Metrics Summary">
         <article className="trn-metric-card">
           <div className="trn-metric-top">
-            <div>
-              <span className="trn-metric-lbl">Active Tracks</span>
-              <div className="trn-metric-huge-val">3 Active</div>
-            </div>
-            <div className="trn-metric-icon-box" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" />
-                <polygon points="10 8 16 12 10 16 10 8" />
-              </svg>
+            <span className="trn-metric-label">Enrolled Programs</span>
+            <div className="trn-metric-icon-box">
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }} aria-hidden="true">
+                local_library
+              </span>
             </div>
           </div>
-          <div className="trn-metric-bottom-box">
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-              <span style={{ color: '#424753', fontWeight: 500 }}>Cohort Completion</span>
-              <span style={{ fontFamily: 'JetBrains Mono', color: '#00418f', fontWeight: 700 }}>82% Avg</span>
-            </div>
-            <div className="trn-progress-track">
-              <div className="trn-progress-fill" style={{ width: '82%' }} />
-            </div>
-            <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', color: '#727784', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              Next: Grasshopper FEA Automation
-            </span>
-          </div>
+          <div className="trn-metric-value">{metrics.activeTracks}</div>
+          <span className="trn-metric-subtext">Active specialized curricula</span>
         </article>
 
-        {/* Card 2 */}
         <article className="trn-metric-card">
           <div className="trn-metric-top">
-            <div>
-              <span className="trn-metric-lbl">Verified CPD / CEU</span>
-              <div className="trn-metric-huge-val">
-                48 / 60 <span style={{ fontSize: '14px', color: '#727784', fontWeight: 400 }}>Hrs</span>
-              </div>
-            </div>
-            <div className="trn-metric-icon-box tertiary" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-              </svg>
+            <span className="trn-metric-label">Completed Certs</span>
+            <div className="trn-metric-icon-box" style={{ background: '#ecfdf5', color: '#059669' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }} aria-hidden="true">
+                workspace_premium
+              </span>
             </div>
           </div>
-          <div className="trn-metric-bottom-box">
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-              <span style={{ color: '#424753', fontWeight: 500 }}>RIBA / CanBIM Target</span>
-              <span style={{ fontFamily: 'JetBrains Mono', color: '#39464f', fontWeight: 700 }}>80% Reached</span>
-            </div>
-            <div className="trn-progress-track">
-              <div className="trn-progress-fill" style={{ width: '80%', background: '#39464f' }} />
-            </div>
-            <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', color: '#727784' }}>
-              12 Hrs remaining for 2025 Cycle
-            </span>
-          </div>
+          <div className="trn-metric-value" style={{ color: '#059669' }}>{metrics.completedCertifications}</div>
+          <span className="trn-metric-subtext">Added to Castallio One profile</span>
         </article>
 
-        {/* Card 3 */}
         <article className="trn-metric-card">
           <div className="trn-metric-top">
-            <div>
-              <span className="trn-metric-lbl">Talent Match Expansion</span>
-              <div className="trn-metric-huge-val" style={{ color: '#00418f' }}>+18.4%</div>
-            </div>
-            <div className="trn-metric-icon-box" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-                <polyline points="17 6 23 6 23 12" />
-              </svg>
+            <span className="trn-metric-label">Study Hours Logged</span>
+            <div className="trn-metric-icon-box" style={{ background: '#eff6ff', color: '#0058bc' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }} aria-hidden="true">
+                schedule
+              </span>
             </div>
           </div>
-          <div className="trn-metric-bottom-box">
-            <span style={{ fontSize: '11px', color: '#727784', textTransform: 'uppercase', fontFamily: 'JetBrains Mono' }}>
-              Role Eligibility Unlocked:
-            </span>
-            <p style={{ fontSize: '13px', fontWeight: 600, color: '#1a1c1e', margin: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2.5" style={{ width: '15px', height: '15px' }} aria-hidden="true">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-              14 Tier-1 Roles (Foster, ZHA, Arup)
-            </p>
-          </div>
+          <div className="trn-metric-value">{metrics.totalHoursLearned}h</div>
+          <span className="trn-metric-subtext">Hands-on AEC project modeling</span>
         </article>
 
-        {/* Card 4 */}
         <article className="trn-metric-card">
           <div className="trn-metric-top">
-            <div>
-              <span className="trn-metric-lbl">Castallio Pro Credits</span>
-              <div className="trn-metric-huge-val">
-                450 <span style={{ fontSize: '14px', color: '#727784', fontWeight: 400 }}>CR</span>
-              </div>
-            </div>
-            <div className="trn-metric-icon-box secondary" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 6v12M6 12h12" />
-              </svg>
+            <span className="trn-metric-label">Talent Match Boost</span>
+            <div className="trn-metric-icon-box" style={{ background: '#fdf4ff', color: '#a855f7' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }} aria-hidden="true">
+                trending_up
+              </span>
             </div>
           </div>
-          <div className="trn-metric-bottom-box" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <span style={{ fontSize: '12px', fontWeight: 600, color: '#1a1c1e', display: 'block' }}>1 Voucher Ready</span>
-              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', color: '#727784' }}>1 Masterclass Value</span>
-            </div>
-            <button
-              type="button"
-              className="btn-trn-light"
-              style={{ padding: '4px 10px', fontSize: '11px' }}
-              onClick={() => setIsCreditModalOpen(true)}
-            >
-              Apply
-            </button>
-          </div>
+          <div className="trn-metric-value" style={{ color: '#00418f' }}>{metrics.visibilityBoost}</div>
+          <span className="trn-metric-subtext">Higher visibility to AEC recruiters</span>
         </article>
       </section>
 
-      {/* 4. Main Content Grid (12 cols) */}
-      <main className="trn-main-workspace-grid">
-        {/* LEFT COLUMN: 8 Columns */}
+      {/* 4. Main 2-Column Grid */}
+      <div className="trn-workspace-grid">
+        {/* LEFT COLUMN: Flagship Spotlight & Course Catalog */}
         <div className="trn-left-col">
-          {/* Flagship Masterclass Banner */}
-          <article className="flagship-banner-card" aria-labelledby="flagship-heading">
-            <div className="flagship-header-row">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span className="trn-radar-badge" style={{ background: '#00418f', color: '#ffffff' }}>
-                  CASTALLIO MASTERCLASS // EXECUTIVE SERIES
-                </span>
-                <span className="trn-radar-badge" style={{ background: '#d8e2ff', color: '#00418f' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '13px', height: '13px' }} aria-hidden="true">
-                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                  </svg>
-                  Flagship
-                </span>
+          {/* Flagship Course Spotlight Banner */}
+          {flagshipCourse && (
+            <article className="flagship-banner-card" aria-label="Castallio Flagship Masterclass">
+              <div className="flagship-top-row">
+                <div className="flagship-badge-group">
+                  <span className="flagship-pill">
+                    <span className="material-symbols-outlined" style={{ fontSize: '14px' }} aria-hidden="true">
+                      stars
+                    </span>
+                    Castallio Flagship Masterclass
+                  </span>
+                  <span className="flagship-tag-pill">{flagshipCourse.level}</span>
+                </div>
+                {flagshipCourse.accreditation && (
+                  <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f', fontWeight: 600 }}>
+                    {flagshipCourse.accreditation}
+                  </span>
+                )}
               </div>
-              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>
-                BATCH #2025-Q1 // LIMITED COHORT
-              </span>
-            </div>
 
-            <div>
-              <h2 className="flagship-title-text" id="flagship-heading">
-                {flagshipCourse.title}
-              </h2>
-              {flagshipCourse.instructor && (
-                <div className="instructor-row-wrap" style={{ marginTop: '10px' }}>
-                  <div className="instructor-avatar-circle">
+              <div>
+                <h2 className="flagship-title">{flagshipCourse.title}</h2>
+                <div className="flagship-instructor-row" style={{ marginTop: '10px' }}>
+                  <div className="flagship-instructor-avatar">
                     {flagshipCourse.instructor.initials}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#1a1c1e' }}>
-                      {flagshipCourse.instructor.name}
-                    </span>
-                    <span style={{ fontSize: '12px', color: '#727784' }}>
-                      {flagshipCourse.instructor.title}
+                  <div className="flagship-instructor-info">
+                    <span className="flagship-instructor-name">{flagshipCourse.instructor.name}</span>
+                    <span className="flagship-instructor-title">
+                      {flagshipCourse.instructor.title} {flagshipCourse.instructor.organization ? `• ${flagshipCourse.instructor.organization}` : ''}
                     </span>
                   </div>
                 </div>
-              )}
-            </div>
-
-            {/* Badges Bar */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontFamily: 'JetBrains Mono', fontSize: '11px' }}>
-              <span className="course-tag-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#00418f', fontWeight: 600 }}>
-                <svg viewBox="0 0 24 24" fill="#00418f" stroke="#00418f" strokeWidth="1" style={{ width: '13px', height: '13px' }} aria-hidden="true">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                </svg>
-                Official Castallio Certification
-              </span>
-              <span className="course-tag-pill">ISO 19650-2 Aligned</span>
-              <span className="course-tag-pill" style={{ color: '#b3272d', fontWeight: 600 }}>
-                CEU: 18 Hours
-              </span>
-              <span className="course-tag-pill" style={{ color: '#00418f', fontWeight: 700 }}>
-                Level: Advanced
-              </span>
-            </div>
-
-            <p style={{ fontSize: '13.5px', lineHeight: '21px', color: '#424753', margin: 0 }}>
-              {flagshipCourse.description}
-            </p>
-
-            {/* 4 Highlights Checklist */}
-            <div className="flagship-highlights-grid">
-              <div className="highlight-bullet-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2.5" style={{ width: '16px', height: '16px' }} aria-hidden="true">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span>8 Comprehensive Modules</span>
               </div>
-              <div className="highlight-bullet-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2.5" style={{ width: '16px', height: '16px' }} aria-hidden="true">
-                  <polyline points="4 17 10 11 4 5" />
-                  <line x1="12" y1="19" x2="20" y2="19" />
-                </svg>
-                <span>Live 3D Sandbox Terminal</span>
+
+              <p className="flagship-desc">{flagshipCourse.description}</p>
+
+              {/* Stacks chips */}
+              <div className="flagship-stacks-row">
+                {flagshipCourse.stacks.map((stack, i) => (
+                  <span key={i} className="stack-chip">
+                    {stack}
+                  </span>
+                ))}
               </div>
-              <div className="highlight-bullet-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2.5" style={{ width: '16px', height: '16px' }} aria-hidden="true">
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <line x1="3" y1="9" x2="21" y2="9" />
-                  <line x1="9" y1="21" x2="9" y2="9" />
-                </svg>
-                <span>Real Grimshaw / Foster Project Data</span>
+
+              {/* Career Boost Callout */}
+              <div className="flagship-profile-callout">
+                <span className="material-symbols-outlined" aria-hidden="true">
+                  verified_user
+                </span>
+                <span>{flagshipCourse.profileBoostImpact}</span>
               </div>
-              <div className="highlight-bullet-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2.5" style={{ width: '16px', height: '16px' }} aria-hidden="true">
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09" />
-                </svg>
-                <span>Direct Recruiter Ledger Verification</span>
+
+              {/* CTAs */}
+              <div className="flagship-actions-row">
+                <button
+                  type="button"
+                  className="btn-trn-primary"
+                  onClick={() => handleOpenEnrollModal(flagshipCourse)}
+                >
+                  <span className="material-symbols-outlined" aria-hidden="true">
+                    how_to_reg
+                  </span>
+                  <span>{flagshipCourse.isEnrolled ? 'View Enrolled Workspace' : 'Enroll in Program'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="btn-trn-secondary"
+                  onClick={() => handleOpenPreview(flagshipCourse)}
+                >
+                  <span className="material-symbols-outlined" aria-hidden="true">
+                    menu_book
+                  </span>
+                  <span>Preview Full Syllabus ({flagshipCourse.modulesCount} Modules)</span>
+                </button>
               </div>
-            </div>
+            </article>
+          )}
 
-            {/* CTA Buttons */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', paddingTop: '4px' }}>
-              <button
-                type="button"
-                className="btn-trn-primary"
-                onClick={() => handleEnrollCourse(flagshipCourse.id)}
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '16px', height: '16px' }} aria-hidden="true">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                  <path d="M7 11V7a5 5 0 0 1 9.9-1" />
-                </svg>
-                <span>Enroll with 1-Click • Free with Pro Membership</span>
-              </button>
+          {/* Controls: Category Tabs & Search Bar */}
+          <section className="trn-controls-section" aria-label="Course Catalog Filters">
+            {/* Category Tabs */}
+            <nav className="trn-tabs-scroll" aria-label="Course Category Tabs">
+              {CATEGORY_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className={`trn-tab-pill ${activeCategory === tab.id ? 'active' : ''}`}
+                  onClick={() => setActiveCategory(tab.id)}
+                >
+                  <span>{tab.label}</span>
+                  <span className="trn-tab-count">{categoryCounts[tab.id]}</span>
+                </button>
+              ))}
+            </nav>
 
-              <button
-                type="button"
-                className="btn-trn-light"
-                onClick={() => handleOpenPreview(flagshipCourse)}
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '16px', height: '16px' }}>
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-                <span>Preview Syllabus &amp; Sandbox</span>
-              </button>
-            </div>
-          </article>
-
-          {/* Filter & Category Selector Tabs */}
-          <div className="trn-filter-container">
-            <div className="trn-category-tabs-scroll" role="tablist">
-              <button
-                type="button"
-                className={`trn-cat-tab-btn ${activeCategory === 'all' ? 'active' : ''}`}
-                onClick={() => setActiveCategory('all')}
-              >
-                All Courses (42)
-              </button>
-              <button
-                type="button"
-                className={`trn-cat-tab-btn ${activeCategory === 'recommended' ? 'active' : ''}`}
-                onClick={() => setActiveCategory('recommended')}
-              >
-                Recommended by Castallio (6)
-              </button>
-              <button
-                type="button"
-                className={`trn-cat-tab-btn ${activeCategory === 'computational' ? 'active' : ''}`}
-                onClick={() => setActiveCategory('computational')}
-              >
-                Computational Design (12)
-              </button>
-              <button
-                type="button"
-                className={`trn-cat-tab-btn ${activeCategory === 'bim-iso' ? 'active' : ''}`}
-                onClick={() => setActiveCategory('bim-iso')}
-              >
-                BIM &amp; ISO 19650 (10)
-              </button>
-              <button
-                type="button"
-                className={`trn-cat-tab-btn ${activeCategory === 'vdc-synchro' ? 'active' : ''}`}
-                onClick={() => setActiveCategory('vdc-synchro')}
-              >
-                4D/5D VDC &amp; Synchro (8)
-              </button>
-              <button
-                type="button"
-                className={`trn-cat-tab-btn ${activeCategory === 'revit-python' ? 'active' : ''}`}
-                onClick={() => setActiveCategory('revit-python')}
-              >
-                Revit API &amp; Python (6)
-              </button>
-            </div>
-
-            <div className="trn-search-filter-box">
-              <div className="trn-search-input-wrap">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '16px', height: '16px', color: '#727784' }} aria-hidden="true">
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
+            {/* Search & Level Filter */}
+            <div className="trn-filters-row">
+              <div className="trn-search-box">
+                <span className="material-symbols-outlined trn-search-icon" aria-hidden="true">
+                  search
+                </span>
                 <input
                   type="text"
-                  placeholder="Search technical topics, software (Grasshopper, Speckle, Solibri), or instructors..."
+                  className="trn-search-input"
+                  placeholder="Search by topic, instructor, or software (Revit, Grasshopper, Synchro)..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   aria-label="Search courses"
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    className="trn-search-clear"
+                    onClick={() => setSearchQuery('')}
+                    aria-label="Clear search"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '16px' }} aria-hidden="true">
+                      close
+                    </span>
+                  </button>
+                )}
               </div>
 
-              <div className="trn-chips-filter-row">
-                <button
-                  type="button"
-                  className={`trn-quick-chip ${filterFreeForPro ? 'active' : ''}`}
-                  onClick={() => setFilterFreeForPro(!filterFreeForPro)}
-                >
-                  <span className="pulse-dot-trn" style={{ width: '5px', height: '5px' }} aria-hidden="true" />
-                  Free for Pro
-                </button>
-
-                <button
-                  type="button"
-                  className={`trn-quick-chip ${filterBuildingSmart ? 'active' : ''}`}
-                  onClick={() => setFilterBuildingSmart(!filterBuildingSmart)}
-                >
-                  buildingSMART Certified
-                </button>
-
-                <button
-                  type="button"
-                  className={`trn-quick-chip ${filterUnder10h ? 'active' : ''}`}
-                  onClick={() => setFilterUnder10h(!filterUnder10h)}
-                >
-                  Under 10 Hours
-                </button>
-
-                <button
-                  type="button"
-                  className={`trn-quick-chip ${filterWithSandbox ? 'active' : ''}`}
-                  onClick={() => setFilterWithSandbox(!filterWithSandbox)}
-                >
-                  With Sandbox
-                </button>
-              </div>
+              <select
+                className="trn-select-dropdown"
+                value={levelFilter}
+                onChange={(e) => setLevelFilter(e.target.value as CourseLevel)}
+                aria-label="Filter by course level"
+              >
+                <option value="All">All Skill Levels</option>
+                <option value="Beginner">Beginner</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Advanced">Advanced</option>
+                <option value="Executive">Executive</option>
+              </select>
             </div>
-          </div>
+          </section>
 
-          {/* Curated Courses List */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '18px', height: '18px' }} aria-hidden="true">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                </svg>
-                <h3 style={{ fontFamily: 'Hanken Grotesk', fontSize: '17px', fontWeight: 700, margin: 0, color: '#1a1c1e' }}>
-                  Recommended by Castallio AI — Curated for Alex Morgan
+          {/* Courses List */}
+          <section className="trn-courses-list" aria-label="Castallio Programs Catalog">
+            {filteredCourses.length === 0 ? (
+              <div style={{ padding: '40px 20px', textAlign: 'center', background: '#ffffff', borderRadius: '16px', border: '1px dashed #cbd5e1' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '40px', color: '#94a3b8' }} aria-hidden="true">
+                  school
+                </span>
+                <h3 style={{ margin: '8px 0', fontSize: '16px', fontWeight: 700, color: '#1a1c1e' }}>
+                  No Castallio courses match your search
                 </h3>
+                <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+                  Try clearing the search query or selecting a different course category.
+                </p>
+                <button
+                  type="button"
+                  className="btn-trn-secondary"
+                  style={{ marginTop: '14px' }}
+                  onClick={() => {
+                    setSearchQuery('')
+                    setActiveCategory('all')
+                    setLevelFilter('All')
+                    setFilterEnrolledOnly(false)
+                  }}
+                >
+                  Reset Catalog Filters
+                </button>
               </div>
+            ) : (
+              filteredCourses.map((course: CourseItem) => (
+                <article
+                  key={course.id}
+                  className={`trn-course-card ${course.isEnrolled ? 'enrolled' : ''}`}
+                >
+                  <div className="course-card-top">
+                    <div>
+                      <div className="course-provider-line">
+                        <span className="material-symbols-outlined" style={{ fontSize: '14px' }} aria-hidden="true">
+                          verified
+                        </span>
+                        <span>{course.provider}</span>
+                      </div>
+                      <h3 className="course-card-heading">{course.title}</h3>
+                    </div>
+                    <span className="course-level-chip">{course.level}</span>
+                  </div>
+
+                  <p className="course-desc-text">{course.description}</p>
+
+                  {/* Stacks chips */}
+                  <div className="flagship-stacks-row">
+                    {course.stacks.map((stack, i) => (
+                      <span key={i} className="stack-chip">
+                        {stack}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Career Impact Note */}
+                  <div className="course-career-boost-box">
+                    <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#059669' }} aria-hidden="true">
+                      rocket_launch
+                    </span>
+                    <span>{course.profileBoostImpact}</span>
+                  </div>
+
+                  {/* Progress bar if enrolled */}
+                  {course.isEnrolled && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: '#00418f', fontWeight: 600 }}>
+                        <span>Course Progress</span>
+                        <span>{course.progressPercent ?? 0}% Completed</span>
+                      </div>
+                      <div style={{ height: '6px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${course.progressPercent ?? 0}%`, background: '#0058bc', transition: 'width 0.3s ease' }} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Footer Meta & Actions */}
+                  <div className="course-meta-footer">
+                    <div className="course-stats-line">
+                      <span className="course-stat-item">
+                        <span className="material-symbols-outlined" aria-hidden="true">
+                          schedule
+                        </span>
+                        <span>{course.totalHours} Hours</span>
+                      </span>
+                      <span>•</span>
+                      <span className="course-stat-item">
+                        <span className="material-symbols-outlined" aria-hidden="true">
+                          format_list_bulleted
+                        </span>
+                        <span>{course.modulesCount} Modules</span>
+                      </span>
+                      <span>•</span>
+                      <span style={{ fontWeight: 600, color: '#1a1c1e' }}>
+                        ★ {course.rating} ({course.reviewsCount} reviews)
+                      </span>
+                    </div>
+
+                    <div className="course-action-buttons">
+                      <button
+                        type="button"
+                        className="btn-trn-secondary"
+                        onClick={() => handleAddPath(course.title)}
+                        title="Add course to your personal pathway"
+                      >
+                        + Pathway
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn-trn-secondary"
+                        onClick={() => handleOpenPreview(course)}
+                        title="Preview syllabus"
+                      >
+                        Syllabus
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn-trn-primary"
+                        onClick={() => {
+                          if (course.isEnrolled) {
+                            handleOpenPreview(course)
+                          } else {
+                            handleOpenEnrollModal(course)
+                          }
+                        }}
+                      >
+                        {course.isEnrolled ? 'Resume Study' : 'Enroll Now'}
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))
+            )}
+          </section>
+        </div>
+
+        {/* RIGHT COLUMN: Streamlined Sidebar (Pathway, Workshop, Why Castallio) */}
+        <aside className="trn-right-col" aria-label="Curated Pathways and Workshops">
+          {/* Card 1: Curated Career Specialization Pathway */}
+          <article className="trn-sidebar-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="trn-overline-badge" style={{ margin: 0 }}>Specialization Track</span>
               <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f', fontWeight: 700 }}>
-                ENGINE: TALENT-VECTOR-MATCH // V2.4
+                AEC LEADERSHIP
               </span>
             </div>
 
-            {filteredCourses.map((course: CourseItem) => (
-              <article className="trn-course-card" key={course.id}>
-                <div className="course-top-title-row">
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>
-                      <span style={{ textTransform: 'uppercase' }}>{course.provider}</span>
-                      {course.collaboration && (
-                        <>
-                          <span>•</span>
-                          <span style={{ color: '#39464f', fontWeight: 600 }}>{course.collaboration}</span>
-                        </>
-                      )}
-                    </div>
-                    <h4 className="course-card-heading">{course.title}</h4>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                    {course.matchScore && (
-                      <span className="trn-radar-badge" style={{ background: '#d8e2ff', color: '#00418f', fontSize: '11px' }}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '13px', height: '13px' }}>
-                          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-                          <polyline points="17 6 23 6 23 12" />
-                        </svg>
-                        {course.matchScore}% Match
-                      </span>
-                    )}
-
-                    {course.progressPercent !== undefined && (
-                      <span className="trn-radar-badge" style={{ background: '#eeeef0', color: '#1a1c1e', fontSize: '11px' }}>
-                        {course.progressPercent}% Completed
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* AI Reason Callout */}
-                {course.matchReason && (
-                  <div className="ai-reason-callout">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '16px', height: '16px', flexShrink: 0 }} aria-hidden="true">
-                      <path d="M12 2a10 10 0 0 1 10 10c0 4.42-3.58 8-8 8v2c0 .55-.45 1-1 1s-1-.45-1-1v-2a8 8 0 0 1-8-8c0-5.52 4.48-10 10-10z" />
-                    </svg>
-                    <span><strong>AI Insight:</strong> {course.matchReason}</span>
-                  </div>
-                )}
-
-                {/* Stacks */}
-                <div className="course-meta-tags-line">
-                  {course.stacks.map((st, i) => (
-                    <span className="course-tag-pill" key={i}>{st}</span>
-                  ))}
-                </div>
-
-                {/* Progress bar if present */}
-                {course.progressPercent !== undefined && (
-                  <div className="trn-progress-track" style={{ height: '7px' }}>
-                    <div className="trn-progress-fill" style={{ width: `${course.progressPercent}%` }} />
-                  </div>
-                )}
-
-                {/* Footer stats & Action */}
-                <div className="course-bottom-actions-row">
-                  <div className="course-stats-cluster">
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '14px', height: '14px' }}>
-                        <circle cx="12" cy="12" r="10" />
-                        <polyline points="12 6 12 12 16 14" />
-                      </svg>
-                      {course.totalHours}h Total
-                    </span>
-                    <span>•</span>
-                    <span>{course.modulesCount} Modules</span>
-                    <span>•</span>
-                    <span>{course.cpdPoints} CPD Points</span>
-                    <span>•</span>
-                    <span style={{ color: '#1a1c1e', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                      ★ {course.rating} ({course.reviewsCount})
-                    </span>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <button
-                      type="button"
-                      className="btn-trn-light"
-                      style={{ padding: '6px 12px', fontSize: '12px' }}
-                      onClick={() => handleAddPath(course.title)}
-                    >
-                      + Add to Path
-                    </button>
-
-                    <button
-                      type="button"
-                      className="btn-trn-primary"
-                      style={{ padding: '6px 16px', fontSize: '12px' }}
-                      onClick={() => {
-                        if (course.isEnrolled) {
-                          handleOpenPreview(course)
-                        } else {
-                          handleEnrollCourse(course.id)
-                        }
-                      }}
-                    >
-                      {course.isEnrolled ? `Resume Learning (${course.progressPercent ?? 0}%)` : 'Enroll Free (Pro)'}
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN: 4 Columns (Intelligence, Learning Track & Credential Sync) */}
-        <aside className="trn-right-col">
-          {/* 1. Learning Pathway: BIM Director Track */}
-          <article className="trn-sidebar-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span className="trn-radar-badge" style={{ fontSize: '10px' }}>Curated Pathway</span>
-              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', color: '#727784' }}>TIER // DIRECTOR</span>
-            </div>
-
             <div>
-              <h3 className="trn-sidebar-title">BIM Director Track</h3>
-              <p style={{ fontSize: '12.5px', color: '#424753', margin: '4px 0 0' }}>
-                Structured 4-step specialization leading to enterprise governance roles.
+              <h3 className="trn-sidebar-title">BIM Coordinator to Director Pathway</h3>
+              <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: '#555b68', lineHeight: 1.4 }}>
+                Structured 4-stage technical progression endorsed by Castallio for high-velocity career advancement.
               </p>
             </div>
 
-            {/* Timeline Steps */}
             <div className="pathway-steps-list">
               {pathSteps.map((step: LearningPathStep) => (
-                <div className="path-step-row" key={step.id}>
+                <div key={step.id} className="path-step-row">
                   <div className={`step-num-circle ${step.status}`}>
                     {step.status === 'done' ? '✓' : `0${step.id}`}
                   </div>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong style={{ fontSize: '13px', color: '#1a1c1e' }}>{step.title}</strong>
-                      <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: step.status === 'done' ? '#00418f' : '#727784', fontWeight: 700 }}>
+                  <div className="step-info-col">
+                    <div className="step-title-line">
+                      <span>{step.title}</span>
+                      <span style={{ fontSize: '11px', color: step.status === 'done' ? '#059669' : '#00418f' }}>
                         {step.subtext}
                       </span>
                     </div>
                     {step.progressPercent !== undefined && (
-                      <div className="trn-progress-track" style={{ height: '4px', margin: '3px 0' }}>
-                        <div className="trn-progress-fill" style={{ width: `${step.progressPercent}%` }} />
+                      <div style={{ height: '4px', background: '#e2e8f0', borderRadius: '2px', overflow: 'hidden', margin: '3px 0' }}>
+                        <div style={{ height: '100%', width: `${step.progressPercent}%`, background: '#0058bc' }} />
                       </div>
                     )}
-                    <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', color: '#727784' }}>
-                      {step.note}
-                    </span>
+                    <span className="step-note-text">{step.note}</span>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div style={{ background: '#d8e2ff', borderRadius: '10px', padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <svg viewBox="0 0 24 24" fill="#00418f" stroke="#00418f" strokeWidth="1" style={{ width: '22px', height: '22px', flexShrink: 0 }} aria-hidden="true">
-                <circle cx="12" cy="8" r="7" />
-                <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
-              </svg>
-              <div>
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#001a41', fontWeight: 700, display: 'block' }}>
-                  UNLOCKS $150K+ SALARY BENCHMARK
-                </span>
-                <span style={{ fontSize: '11.5px', color: '#00418f' }}>
-                  Estimated completion: ~4 weeks with active cadence
-                </span>
-              </div>
+            <div style={{ background: '#eff6ff', borderRadius: '10px', padding: '10px 12px', fontSize: '12px', color: '#00418f', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }} aria-hidden="true">
+                military_tech
+              </span>
+              <span>Completing this pathway unlocks Tier-1 enterprise recruiter prioritization on Castallio One.</span>
             </div>
           </article>
 
-          {/* 2. Sandbox Lab Environment Widget */}
+          {/* Card 2: Upcoming Live Workshop */}
           <article className="trn-sidebar-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', color: '#727784', textTransform: 'uppercase', fontWeight: 700 }}>
-                Virtual Modeling Pod
+              <span className="trn-overline-badge" style={{ margin: 0, background: '#fee2e2', color: '#b91c1c' }}>
+                Live Masterclass
               </span>
-              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', color: '#00418f', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span className="pulse-dot-trn" aria-hidden="true" />
-                RTX 4090 CLOUD GPU
-              </span>
-            </div>
-
-            <div>
-              <h3 className="trn-sidebar-title">Castallio Sandbox Lab</h3>
-              <p style={{ fontSize: '12.5px', color: '#424753', margin: '4px 0 0' }}>
-                Spin up an instant browser-based development station with pre-configured toolchains.
-              </p>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', textTransform: 'uppercase', color: '#727784' }}>
-                Installed Kernels &amp; Runtimes:
-              </span>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', fontFamily: 'JetBrains Mono', fontSize: '10.5px' }}>
-                <span className="course-tag-pill">pyRevit 4.8.14</span>
-                <span className="course-tag-pill">Python 3.10 AEC</span>
-                <span className="course-tag-pill">Rhino.Inside v1.12</span>
-                <span className="course-tag-pill">Speckle CLI</span>
-                <span className="course-tag-pill">Solibri Mock API</span>
-              </div>
-            </div>
-
-            {/* Visual Terminal Window */}
-            <div className="terminal-window-box">
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', color: '#727784', borderBottom: '1px solid #424753', paddingBottom: '3px', marginBottom: '4px' }}>
-                <span>TERMINAL // POD-ALPHA-04</span>
-                <span style={{ color: '#00418f' }}>LATENCY: 14ms</span>
-              </div>
-              <div style={{ color: '#adc6ff' }}>$ import pyrevit.forms as forms</div>
-              <div style={{ color: '#adc6ff' }}>$ speckle_client.authenticate_session(AUTH_TOKEN)</div>
-              <div style={{ color: '#c2c6d5' }}>&gt;&gt; Geometry stream linked: IFC4x3_AIRPORT_TERMINAL_B.ifc</div>
-            </div>
-
-            <button
-              type="button"
-              className="btn-trn-primary"
-              style={{ justifyContent: 'center' }}
-              onClick={handleLaunchSandbox}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '16px', height: '16px' }}>
-                <polyline points="4 17 10 11 4 5" />
-                <line x1="12" y1="19" x2="20" y2="19" />
-              </svg>
-              <span>Launch 3D WebGL Lab Environment</span>
-            </button>
-          </article>
-
-          {/* 3. Live Masterclasses & Workshops */}
-          <article className="trn-sidebar-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span className="trn-radar-badge" style={{ background: '#ffdad7', color: '#b3272d' }}>
-                LIVE WORKSHOP
-              </span>
-              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>
+              <span className="workshop-date-badge">
+                <span className="material-symbols-outlined" style={{ fontSize: '13px' }} aria-hidden="true">
+                  calendar_today
+                </span>
                 {workshop.dateText}
               </span>
             </div>
 
             <div>
-              <h4 className="trn-sidebar-title">{workshop.title}</h4>
-              <p style={{ fontSize: '12.5px', color: '#424753', margin: '4px 0 0' }}>
+              <h3 className="trn-sidebar-title">{workshop.title}</h3>
+              <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: '#555b68', lineHeight: 1.45 }}>
                 {workshop.description}
               </p>
             </div>
 
-            <div style={{ background: '#f3f3f6', borderRadius: '10px', padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#1a1c1e' }}>
-                {workshop.seatsRemaining} Seats Remaining
-              </span>
-              <span className="trn-radar-badge" style={{ fontSize: '10px' }}>FREE FOR PRO</span>
+            <div className="workshop-highlight-box">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
+                <span style={{ fontWeight: 600, color: '#1a1c1e' }}>{workshop.instructor}</span>
+                <span style={{ color: '#00418f', fontWeight: 700 }}>{workshop.seatsRemaining} Seats Left</span>
+              </div>
+              <span style={{ fontSize: '11.5px', color: '#727784' }}>{workshop.timeText} • {workshop.platform}</span>
             </div>
 
             <button
               type="button"
-              className="btn-trn-light"
-              style={{ justifyContent: 'center', fontWeight: 700 }}
+              className={workshop.isReserved ? 'btn-trn-secondary' : 'btn-trn-primary'}
+              style={{ justifyContent: 'center' }}
               onClick={handleReserveWorkshopSeat}
             >
-              {workshop.isReserved ? '✓ Seat Reserved (Check Calendar)' : 'Reserve Seat Now'}
+              <span className="material-symbols-outlined" aria-hidden="true">
+                {workshop.isReserved ? 'event_available' : 'confirmation_number'}
+              </span>
+              <span>{workshop.isReserved ? 'Seat Reserved (Check Email / Alerts)' : 'Reserve Free Candidate Seat'}</span>
             </button>
           </article>
 
-          {/* 4. Recognized Industry Credentials */}
+          {/* Card 3: Why Learn with Castallio */}
           <article className="trn-sidebar-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', textTransform: 'uppercase', color: '#727784', fontWeight: 700 }}>
-                Accreditation Network
-              </span>
-              <svg viewBox="0 0 24 24" fill="#00418f" stroke="#00418f" strokeWidth="1" style={{ width: '16px', height: '16px' }}>
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-              </svg>
+            <h3 className="trn-sidebar-title">Why Learn with Castallio?</h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className="why-castallio-item">
+                <div className="why-castallio-icon">
+                  <span className="material-symbols-outlined" aria-hidden="true">
+                    badge
+                  </span>
+                </div>
+                <div className="why-castallio-text">
+                  <span className="why-castallio-heading">Direct Castallio One Sync</span>
+                  <span className="why-castallio-desc">
+                    Certificates automatically appear on your talent profile for hiring studios to verify.
+                  </span>
+                </div>
+              </div>
+
+              <div className="why-castallio-item">
+                <div className="why-castallio-icon">
+                  <span className="material-symbols-outlined" aria-hidden="true">
+                    domain
+                  </span>
+                </div>
+                <div className="why-castallio-text">
+                  <span className="why-castallio-heading">Production Project Blueprints</span>
+                  <span className="why-castallio-desc">
+                    Trained on real IFC datasets from international airports, hospitals, and transit hubs.
+                  </span>
+                </div>
+              </div>
+
+              <div className="why-castallio-item">
+                <div className="why-castallio-icon">
+                  <span className="material-symbols-outlined" aria-hidden="true">
+                    verified
+                  </span>
+                </div>
+                <div className="why-castallio-text">
+                  <span className="why-castallio-heading">ISO 19650 &amp; OpenBIM Standards</span>
+                  <span className="why-castallio-desc">
+                    Aligend with global buildingSMART, UK BIM Framework, and Autodesk standards.
+                  </span>
+                </div>
+              </div>
             </div>
-
-            <h4 className="trn-sidebar-title">Recognized Industry Credentials</h4>
-
-            <div className="accreditation-2col-grid">
-              <div className="accred-box-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '16px', height: '16px' }}>
-                  <path d="M3 21h18M3 7v14M21 7v14M6 11h2M6 15h2M10 11h2M10 15h2M14 11h2M14 15h2M18 11h2M18 15h2M9 3h6v4H9z" />
-                </svg>
-                <span>buildingSMART</span>
-              </div>
-              <div className="accred-box-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#39464f" strokeWidth="2" style={{ width: '16px', height: '16px' }}>
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <line x1="9" y1="3" x2="9" y2="21" />
-                </svg>
-                <span>BRE Academy</span>
-              </div>
-              <div className="accred-box-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '16px', height: '16px' }}>
-                  <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                </svg>
-                <span>Autodesk Partner</span>
-              </div>
-              <div className="accred-box-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#b3272d" strokeWidth="2" style={{ width: '16px', height: '16px' }}>
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 14 14" />
-                </svg>
-                <span>CanBIM Council</span>
-              </div>
-            </div>
-
-            <p style={{ fontSize: '12px', lineHeight: '18px', color: '#424753', margin: 0 }}>
-              Every Castallio Academy certificate is cryptographically anchored to your public AEC Ledger and instantly verifiable by Tier-1 hiring partners.
-            </p>
-
-            <button
-              type="button"
-              style={{ border: 'none', background: 'none', fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f', fontWeight: 700, cursor: 'pointer', textAlign: 'left', padding: 0 }}
-              onClick={() => showToast('Public Ledger: SHA-256 block 884129 verified.')}
-            >
-              View Public Ledger Verification Protocol →
-            </button>
           </article>
         </aside>
-      </main>
+      </div>
 
-      {/* ── MODAL: Course Preview & Syllabus ── */}
+      {/* ── MODAL: Course Syllabus & Module Preview ── */}
       {isPreviewModalOpen && selectedCourseForPreview && (
-        <div className="trn-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="preview-modal-title">
-          <div className="trn-modal-dialog">
-            <div className="trn-modal-header">
+        <aside
+          className="trn-modal-backdrop"
+          onClick={() => setIsPreviewModalOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Course Syllabus Modal"
+        >
+          <div className="trn-modal-dialog" onClick={(e) => e.stopPropagation()}>
+            <header className="trn-modal-header">
               <div>
-                <h2 id="preview-modal-title">{selectedCourseForPreview.title}</h2>
+                <h2 className="trn-modal-title">{selectedCourseForPreview.title}</h2>
                 <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f' }}>
-                  {selectedCourseForPreview.provider} • {selectedCourseForPreview.totalHours} Hours Total ({selectedCourseForPreview.cpdPoints} CPD Points)
+                  Offered by {selectedCourseForPreview.provider} • {selectedCourseForPreview.totalHours} Hours ({selectedCourseForPreview.modulesCount} Modules)
                 </span>
               </div>
               <button
@@ -843,39 +638,29 @@ const Training: FC<TrainingProps> = () => {
                 onClick={() => setIsPreviewModalOpen(false)}
                 aria-label="Close dialog"
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '20px', height: '20px' }}>
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
+                <span className="material-symbols-outlined" aria-hidden="true">
+                  close
+                </span>
               </button>
-            </div>
+            </header>
 
             <div className="trn-modal-body">
-              <p style={{ margin: 0 }}>{selectedCourseForPreview.description}</p>
+              <p style={{ margin: 0, fontSize: '13.5px', color: '#424753', lineHeight: 1.5 }}>
+                {selectedCourseForPreview.description}
+              </p>
 
               <div>
-                <h3 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 8px', color: '#1a1c1e' }}>
-                  Course Syllabus ({selectedCourseForPreview.modulesCount} Modules)
+                <h3 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 10px', color: '#1a1c1e' }}>
+                  Detailed Course Syllabus ({selectedCourseForPreview.modulesCount} Modules)
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {selectedCourseForPreview.syllabus?.map((mod: CourseModule, idx) => (
-                    <div
-                      key={mod.id}
-                      style={{
-                        background: '#f3f3f6',
-                        borderRadius: '8px',
-                        padding: '8px 12px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        fontSize: '12.5px',
-                      }}
-                    >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {selectedCourseForPreview.syllabus.map((mod: CourseModule, idx) => (
+                    <div key={mod.id} className="trn-module-item">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f', fontWeight: 700 }}>
-                          0{idx + 1}.
+                        <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11.5px', color: '#00418f', fontWeight: 700 }}>
+                          {String(idx + 1).padStart(2, '0')}.
                         </span>
-                        <span style={{ color: '#1a1c1e', fontWeight: 500 }}>{mod.title}</span>
+                        <span style={{ fontWeight: 600, color: '#1a1c1e' }}>{mod.title}</span>
                       </div>
                       <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>
                         {mod.duration}
@@ -884,12 +669,21 @@ const Training: FC<TrainingProps> = () => {
                   ))}
                 </div>
               </div>
+
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#00418f', display: 'block', marginBottom: '2px' }}>
+                  Castallio Certificate Issued Upon Completion:
+                </span>
+                <span style={{ fontSize: '12.5px', color: '#1a1c1e', fontWeight: 600 }}>
+                  {selectedCourseForPreview.certificateTitle}
+                </span>
+              </div>
             </div>
 
-            <div className="trn-modal-footer">
+            <footer className="trn-modal-footer">
               <button
                 type="button"
-                className="btn-trn-light"
+                className="btn-trn-secondary"
                 onClick={() => setIsPreviewModalOpen(false)}
               >
                 Close
@@ -898,137 +692,95 @@ const Training: FC<TrainingProps> = () => {
                 type="button"
                 className="btn-trn-primary"
                 onClick={() => {
-                  handleEnrollCourse(selectedCourseForPreview.id)
                   setIsPreviewModalOpen(false)
+                  handleEnrollCourse(selectedCourseForPreview.id)
                 }}
               >
-                Enroll in Course
+                {selectedCourseForPreview.isEnrolled ? 'Open Workspace' : 'Enroll in Program'}
               </button>
-            </div>
+            </footer>
           </div>
-        </div>
+        </aside>
       )}
 
-      {/* ── MODAL: Redeem Training Credit ── */}
-      {isCreditModalOpen && (
-        <div className="trn-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="credit-modal-title">
-          <div className="trn-modal-dialog">
-            <div className="trn-modal-header">
-              <h2 id="credit-modal-title">Redeem Enterprise Training Credit</h2>
+      {/* ── MODAL: Course Enrollment Confirmation ── */}
+      {isEnrollModalOpen && selectedCourseForEnroll && (
+        <aside
+          className="trn-modal-backdrop"
+          onClick={() => setIsEnrollModalOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Confirm Course Enrollment Modal"
+        >
+          <div className="trn-modal-dialog" style={{ maxWidth: '520px' }} onClick={(e) => e.stopPropagation()}>
+            <header className="trn-modal-header">
+              <div>
+                <h2 className="trn-modal-title">Enroll in Castallio Program</h2>
+                <span style={{ fontSize: '12px', color: '#00418f' }}>
+                  {selectedCourseForEnroll.provider}
+                </span>
+              </div>
               <button
                 type="button"
                 className="trn-modal-close"
-                onClick={() => setIsCreditModalOpen(false)}
+                onClick={() => setIsEnrollModalOpen(false)}
                 aria-label="Close dialog"
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '20px', height: '20px' }}>
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
+                <span className="material-symbols-outlined" aria-hidden="true">
+                  close
+                </span>
               </button>
-            </div>
+            </header>
 
             <div className="trn-modal-body">
-              <p style={{ margin: 0 }}>
-                Enter your employer-issued AEC continuous education voucher code or buildingSMART partner grant key:
-              </p>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1a1c1e' }}>
+                {selectedCourseForEnroll.title}
+              </h3>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontWeight: 600, color: '#1a1c1e' }}>Voucher / Token Code</label>
-                <input
-                  type="text"
-                  placeholder="e.g. FOSTER-Q1-TRN-8842"
-                  value={creditCodeInput}
-                  onChange={(e) => setCreditCodeInput(e.target.value)}
-                  style={{
-                    background: '#f3f3f6',
-                    border: '1px solid #c2c6d5',
-                    borderRadius: '8px',
-                    padding: '8px 12px',
-                    fontFamily: 'JetBrains Mono',
-                    fontSize: '13px',
-                    outline: 'none',
-                  }}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#f8fafc', padding: '12px', borderRadius: '10px', fontSize: '12.5px' }}>
+                <div>
+                  <span style={{ color: '#727784', display: 'block' }}>Instructor</span>
+                  <strong style={{ color: '#1a1c1e' }}>{selectedCourseForEnroll.instructor.name}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#727784', display: 'block' }}>Duration</span>
+                  <strong style={{ color: '#1a1c1e' }}>{selectedCourseForEnroll.totalHours} Hours Total</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#727784', display: 'block' }}>Skill Level</span>
+                  <strong style={{ color: '#1a1c1e' }}>{selectedCourseForEnroll.level}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#727784', display: 'block' }}>Access</span>
+                  <strong style={{ color: '#059669' }}>Free for Verified Candidates</strong>
+                </div>
+              </div>
+
+              <div style={{ background: '#eff6ff', borderRadius: '10px', padding: '12px', fontSize: '12px', color: '#00418f' }}>
+                Upon enrollment, your curriculum progress will synchronize directly to your candidate profile on Castallio One to boost recruiter search rankings.
               </div>
             </div>
 
-            <div className="trn-modal-footer">
+            <footer className="trn-modal-footer">
               <button
                 type="button"
-                className="btn-trn-light"
-                onClick={() => setIsCreditModalOpen(false)}
+                className="btn-trn-secondary"
+                onClick={() => setIsEnrollModalOpen(false)}
               >
                 Cancel
               </button>
               <button
                 type="button"
                 className="btn-trn-primary"
-                onClick={handleRedeemCredit}
+                onClick={handleConfirmEnrollment}
               >
-                Validate &amp; Redeem Credit
+                Confirm &amp; Start Learning
               </button>
-            </div>
+            </footer>
           </div>
-        </div>
+        </aside>
       )}
-
-      {/* ── MODAL: 3D WebGL Sandbox Lab Terminal ── */}
-      {isSandboxModalOpen && (
-        <div className="trn-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="sandbox-modal-title">
-          <div className="trn-modal-dialog" style={{ maxWidth: '640px' }}>
-            <div className="trn-modal-header">
-              <div>
-                <h2 id="sandbox-modal-title">Castallio WebGL 3D Modeling Pod</h2>
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f' }}>
-                  RTX 4090 GPU Node • 60 FPS Stream
-                </span>
-              </div>
-              <button
-                type="button"
-                className="trn-modal-close"
-                onClick={() => setIsSandboxModalOpen(false)}
-                aria-label="Close dialog"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '20px', height: '20px' }}>
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="trn-modal-body">
-              <div className="terminal-window-box" style={{ minHeight: '180px' }}>
-                {terminalLines.map((line, idx) => (
-                  <div key={idx} style={{ color: line.startsWith('$') ? '#adc6ff' : '#f0f0f3' }}>
-                    {line}
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px', background: '#f3f3f6', padding: '10px', borderRadius: '8px' }}>
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f', fontWeight: 700 }}>
-                  Active Schemas:
-                </span>
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#39464f' }}>
-                  IFC4.3 ADD2 • Rhino 8 NURBS Kernel • pyRevit VDC Framework
-                </span>
-              </div>
-            </div>
-
-            <div className="trn-modal-footer">
-              <button
-                type="button"
-                className="btn-trn-primary"
-                onClick={() => setIsSandboxModalOpen(false)}
-              >
-                Keep Pod Running in Background
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    </main>
   )
 }
 

@@ -5,13 +5,20 @@ import { ChatHeader } from './messages/ChatHeader'
 import { MessageList } from './messages/MessageList'
 import { MessageComposer } from './messages/MessageComposer'
 import { ComposeInquiryModal } from './messages/ComposeInquiryModal'
+import { ContextualInterviewBanner } from './messages/ContextualInterviewBanner'
 import './Messages.css'
 
 export interface MessagesProps {
   onNavigateToFindJobs?: () => void
+  targetCompany?: { id?: string; name?: string } | null
+  onClearTargetCompany?: () => void
 }
 
-export const Messages: FC<MessagesProps> = () => {
+export const Messages: FC<MessagesProps> = ({
+  onNavigateToFindJobs,
+  targetCompany,
+  onClearTargetCompany,
+}) => {
   const {
     filteredConversations,
     selectedThread,
@@ -25,6 +32,7 @@ export const Messages: FC<MessagesProps> = () => {
     loading,
     userRole,
     availableRecipients,
+    hasAppliedPositions,
     isComposeModalOpen,
     setIsComposeModalOpen,
     handleSelectThread,
@@ -34,7 +42,7 @@ export const Messages: FC<MessagesProps> = () => {
     exportICS,
     toastMessage,
     showToast,
-  } = useMessages()
+  } = useMessages({ targetCompany, onClearTargetCompany })
 
   const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value)
@@ -84,22 +92,24 @@ export const Messages: FC<MessagesProps> = () => {
               </button>
             )}
 
-            <button
-              type="button"
-              className="btn-msg-primary"
-              onClick={() => setIsComposeModalOpen(true)}
-              title="Start a new message"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }} aria-hidden="true">
-                edit_square
-              </span>
-              <span>{userRole === 'employer' ? 'Message Candidate' : 'New Message'}</span>
-            </button>
+            {userRole === 'employer' && (
+              <button
+                type="button"
+                className="btn-msg-primary"
+                onClick={() => setIsComposeModalOpen(true)}
+                title="Message Candidate"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }} aria-hidden="true">
+                  edit_square
+                </span>
+                <span>Message Candidate</span>
+              </button>
+            )}
           </div>
         </header>
 
         {/* ── Main Two-Column Master-Detail Chat Layout ── */}
-        <div className="msg-workspace-layout">
+        <div className={`msg-workspace-layout ${selectedThread ? 'has-active-thread' : 'no-active-thread'}`}>
           {/* LEFT COLUMN: Conversation Directory */}
           <ConversationSidebar
             conversations={filteredConversations}
@@ -136,27 +146,80 @@ export const Messages: FC<MessagesProps> = () => {
             <section className="msg-chat-column" aria-label="No Active Conversations">
               <div className="msg-empty-workspace">
                 <span className="material-symbols-outlined msg-empty-icon" aria-hidden="true">
-                  chat_bubble_outline
+                  {userRole === 'talent' && !hasAppliedPositions ? 'lock' : 'forum'}
                 </span>
-                <h3 className="msg-empty-title">No Active Messages Yet</h3>
+                <h3 className="msg-empty-title">
+                  {userRole === 'employer'
+                    ? 'No Active Conversations'
+                    : !hasAppliedPositions
+                    ? 'Messaging Feature Locked'
+                    : 'Your Studio Direct Inquiries'}
+                </h3>
                 <p className="msg-empty-desc">
                   {userRole === 'employer'
                     ? 'Direct conversations with candidate applicants will appear here once initiated or received.'
-                    : 'Messages with AEC studios and recruiters will appear here.'}
+                    : !hasAppliedPositions
+                    ? 'The messaging feature is enabled once you apply for a position. You can chat directly with companies where you have an active application.'
+                    : 'Connect directly with hiring managers at companies you have applied to, review inbound studio inquiries, and coordinate technical interviews.'}
                 </p>
-                <button
-                  type="button"
-                  className="btn-msg-primary"
-                  onClick={() => setIsComposeModalOpen(true)}
-                >
-                  <span className="material-symbols-outlined">edit_square</span>
-                  <span>{userRole === 'employer' ? 'Message Candidate' : 'Start a Conversation'}</span>
-                </button>
+                <div className="msg-empty-actions-row">
+                  {userRole === 'talent' && !hasAppliedPositions ? (
+                    onNavigateToFindJobs && (
+                      <button
+                        type="button"
+                        className="btn-msg-primary"
+                        onClick={onNavigateToFindJobs}
+                      >
+                        <span className="material-symbols-outlined">work</span>
+                        <span>Browse Positions &amp; Apply to Unlock</span>
+                      </button>
+                    )
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className="btn-msg-primary"
+                        onClick={() => setIsComposeModalOpen(true)}
+                      >
+                        <span className="material-symbols-outlined">edit_square</span>
+                        <span>{userRole === 'employer' ? 'Message Candidate' : 'Start a Conversation'}</span>
+                      </button>
+                      {userRole !== 'employer' && onNavigateToFindJobs && (
+                        <button
+                          type="button"
+                          className="btn-msg-secondary"
+                          onClick={onNavigateToFindJobs}
+                        >
+                          <span className="material-symbols-outlined">work</span>
+                          <span>Explore Jobs &amp; Studios</span>
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             </section>
           ) : (
             <section className="msg-chat-column" aria-label="Active Conversation Stream">
-              <ChatHeader thread={selectedThread} />
+              <ChatHeader
+                thread={selectedThread}
+                onBack={() => handleSelectThread('')}
+              />
+
+              {/* Contextual Interview Banner (if interview scheduled) */}
+              {selectedThread.interviewDetails && (
+                <ContextualInterviewBanner
+                  interview={selectedThread.interviewDetails}
+                  onProposeAlternate={() => {
+                    setMessageInput('Hello, could we look into an alternative time slot for this discussion?')
+                    showToast('Drafted alternate time request in message box.')
+                  }}
+                  onAccept={() => {
+                    showToast('Interview confirmed! Syncing with calendar.')
+                  }}
+                  onExportICS={exportICS}
+                />
+              )}
 
               {/* Message History Pane */}
               <MessageList

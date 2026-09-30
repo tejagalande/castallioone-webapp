@@ -50,19 +50,17 @@ export const MessageList: FC<MessageListProps> = ({
           if (msg.isMe) {
             return (
               <div key={msg.id} className="msg-bubble-group candidate">
-                <div className="candidate-initials-avatar">
-                  {msg.senderName.slice(0, 2).toUpperCase()}
-                </div>
                 <div className="msg-bubble-content candidate">
-                  <div className="msg-bubble-sender-row" style={{ flexDirection: 'row-reverse' }}>
-                    <span className="msg-bubble-sender-name">{msg.senderName}</span>
-                    <span className="msg-bubble-time">{msg.time}</span>
-                  </div>
-
                   <div className="msg-text-bubble candidate">
-                    {msg.text.split('\n\n').map((para, pIdx) => (
-                      <p key={pIdx}>{para}</p>
-                    ))}
+                    <div className="msg-bubble-body">
+                      {msg.text.split('\n\n').map((para, pIdx) => (
+                        <p key={pIdx}>{para}</p>
+                      ))}
+                    </div>
+                    <div className="msg-bubble-meta candidate">
+                      <span className="msg-bubble-time candidate">{msg.time}</span>
+                      <span className="msg-bubble-status-checks" title="Delivered">✓✓</span>
+                    </div>
                   </div>
 
                   {/* Candidate Attachments */}
@@ -72,12 +70,12 @@ export const MessageList: FC<MessageListProps> = ({
                         <div key={att.id} className="candidate-attachment-chip">
                           <span
                             className="material-symbols-outlined"
-                            style={{ fontSize: '16px', color: '#00418f' }}
+                            style={{ fontSize: '15px', color: '#00418f' }}
                           >
-                            {att.type === 'pdf' ? 'verified' : 'terminal'}
+                            {att.type === 'pdf' ? 'description' : 'data_object'}
                           </span>
                           <span style={{ fontWeight: 600 }}>{att.name}</span>
-                          <span style={{ color: att.type === 'ghx' ? '#00418f' : '#727784' }}>
+                          <span style={{ color: '#64748b' }}>
                             ({att.meta})
                           </span>
                         </div>
@@ -99,19 +97,23 @@ export const MessageList: FC<MessageListProps> = ({
                 onError={(e) => {
                   const img = e.currentTarget
                   img.onerror = null
-                  img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.senderName)}&background=00418f&color=fff`
+                  img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.senderName || partnerName)}&background=00418f&color=fff`
                 }}
               />
               <div className="msg-bubble-content">
                 <div className="msg-bubble-sender-row">
                   <span className="msg-bubble-sender-name">{msg.senderName || partnerName}</span>
-                  <span className="msg-bubble-time">{msg.time}</span>
                 </div>
 
                 <div className="msg-text-bubble">
-                  {msg.text.split('\n\n').map((para, pIdx) => (
-                    <p key={pIdx}>{para}</p>
-                  ))}
+                  <div className="msg-bubble-body">
+                    {msg.text.split('\n\n').map((para, pIdx) => (
+                      <p key={pIdx}>{para}</p>
+                    ))}
+                  </div>
+                  <div className="msg-bubble-meta">
+                    <span className="msg-bubble-time">{msg.time}</span>
+                  </div>
                 </div>
 
                 {/* Technical Attachments */}

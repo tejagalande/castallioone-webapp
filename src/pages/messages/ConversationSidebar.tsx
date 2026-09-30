@@ -92,11 +92,28 @@ export const ConversationSidebar: FC<ConversationSidebarProps> = ({
             ))}
           </div>
         ) : conversations.length === 0 ? (
-          <div style={{ padding: '32px 16px', textAlign: 'center', color: '#727784', fontSize: '13.5px' }}>
-            <span className="material-symbols-outlined" style={{ fontSize: '32px', color: '#c2c6d5', marginBottom: '8px' }}>
-              chat_bubble_outline
+          <div className="msg-sidebar-empty-state">
+            <span className="material-symbols-outlined msg-sidebar-empty-icon" aria-hidden="true">
+              {searchQuery ? 'search_off' : 'forum'}
             </span>
-            <p style={{ margin: 0 }}>No conversations match your criteria.</p>
+            <p className="msg-sidebar-empty-text">
+              {searchQuery
+                ? `No conversations match "${searchQuery}"`
+                : activeFilter !== 'all'
+                ? `No ${activeFilter} conversations found`
+                : 'No conversations yet'}
+            </p>
+            {(searchQuery || activeFilter !== 'all') && (
+              <button
+                type="button"
+                className="btn-msg-clear-filter"
+                onClick={() => {
+                  onFilterChange('all')
+                }}
+              >
+                Reset Filters
+              </button>
+            )}
           </div>
         ) : (
           conversations.map((thread) => {

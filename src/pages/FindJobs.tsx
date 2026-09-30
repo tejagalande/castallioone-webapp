@@ -11,7 +11,7 @@ export interface FindJobsProps {
   savedJobIds?: Set<string>
   appliedJobIds?: Set<string>
   profile?: TalentProfileInfo
-  onNavigateToMessages?: () => void
+  onNavigateToMessages?: (companyName?: string, companyId?: string) => void
 }
 
 type WorkModeFilter = 'all' | 'On-site' | 'Hybrid' | 'Remote'
@@ -558,17 +558,46 @@ export const FindJobs: FC<FindJobsProps> = (props) => {
                     {props.onNavigateToMessages && (
                       <button
                         type="button"
-                        className="btn-inspector-msg"
-                        onClick={props.onNavigateToMessages}
-                        title="Chat with Recruiter"
+                        className={`btn-inspector-msg ${isApplied(activeJob.id) ? 'enabled' : 'disabled'}`}
+                        onClick={() => {
+                          if (isApplied(activeJob.id)) {
+                            props.onNavigateToMessages?.(activeJob.company, activeJob.companyId)
+                          }
+                        }}
+                        disabled={!isApplied(activeJob.id)}
+                        title={
+                          isApplied(activeJob.id)
+                            ? `Chat with ${activeJob.company}`
+                            : `Apply for this position to unlock direct chat with ${activeJob.company}`
+                        }
                       >
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" aria-hidden="true">
-                          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z" />
+                          {isApplied(activeJob.id) ? (
+                            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z" />
+                          ) : (
+                            <>
+                              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                              <path d="M7 11V7a5 5 0 0110 0v4" />
+                            </>
+                          )}
                         </svg>
-                        Message
+                        {isApplied(activeJob.id) ? 'Message Studio' : 'Chat (Apply first)'}
                       </button>
                     )}
                   </div>
+
+                  {/* Messaging status hint */}
+                  {!isApplied(activeJob.id) ? (
+                    <div className="inspector-msg-hint locked">
+                      <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>lock</span>
+                      <span>Direct messaging unlocks once you submit an application to {activeJob.company}.</span>
+                    </div>
+                  ) : (
+                    <div className="inspector-msg-hint active">
+                      <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>check_circle</span>
+                      <span>Application submitted! Direct messaging with {activeJob.company} is active.</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* ── Key Job Metrics Grid ── */}

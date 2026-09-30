@@ -1,16 +1,13 @@
-import { useState, type FC } from 'react'
+import { useState, useEffect, type FC } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import './TalentDashboard.css'
 import FindJobs from './FindJobs'
 import Applications from './Applications'
 import SavedJobs from './SavedJobs'
 import MyProfile from './MyProfile'
-import Resume from './Resume'
-import Portfolio from './Portfolio'
-import Certifications from './Certifications'
 import Messages from './Messages'
 import Interviews from './Interviews'
-import JobAlerts from './JobAlerts'
+import Notifications from './Notifications'
 import Training from './Training'
 import { WalkInDrivesTalent } from './WalkInDrivesTalent'
 import { LogoutModal } from '../components/LogoutModal'
@@ -27,11 +24,9 @@ type MenuItem =
   | 'saved-jobs'
   | 'applications'
   | 'my-profile'
-  | 'resume'
-  | 'portfolio'
-  | 'certifications'
   | 'messages'
   | 'interviews'
+  | 'notifications'
   | 'job-alerts'
   | 'training'
   | 'settings'
@@ -48,12 +43,9 @@ const menuItems: { id: MenuItem; label: string; icon: string }[] = [
   { id: 'saved-jobs', label: 'Saved Jobs', icon: 'M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z' },
   { id: 'applications', label: 'Applications', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
   { id: 'my-profile', label: 'My Profile', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
-  { id: 'resume', label: 'Resume / CV', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
-  { id: 'portfolio', label: 'Portfolio / Projects', icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
-  { id: 'certifications', label: 'Certifications / Licenses', icon: 'M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z' },
   { id: 'messages', label: 'Messages', icon: 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z' },
   { id: 'interviews', label: 'Interviews', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
-  { id: 'job-alerts', label: 'Job Alerts', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
+  { id: 'notifications', label: 'Notifications', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
   { id: 'training', label: 'Training / Courses', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
   { id: 'settings', label: 'Settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
 ]
@@ -61,25 +53,66 @@ const menuItems: { id: MenuItem; label: string; icon: string }[] = [
 export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const tabParam = searchParams.get('tab') as MenuItem | null
+  const tabParam = searchParams.get('tab') as string | null
 
   const [activeMenu, setActiveMenu] = useState<MenuItem>(() => {
+    if (tabParam === 'resume' || tabParam === 'portfolio' || tabParam === 'certifications') {
+      return 'my-profile'
+    }
+    if (tabParam === 'job-alerts' || tabParam === 'notifications') {
+      return 'notifications'
+    }
     if (tabParam && menuItems.some((m) => m.id === tabParam)) {
-      return tabParam
+      return tabParam as MenuItem
     }
     return 'dashboard'
   })
-  const [prevTabParam, setPrevTabParam] = useState<MenuItem | null>(tabParam)
+  const [prevTabParam, setPrevTabParam] = useState<string | null>(tabParam)
 
   if (tabParam !== prevTabParam) {
     setPrevTabParam(tabParam)
-    if (tabParam && menuItems.some((m) => m.id === tabParam)) {
-      setActiveMenu(tabParam)
+    if (tabParam === 'resume' || tabParam === 'portfolio' || tabParam === 'certifications') {
+      setActiveMenu('my-profile')
+    } else if (tabParam === 'job-alerts' || tabParam === 'notifications') {
+      setActiveMenu('notifications')
+    } else if (tabParam && menuItems.some((m) => m.id === tabParam)) {
+      setActiveMenu(tabParam as MenuItem)
     }
   }
 
+  // Live Unread Notification Badge Counter
+  const [unreadNotifCount, setUnreadNotifCount] = useState<number>(() => {
+    try {
+      const count = localStorage.getItem('castallio_unread_notifications_count')
+      return count ? parseInt(count, 10) : 4
+    } catch {
+      return 4
+    }
+  })
+
+  useEffect(() => {
+    const handleNotifUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<{ unreadCount: number }>
+      if (customEvent.detail && typeof customEvent.detail.unreadCount === 'number') {
+        setUnreadNotifCount(customEvent.detail.unreadCount)
+      }
+    }
+    window.addEventListener('castallio-notifications-updated', handleNotifUpdate)
+    return () => {
+      window.removeEventListener('castallio-notifications-updated', handleNotifUpdate)
+    }
+  }, [])
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
+  const [targetChatCompany, setTargetChatCompany] = useState<{ id?: string; name?: string } | null>(null)
+
+  const handleNavigateToMessages = (companyName?: string, companyId?: string) => {
+    if (companyName || companyId) {
+      setTargetChatCompany({ id: companyId, name: companyName })
+    }
+    setActiveMenu('messages')
+  }
 
   // Custom Toast notifications
   const { toasts, dismissToast, showSuccess, showInfo } = useToast()
@@ -170,13 +203,27 @@ export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
           {menuItems.map((item) => (
             <button
               key={item.id}
-              className={`nav-item ${activeMenu === item.id ? 'active' : ''}`}
+              className={`nav-item ${activeMenu === item.id || (item.id === 'notifications' && activeMenu === 'job-alerts') ? 'active' : ''}`}
               onClick={() => setActiveMenu(item.id)}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="nav-icon" aria-hidden="true">
-                <path d={item.icon} />
-              </svg>
-              {!sidebarCollapsed && <span className="nav-label">{item.label}</span>}
+              <div className="nav-icon-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="nav-icon" aria-hidden="true">
+                  <path d={item.icon} />
+                </svg>
+                {item.id === 'notifications' && unreadNotifCount > 0 && sidebarCollapsed && (
+                  <span className="nav-unread-badge" aria-label={`${unreadNotifCount} unread notifications`}>
+                    {unreadNotifCount > 99 ? '99+' : unreadNotifCount}
+                  </span>
+                )}
+              </div>
+              {!sidebarCollapsed && (
+                <div className="nav-label-group">
+                  <span className="nav-label">{item.label}</span>
+                  {item.id === 'notifications' && unreadNotifCount > 0 && (
+                    <span className="nav-badge-pill">{unreadNotifCount}</span>
+                  )}
+                </div>
+              )}
             </button>
           ))}
         </nav>
@@ -217,7 +264,7 @@ export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
               savedJobIds={savedJobIds}
               appliedJobIds={appliedJobIds}
               profile={profile}
-              onNavigateToMessages={() => setActiveMenu('messages')}
+              onNavigateToMessages={handleNavigateToMessages}
             />
           </div>
         ) : activeMenu === 'walk-in-drives' ? (
@@ -241,42 +288,41 @@ export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
           <div className="talent-page-content find-jobs-page-wrapper">
             <Applications
               onNavigateToFindJobs={() => setActiveMenu('find-jobs')}
-              onNavigateToMessages={() => setActiveMenu('messages')}
+              onNavigateToMessages={handleNavigateToMessages}
               onNavigateToInterviews={() => setActiveMenu('interviews')}
-              onNavigateToResume={() => setActiveMenu('resume')}
-              onNavigateToCertifications={() => setActiveMenu('certifications')}
+              onNavigateToResume={() => setActiveMenu('my-profile')}
+              onNavigateToCertifications={() => setActiveMenu('my-profile')}
             />
           </div>
         ) : activeMenu === 'my-profile' ? (
           <div className="talent-page-content">
-            <MyProfile onNavigateToPortfolio={() => setActiveMenu('portfolio')} />
-          </div>
-        ) : activeMenu === 'resume' ? (
-          <div className="talent-page-content">
-            <Resume
-              onNavigateToPortfolio={() => setActiveMenu('portfolio')}
-              onNavigateToCertifications={() => setActiveMenu('certifications')}
-            />
-          </div>
-        ) : activeMenu === 'portfolio' ? (
-          <div className="talent-page-content">
-            <Portfolio onNavigateToFindJobs={() => setActiveMenu('find-jobs')} />
-          </div>
-        ) : activeMenu === 'certifications' ? (
-          <div className="talent-page-content">
-            <Certifications onNavigateToPortfolio={() => setActiveMenu('portfolio')} />
+            <MyProfile onNavigateToPortfolio={() => setActiveMenu('my-profile')} />
           </div>
         ) : activeMenu === 'messages' ? (
           <div className="talent-page-content">
-            <Messages onNavigateToFindJobs={() => setActiveMenu('find-jobs')} />
+            <Messages
+              onNavigateToFindJobs={() => setActiveMenu('find-jobs')}
+              targetCompany={targetChatCompany}
+              onClearTargetCompany={() => setTargetChatCompany(null)}
+            />
           </div>
         ) : activeMenu === 'interviews' ? (
           <div className="talent-page-content">
-            <Interviews onNavigateToFindJobs={() => setActiveMenu('find-jobs')} />
+            <Interviews
+              onNavigateToFindJobs={() => setActiveMenu('find-jobs')}
+              onNavigateToMessages={handleNavigateToMessages}
+            />
           </div>
-        ) : activeMenu === 'job-alerts' ? (
+        ) : activeMenu === 'notifications' || activeMenu === 'job-alerts' ? (
           <div className="talent-page-content">
-            <JobAlerts onNavigateToFindJobs={() => setActiveMenu('find-jobs')} />
+            <Notifications
+              onNavigateToFindJobs={() => setActiveMenu('find-jobs')}
+              onNavigateToApplications={() => setActiveMenu('applications')}
+              onNavigateToInterviews={() => setActiveMenu('interviews')}
+              onNavigateToMessages={handleNavigateToMessages}
+              onNavigateToDrives={() => setActiveMenu('walk-in-drives')}
+              onNavigateToProfile={() => setActiveMenu('my-profile')}
+            />
           </div>
         ) : activeMenu === 'training' ? (
           <div className="talent-page-content">
