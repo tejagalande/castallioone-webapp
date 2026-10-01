@@ -87,7 +87,6 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs, onNaviga
     handleRequestAlternateSlot,
     handleSaveEvaluation,
     handleCancelInterview,
-    handleSyncCalendar,
     handleDownloadSingleICS,
   } = useInterviews()
 

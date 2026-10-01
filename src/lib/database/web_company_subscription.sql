@@ -47,10 +47,10 @@ BEGIN
     ORDER BY cs.created_at DESC
     LIMIT 1;
 
-    -- If no active subscription row exists, default to 'free' tier
-    IF v_sub.id IS NULL THEN
-        SELECT * INTO v_plan FROM subscription_plans WHERE id = 'free' LIMIT 1;
-    END IF;
+    -- Always initialize v_plan so the record is never unassigned
+    SELECT * INTO v_plan FROM subscription_plans WHERE id = 'free' LIMIT 1;
+
+    -- 2. Fetch Active Subscription
 
     -- 3. Fetch Transaction History
     SELECT COALESCE(
@@ -112,8 +112,11 @@ $$;
 -- 2. CHECKOUT FUNCTION: web_process_subscription_checkout
 CREATE OR REPLACE FUNCTION web_process_subscription_checkout(
     p_plan_id text,
-    p_payment_mode text DEFAULT 'gateway',
-    p_gstin text DEFAULT NULL
+    p_payment_mode text DEFAULT 'razorpay',
+    p_gstin text DEFAULT NULL,
+    p_razorpay_payment_id text DEFAULT NULL,
+    p_razorpay_order_id text DEFAULT NULL,
+    p_razorpay_signature text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -129,8 +132,9 @@ DECLARE
     v_txn_id text;
     v_expires_at timestamp with time zone;
     v_is_cv_addon boolean;
-    v_additional_cvs integer := 0;
     v_result jsonb;
+    v_store text := 'razorpay';
+    v_env text := 'SANDBOX';
 BEGIN
     IF v_user_id IS NULL THEN
         RAISE EXCEPTION 'Not authenticated';
@@ -158,7 +162,19 @@ BEGIN
 
     v_expires_at := now() + interval '1 month';
     v_is_cv_addon := (p_plan_id IN ('starter_cv', 'professional_cv'));
-    v_txn_id := 'TXN_SB_' || floor(extract(epoch from now()))::text || '_' || floor(random() * 9000 + 1000)::text;
+
+    -- Determine transaction ID & environment
+    IF p_razorpay_payment_id IS NOT NULL AND length(trim(p_razorpay_payment_id)) > 0 THEN
+        v_txn_id := trim(p_razorpay_payment_id);
+        IF v_txn_id LIKE 'pay_%' AND v_txn_id NOT LIKE 'pay_test_%' THEN
+            v_env := 'PRODUCTION';
+        ELSE
+            v_env := 'SANDBOX';
+        END IF;
+    ELSE
+        v_txn_id := 'TXN_RZP_' || floor(extract(epoch from now()))::text || '_' || floor(random() * 9000 + 1000)::text;
+        v_env := 'SANDBOX';
+    END IF;
 
     -- 3. Update Company GSTIN if provided
     IF p_gstin IS NOT NULL AND length(trim(p_gstin)) > 0 THEN
@@ -177,25 +193,21 @@ BEGIN
         ORDER BY created_at DESC
         LIMIT 1;
 
-        IF p_plan_id = 'starter_cv' THEN
-            v_additional_cvs := 100;
-        ELSIF p_plan_id = 'professional_cv' THEN
-            v_additional_cvs := 200;
-        END IF;
-
         IF v_existing_sub.id IS NOT NULL THEN
-            -- Extend existing subscription CV quota
             UPDATE company_subscriptions
-            SET updated_at = now()
+            SET updated_at = now(),
+                payment_gateway = 'razorpay',
+                razorpay_payment_id = COALESCE(p_razorpay_payment_id, v_existing_sub.razorpay_payment_id)
             WHERE id = v_existing_sub.id;
         ELSE
-            -- Create subscription with add-on
             INSERT INTO company_subscriptions (
                 company_id, plan_id, started_at, expires_at, is_active,
-                usage_month, cvs_unlocked, jobs_posted, store, auto_renew
+                usage_month, cvs_unlocked, jobs_posted, store, auto_renew,
+                payment_gateway, razorpay_payment_id, razorpay_plan_id
             ) VALUES (
                 v_company_id, p_plan_id, now(), v_expires_at, true,
-                to_char(now(), 'YYYY-MM'), 0, 0, 'web_gateway_sandbox', true
+                to_char(now(), 'YYYY-MM'), 0, 0, v_store, true,
+                'razorpay', p_razorpay_payment_id, v_plan.razorpay_plan_id
             ) RETURNING id INTO v_new_sub_id;
         END IF;
     ELSE
@@ -207,10 +219,12 @@ BEGIN
 
         INSERT INTO company_subscriptions (
             company_id, plan_id, started_at, expires_at, is_active,
-            usage_month, cvs_unlocked, jobs_posted, store, auto_renew
+            usage_month, cvs_unlocked, jobs_posted, store, auto_renew,
+            payment_gateway, razorpay_payment_id, razorpay_plan_id
         ) VALUES (
             v_company_id, p_plan_id, now(), v_expires_at, true,
-            to_char(now(), 'YYYY-MM'), 0, 0, 'web_gateway_sandbox', true
+            to_char(now(), 'YYYY-MM'), 0, 0, v_store, true,
+            'razorpay', p_razorpay_payment_id, v_plan.razorpay_plan_id
         ) RETURNING id INTO v_new_sub_id;
     END IF;
 
@@ -220,24 +234,28 @@ BEGIN
         plan_id,
         product_id,
         transaction_id,
+        revenuecat_event_id,
         event_type,
         purchased_at,
         expires_at,
         store,
         environment,
         period_type,
+        razorpay_payment_id,
         raw_event
     ) VALUES (
         v_company_id,
         p_plan_id,
         'castallio_' || p_plan_id,
         v_txn_id,
+        'rzp_evt_' || v_txn_id,
         'INITIAL_PURCHASE',
         now(),
         v_expires_at,
-        'WEB_GATEWAY_SANDBOX',
-        'SANDBOX',
+        v_store,
+        v_env,
         'MONTHLY',
+        p_razorpay_payment_id,
         jsonb_build_object(
             'plan_id', p_plan_id,
             'plan_name', v_plan.name,
@@ -246,7 +264,11 @@ BEGIN
             'totalPaid', round(v_plan.price_inr * 1.18, 2),
             'paymentMode', p_payment_mode,
             'gstin', COALESCE(p_gstin, 'UNREGISTERED'),
-            'currency', 'INR'
+            'currency', 'INR',
+            'razorpay_payment_id', p_razorpay_payment_id,
+            'razorpay_order_id', p_razorpay_order_id,
+            'razorpay_signature', p_razorpay_signature,
+            'gateway', 'Razorpay'
         )
     );
 

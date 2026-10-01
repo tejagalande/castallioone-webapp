@@ -2,7 +2,6 @@ import { useState, useMemo, useRef, type FC, type ChangeEvent } from 'react'
 import './MyProfile.css'
 import {
   useMyProfile,
-  CDE_STANDARDS_TAGS,
   PREDEFINED_CORE_SOFTWARE,
   PREDEFINED_TECH_SKILLS,
   PREDEFINED_SOFT_SKILLS,

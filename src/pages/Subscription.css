@@ -1142,3 +1142,118 @@
     transform: scale(1) translateY(0);
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Razorpay Custom Badges and Controls
+   ═══════════════════════════════════════════════════════════════════════ */
+.sub-razorpay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sub-razorpay-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #02042b;
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.sub-razorpay-badge-logo {
+  color: #0c83ff;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+}
+
+.sub-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.sub-mode-pill.sandbox {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.sub-mode-pill.live {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.sub-mode-pill.unconfigured {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.sub-copy-btn {
+  background: transparent;
+  border: 1px solid var(--sub-slate-300);
+  border-radius: 6px;
+  padding: 3px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--sub-slate-600);
+  transition: all 0.15s ease;
+  margin-left: 8px;
+}
+
+.sub-copy-btn:hover {
+  background: var(--sub-slate-100);
+  color: var(--sub-slate-900);
+}
+
+.btn-simulate-sandbox {
+  background: transparent;
+  border: 1px dashed var(--sub-slate-300);
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sub-slate-600);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.btn-simulate-sandbox:hover {
+  background: var(--sub-slate-50);
+  border-color: var(--sub-blue-600);
+  color: var(--sub-blue-600);
+}
+
+.sub-key-custom-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}

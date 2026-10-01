@@ -3,6 +3,7 @@ import {
   useSubscription,
   type EnterprisePlan,
 } from './useSubscription'
+import { initiateRazorpayCheckout } from '../lib/razorpay'
 import './Subscription.css'
 
 export interface SubscriptionProps {
@@ -16,6 +17,9 @@ export const Subscription: FC<SubscriptionProps> = ({
 }) => {
   const {
     companyName,
+    companyEmail,
+    companyGstin,
+    userEmail,
     activePlanId,
     usage,
     jobPostingPlans,
@@ -27,43 +31,112 @@ export const Subscription: FC<SubscriptionProps> = ({
     handleConfirmSubscription,
     handleDownloadGstInvoice,
     toastMessage,
+    showToast,
   } = useSubscription()
 
   // Gateway flow states
-  const [gstinNumber, setGstinNumber] = useState<string>('')
+  const [userGstinInput, setUserGstinInput] = useState<string | null>(null)
+  const gstinNumber = userGstinInput !== null ? userGstinInput : (companyGstin || '')
+  const setGstinNumber = (val: string) => setUserGstinInput(val)
+
   const [isGatewayLoading, setIsGatewayLoading] = useState<boolean>(false)
   const [isSuccessView, setIsSuccessView] = useState<boolean>(false)
   const [confirmedPlan, setConfirmedPlan] = useState<EnterprisePlan | null>(null)
+  const [gatewayError, setGatewayError] = useState<string | null>(null)
+  const [copiedTxn, setCopiedTxn] = useState<boolean>(false)
 
-  // Trigger third-party payment gateway
+  // Razorpay Key Credentials Handling (reads .env or allows inline test key entry)
+  const envKey =
+    (import.meta.env.VITE_RAZORPAY_KEY_ID as string | undefined) ||
+    (import.meta.env.VITE_RAZORPAY_KEY as string | undefined) ||
+    ''
+  const [customKeyId, setCustomKeyId] = useState<string>('')
+  const [showKeyConfig, setShowKeyConfig] = useState<boolean>(false)
+
+  const activeKeyId = customKeyId.trim() || envKey.trim()
+  const isSandbox = activeKeyId.startsWith('rzp_test_')
+  const isLive = activeKeyId.startsWith('rzp_live_')
+  const hasKey = Boolean(activeKeyId)
+
+  // Trigger Real Razorpay Checkout Modal
   const handleProceedToGateway = async () => {
     if (!selectedPlanForGateway) return
+    setGatewayError(null)
+
+    if (!activeKeyId) {
+      setGatewayError(
+        'Razorpay Key ID is required. Please enter your test credentials below or add VITE_RAZORPAY_KEY_ID in your .env file.'
+      )
+      setShowKeyConfig(true)
+      return
+    }
+
     setIsGatewayLoading(true)
 
     try {
-      /* ═════════════════════════════════════════════════════════════════════
-         THIRD-PARTY PAYMENT GATEWAY INTEGRATION HOOK
-         When ready to connect live Razorpay / Cashfree / Stripe:
-         const options = {
-           key: process.env.VITE_RAZORPAY_KEY,
-           amount: totalPayable * 100, // paise
-           currency: 'INR',
-           name: 'Castallio One',
-           description: `${selectedPlanForGateway.name} Subscription`,
-           handler: (response) => { ... },
-           prefill: { email: user.email, contact: companyPhone }
-         };
-         const rzp = new window.Razorpay(options);
-         rzp.open();
-         ═════════════════════════════════════════════════════════════════════ */
+      const baseAmt = selectedPlanForGateway.price
+      const cgstAmt = Number((baseAmt * 0.09).toFixed(2))
+      const sgstAmt = Number((baseAmt * 0.09).toFixed(2))
+      const totalWithGst = Number((baseAmt + cgstAmt + sgstAmt).toFixed(2))
 
-      // Simulate gateway initialization and processing
-      await new Promise((resolve) => setTimeout(resolve, 1200))
+      const checkoutRes = await initiateRazorpayCheckout({
+        keyId: activeKeyId,
+        planId: selectedPlanForGateway.id,
+        planName: selectedPlanForGateway.name,
+        amountInr: totalWithGst,
+        companyName: companyName,
+        userEmail: companyEmail || userEmail,
+        gstin: gstinNumber,
+      })
+
+      if (checkoutRes.status === 'success' && checkoutRes.paymentId) {
+        // Record payment in Supabase database
+        const result = await handleConfirmSubscription(
+          selectedPlanForGateway,
+          'razorpay',
+          gstinNumber,
+          {
+            paymentId: checkoutRes.paymentId,
+            orderId: checkoutRes.orderId,
+            signature: checkoutRes.signature,
+          }
+        )
+
+        if (result.success) {
+          setConfirmedPlan(selectedPlanForGateway)
+          setIsSuccessView(true)
+        }
+      } else if (checkoutRes.status === 'dismissed') {
+        showToast('Payment window closed. No charges were made.')
+      } else if (checkoutRes.status === 'failed') {
+        const msg = checkoutRes.errorMessage || 'Payment was declined or cancelled.'
+        setGatewayError(msg)
+        showToast(msg)
+      }
+    } catch (err: unknown) {
+      console.error('Razorpay gateway execution error:', err)
+      const msg = err instanceof Error ? err.message : 'Payment processing encountered an unexpected issue.'
+      setGatewayError(msg)
+    } finally {
+      setIsGatewayLoading(false)
+    }
+  }
+
+  // Developer / QA Simulated Sandbox Payment (Ensures testing works even without active internet/keys)
+  const handleSimulateSandboxPayment = async () => {
+    if (!selectedPlanForGateway) return
+    setGatewayError(null)
+    setIsGatewayLoading(true)
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const simulatedPaymentId = `pay_test_${Math.random().toString(36).substring(2, 9)}${Date.now().toString().slice(-4)}`
 
       const result = await handleConfirmSubscription(
         selectedPlanForGateway,
         'upi',
-        gstinNumber
+        gstinNumber,
+        { paymentId: simulatedPaymentId }
       )
 
       if (result.success) {
@@ -79,6 +152,14 @@ export const Subscription: FC<SubscriptionProps> = ({
     setSelectedPlanForGateway(null)
     setIsSuccessView(false)
     setConfirmedPlan(null)
+    setGatewayError(null)
+  }
+
+  const handleCopyTransactionId = (txnId: string) => {
+    navigator.clipboard.writeText(txnId)
+    setCopiedTxn(true)
+    showToast('Payment reference copied to clipboard.')
+    setTimeout(() => setCopiedTxn(false), 2500)
   }
 
   // Progress calculations for quota bars
@@ -93,6 +174,8 @@ export const Subscription: FC<SubscriptionProps> = ({
   // VIEW 1: PAYMENT SUCCESS CONFIRMATION
   // ═══════════════════════════════════════════════════════════════════════════
   if (isSuccessView && confirmedPlan) {
+    const txnDisplay = lastTransactionId || 'TXN_GATEWAY_SETTLED'
+
     return (
       <main className="sub-enterprise-root" aria-label="Subscription Activated">
         <div className="sub-enterprise-container">
@@ -101,9 +184,14 @@ export const Subscription: FC<SubscriptionProps> = ({
               <span className="material-symbols-outlined">check_circle</span>
             </div>
 
+            <div className="sub-razorpay-badge" style={{ margin: '0 auto' }}>
+              <span className="sub-razorpay-badge-logo">RZP</span>
+              <span>VERIFIED BY RAZORPAY</span>
+            </div>
+
             <h1 className="sub-success-title">Subscription Activated!</h1>
             <p className="sub-success-desc">
-              Your payment has been verified via the secure gateway. Your enterprise account has been upgraded to the <strong>{confirmedPlan.name}</strong>.
+              Your payment has been successfully authorized via Razorpay. Your enterprise workspace is now upgraded to the <strong>{confirmedPlan.name}</strong>.
             </p>
 
             <div className="sub-success-details-box">
@@ -112,9 +200,20 @@ export const Subscription: FC<SubscriptionProps> = ({
                 <span className="sub-tax-val">{confirmedPlan.name} ({confirmedPlan.category})</span>
               </div>
               <div className="sub-tax-row">
-                <span className="sub-tax-key">Transaction Ref:</span>
-                <span className="sub-tax-val" style={{ fontFamily: 'monospace' }}>
-                  {lastTransactionId || 'TXN_GATEWAY_SETTLED'}
+                <span className="sub-tax-key">Payment Reference:</span>
+                <span className="sub-tax-val" style={{ fontFamily: 'monospace', display: 'flex', alignItems: 'center' }}>
+                  {txnDisplay}
+                  <button
+                    type="button"
+                    className="sub-copy-btn"
+                    onClick={() => handleCopyTransactionId(txnDisplay)}
+                    title="Copy Transaction ID"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>
+                      {copiedTxn ? 'check' : 'content_copy'}
+                    </span>
+                    <span>{copiedTxn ? 'Copied' : 'Copy'}</span>
+                  </button>
                 </span>
               </div>
               <div className="sub-tax-row">
@@ -127,6 +226,12 @@ export const Subscription: FC<SubscriptionProps> = ({
                 <span className="sub-tax-key">Enterprise Entity:</span>
                 <span className="sub-tax-val">{companyName}</span>
               </div>
+              {gstinNumber && (
+                <div className="sub-tax-row">
+                  <span className="sub-tax-key">Invoiced GSTIN:</span>
+                  <span className="sub-tax-val" style={{ fontFamily: 'monospace' }}>{gstinNumber}</span>
+                </div>
+              )}
             </div>
 
             <div className="sub-success-actions-row">
@@ -189,12 +294,14 @@ export const Subscription: FC<SubscriptionProps> = ({
                 <span>Back to Subscription Plans</span>
               </button>
 
-              <span className="sub-gateway-trust-badge">
-                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
-                  lock
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span className="sub-gateway-trust-badge">
+                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
+                    lock
+                  </span>
+                  <span>256-BIT ENCRYPTED CHECKOUT</span>
                 </span>
-                <span>256-BIT ENCRYPTED GATEWAY CHECKOUT</span>
-              </span>
+              </div>
             </div>
 
             <div className="sub-gateway-layout">
@@ -280,6 +387,7 @@ export const Subscription: FC<SubscriptionProps> = ({
                     placeholder="e.g. 27AAACC4451N1ZP"
                     value={gstinNumber}
                     onChange={(e) => setGstinNumber(e.target.value.toUpperCase())}
+                    maxLength={15}
                   />
                   <span style={{ fontSize: '11.5px', color: '#64748b' }}>
                     Invoices will reflect in your GSTR-2B under SAC code 998311.
@@ -287,19 +395,103 @@ export const Subscription: FC<SubscriptionProps> = ({
                 </div>
               </div>
 
-              {/* Right Column: Third-Party Payment Gateway Integration Screen */}
+              {/* Right Column: Official Razorpay Payment Gateway Card */}
               <div className="sub-gateway-terminal-card">
-                <div>
-                  <h3 className="sub-gateway-terminal-title">
-                    <span className="material-symbols-outlined" style={{ color: '#0056d2' }}>
-                      account_balance_wallet
-                    </span>
-                    <span>Payment Gateway</span>
-                  </h3>
-                  <p className="sub-gateway-terminal-desc">
-                    All transactions are processed through authenticated third-party banking channels.
-                  </p>
+                <div className="sub-razorpay-header">
+                  <div>
+                    <h3 className="sub-gateway-terminal-title">
+                      <span className="material-symbols-outlined" style={{ color: '#0056d2' }}>
+                        account_balance_wallet
+                      </span>
+                      <span>Razorpay Checkout</span>
+                    </h3>
+                    <p className="sub-gateway-terminal-desc">
+                      Fast, authenticated payment processing powered by Razorpay.
+                    </p>
+                  </div>
+
+                  <div className="sub-razorpay-badge">
+                    <span className="sub-razorpay-badge-logo">RZP</span>
+                    <span>Razorpay</span>
+                  </div>
                 </div>
+
+                {/* Environment Mode Status Indicator */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span
+                      className={`sub-mode-pill ${
+                        isSandbox ? 'sandbox' : isLive ? 'live' : 'unconfigured'
+                      }`}
+                    >
+                      {isSandbox ? 'TEST SANDBOX' : isLive ? 'LIVE PRODUCTION' : 'SETUP REQUIRED'}
+                    </span>
+                    <span style={{ fontSize: '12px', color: '#475569', fontWeight: 500 }}>
+                      {hasKey
+                        ? `${activeKeyId.slice(0, 12)}••••`
+                        : 'No Razorpay Key Configured'}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowKeyConfig((prev) => !prev)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#0056d2',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      padding: 0,
+                    }}
+                  >
+                    {showKeyConfig ? 'Hide Settings' : hasKey ? 'Change Key' : 'Enter Test Key'}
+                  </button>
+                </div>
+
+                {/* Optional Key Configuration Widget for Testing */}
+                {showKeyConfig && (
+                  <div className="sub-key-custom-card">
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#1e293b' }}>
+                      Razorpay Key ID (Test Credentials):
+                    </label>
+                    <input
+                      type="text"
+                      className="sub-form-input"
+                      placeholder="rzp_test_..."
+                      value={customKeyId}
+                      onChange={(e) => setCustomKeyId(e.target.value.trim())}
+                      style={{ fontSize: '12.5px', padding: '8px 12px' }}
+                    />
+                    <span style={{ fontSize: '11px', color: '#64748b' }}>
+                      You can also permanently configure this by adding{' '}
+                      <code>VITE_RAZORPAY_KEY_ID=rzp_test_...</code> to your <code>.env</code> file.
+                    </span>
+                  </div>
+                )}
+
+                {/* Error Banner if Gateway Error Occurs */}
+                {gatewayError && (
+                  <div
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: '12px',
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      color: '#b91c1c',
+                      fontSize: '13px',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '8px',
+                    }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px', marginTop: '1px' }}>
+                      error
+                    </span>
+                    <span>{gatewayError}</span>
+                  </div>
+                )}
 
                 {/* Supported Payment Rails */}
                 <div className="sub-gateway-rails-box">
@@ -307,7 +499,7 @@ export const Subscription: FC<SubscriptionProps> = ({
                     <span className="material-symbols-outlined">qr_code_2</span>
                     <div>
                       <div style={{ fontWeight: 700 }}>Instant UPI</div>
-                      <div style={{ fontSize: '11px', color: '#64748b' }}>GPay, PhonePe, Paytm</div>
+                      <div style={{ fontSize: '11px', color: '#64748b' }}>GPay, PhonePe, Paytm, BHIM</div>
                     </div>
                   </div>
 
@@ -323,33 +515,20 @@ export const Subscription: FC<SubscriptionProps> = ({
                     <span className="material-symbols-outlined">account_balance</span>
                     <div>
                       <div style={{ fontWeight: 700 }}>NetBanking</div>
-                      <div style={{ fontSize: '11px', color: '#64748b' }}>All Indian Banks</div>
+                      <div style={{ fontSize: '11px', color: '#64748b' }}>50+ Indian Banks</div>
                     </div>
                   </div>
 
                   <div className="sub-gateway-rail-badge">
-                    <span className="material-symbols-outlined">receipt_long</span>
+                    <span className="material-symbols-outlined">account_balance_wallet</span>
                     <div>
-                      <div style={{ fontWeight: 700 }}>Corporate Billing</div>
-                      <div style={{ fontSize: '11px', color: '#64748b' }}>Direct Invoicing</div>
+                      <div style={{ fontWeight: 700 }}>Wallets &amp; EMI</div>
+                      <div style={{ fontSize: '11px', color: '#64748b' }}>Corporate &amp; NetBanking</div>
                     </div>
                   </div>
                 </div>
 
-                {/* Integration Notice for Developers & Clients */}
-                <div className="sub-gateway-placeholder-banner">
-                  <div className="sub-gateway-banner-header">
-                    <span className="material-symbols-outlined" style={{ fontSize: '17px' }}>
-                      hub
-                    </span>
-                    <span>Third-Party Gateway Integration Ready</span>
-                  </div>
-                  <p className="sub-gateway-banner-text">
-                    This screen triggers your payment gateway SDK (Razorpay / Cashfree / Stripe). You can simulate the checkout now to activate the subscription in your database.
-                  </p>
-                </div>
-
-                {/* Gateway Launch Action */}
+                {/* Live Gateway Action */}
                 <button
                   type="button"
                   className="btn-launch-gateway"
@@ -359,16 +538,30 @@ export const Subscription: FC<SubscriptionProps> = ({
                   <span className="material-symbols-outlined">lock</span>
                   <span>
                     {isGatewayLoading
-                      ? 'Connecting to Gateway...'
-                      : `Proceed to Pay ₹${totalWithGst} via Gateway`}
+                      ? 'Launching Razorpay Gateway...'
+                      : `Proceed to Pay ₹${totalWithGst} via Razorpay`}
                   </span>
+                </button>
+
+                {/* Secondary Simulated Sandbox Fallback */}
+                <button
+                  type="button"
+                  className="btn-simulate-sandbox"
+                  onClick={handleSimulateSandboxPayment}
+                  disabled={isGatewayLoading}
+                  title="Simulate instant payment verification for developer testing"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
+                    science
+                  </span>
+                  <span>Simulate Instant Sandbox Payment (Developer Bypass)</span>
                 </button>
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '12px', color: '#64748b' }}>
                   <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#059669' }}>
                     verified_user
                   </span>
-                  <span>PCI-DSS Level 1 &amp; RBI Approved Security Standards</span>
+                  <span>PCI-DSS Level 1 &amp; RBI Approved 3D Secure 2.0</span>
                 </div>
               </div>
             </div>

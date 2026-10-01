@@ -244,6 +244,52 @@ export const useBilling = () => {
             accountsEmail: comp.email || prev.accountsEmail,
             billingAddress: comp.office_address || prev.billingAddress,
           }))
+
+          // Also fetch transactions directly if RPC didn't return them
+          const { data: dbTxns } = await supabase
+            .from('subscription_transactions')
+            .select('*')
+            .eq('company_id', comp.id)
+            .order('purchased_at', { ascending: false })
+
+          if (dbTxns && dbTxns.length > 0) {
+            const planNames: Record<string, string> = {
+              free: 'Free Plan',
+              starter: 'Starter Plan (Monthly)',
+              professional: 'Professional Plan (Monthly)',
+              unlimited: 'Unlimited Plan (Monthly)',
+              starter_cv: 'Starter + CV Add-on (100 Unlocks)',
+              professional_cv: 'Professional + CV Add-on (200 Unlocks)',
+            }
+
+            const fallbackInvoices: EnterpriseInvoiceItem[] = dbTxns.map((t: any, idx: number) => {
+              const pDate = new Date(t.purchased_at || t.created_at || Date.now())
+              const amt = Number(t.raw_event?.amount || 1499.00)
+              const gstAmt = Number(t.raw_event?.gst18Percent || (amt * 0.18).toFixed(2))
+              const totAmt = Number(t.raw_event?.totalPaid || (amt * 1.18).toFixed(2))
+
+              return {
+                id: t.razorpay_payment_id || t.transaction_id || `INV-${pDate.getFullYear()}-${String(idx + 1).padStart(4, '0')}`,
+                date: pDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+                year: pDate.getFullYear(),
+                plan: planNames[t.plan_id] || t.plan_id || 'Enterprise Plan',
+                description: `${(t.plan_id || 'ENTERPRISE').toUpperCase()} Recruitment Software License`,
+                period: pDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }),
+                sacCode: '998311',
+                amount: amt,
+                gst: gstAmt,
+                total: totAmt,
+                paymentMethod: {
+                  type: 'UPI',
+                  label: t.razorpay_payment_id ? `Razorpay (${t.razorpay_payment_id.slice(0, 10)}...)` : (t.raw_event?.paymentMode || 'Online Gateway'),
+                },
+                status: 'paid',
+                itcStatus: '18% ITC Eligible (GSTR-2B)',
+              }
+            })
+
+            setInvoices(fallbackInvoices)
+          }
         }
       } catch (err) {
         console.warn('Error loading enterprise billing data:', err)

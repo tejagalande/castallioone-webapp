@@ -50,7 +50,6 @@ export const Notifications: FC<NotificationsProps> = ({
     handleDeleteNotification,
     handleClearAllRead,
     handleSavePreferences,
-    handleSendTestNotification,
   } = useNotifications()
 
   // Local state for preferences modal edit form
