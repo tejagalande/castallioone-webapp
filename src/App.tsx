@@ -10,6 +10,8 @@ import { TalentProfile } from './pages/TalentProfile'
 import TermsConditions from './pages/TermsConditions'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import AppPrivacyPolicy from './pages/AppPrivacyPolicy'
+import { JobAppFallback } from './pages/JobAppFallback'
+import { WalkInDriveAppFallback } from './pages/WalkInDriveAppFallback'
 import { ToastContainer } from './components/Toast'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { RootRedirect } from './components/RootRedirect'
@@ -148,6 +150,27 @@ function App() {
         <Route path="/app/privacy" element={<Navigate to="/app-privacy" replace />} />
         <Route path="/privacy/app" element={<Navigate to="/app-privacy" replace />} />
         <Route path="/privacy-app" element={<Navigate to="/app-privacy" replace />} />
+
+        {/* Android Mobile App Fallback Routes */}
+        <Route path="/job-app-fallback" element={<JobAppFallback />} />
+        <Route path="/job-app-fallback/:id" element={<JobAppFallback />} />
+        <Route path="/job-fallback" element={<JobAppFallback />} />
+        <Route path="/job-fallback/:id" element={<JobAppFallback />} />
+        <Route
+          path="/jobs/:jobId"
+          element={<JobAppFallback />}
+        />
+
+        <Route
+          path="/walk-in-drives/:driveId"
+          element={<WalkInDriveAppFallback />}
+        />
+        <Route path="/walk-in-drive-app-fallback" element={<WalkInDriveAppFallback />} />
+        <Route path="/walk-in-drive-app-fallback/:id" element={<WalkInDriveAppFallback />} />
+        <Route path="/walk-in-fallback" element={<WalkInDriveAppFallback />} />
+        <Route path="/walk-in-fallback/:id" element={<WalkInDriveAppFallback />} />
+        <Route path="/walkin-fallback" element={<WalkInDriveAppFallback />} />
+        <Route path="/walkin-fallback/:id" element={<WalkInDriveAppFallback />} />
 
         {/* Protected Onboarding / Company Setup */}
         <Route

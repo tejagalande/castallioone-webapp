@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { getCompanyJobQuota, type CompanyJobQuota } from '../lib/jobQuotaService'
 
 export interface PipelineStats {
   total: number
@@ -109,6 +110,7 @@ export function useMyJobs(onPostNewJob?: () => void) {
   const [isCandidatesModalOpen, setIsCandidatesModalOpen] = useState<boolean>(false)
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [jobQuota, setJobQuota] = useState<CompanyJobQuota | null>(null)
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg)
@@ -139,6 +141,11 @@ export function useMyJobs(onPostNewJob?: () => void) {
       const cName = companyData?.name || 'Enterprise Studio'
       setCompanyId(cId)
       setCompanyName(cName)
+
+      // Fetch active job quota
+      if (cId) {
+        void getCompanyJobQuota(cId).then((q) => setJobQuota(q))
+      }
 
       // 2. Fetch jobs
       let jobsQuery = supabase
@@ -425,12 +432,27 @@ export function useMyJobs(onPostNewJob?: () => void) {
   const handleReopenRequisition = useCallback(
     async (id: string) => {
       try {
+        if (companyId) {
+          const quota = await getCompanyJobQuota(companyId)
+          setJobQuota(quota)
+          if (quota.isLimitReached) {
+            showToast(
+              `Cannot re-open: Plan limit of ${quota.jobPostLimit} active jobs reached (${quota.activeJobsCount} live). Please close an active job or upgrade your subscription plan.`
+            )
+            return
+          }
+        }
+
         const newExpiresAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString()
         const { error } = await supabase
           .from('create_job_post')
           .update({ status: 'active', expires_at: newExpiresAt })
           .eq('id', id)
         if (error) throw error
+
+        if (companyId) {
+          void getCompanyJobQuota(companyId).then((q) => setJobQuota(q))
+        }
 
         setRequisitions((prev) =>
           prev.map((r) => (r.id === id ? { ...r, status: 'active', createdDateText: 'Re-opened today' } : r))
@@ -441,7 +463,7 @@ export function useMyJobs(onPostNewJob?: () => void) {
         showToast(msg)
       }
     },
-    [showToast]
+    [companyId, showToast]
   )
 
   const handleExportLedger = useCallback(
@@ -499,6 +521,7 @@ export function useMyJobs(onPostNewJob?: () => void) {
     setIsCandidatesModalOpen,
     isExportModalOpen,
     setIsExportModalOpen,
+    jobQuota,
     toastMessage,
     showToast,
     refreshJobs,

@@ -57,56 +57,13 @@ const menuItems: { id: MenuItem; label: string; icon: string }[] = [
   { id: 'settings', label: 'Settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
 ]
 
-const recentApplicants = [
-  {
-    name: 'Sarah Jenkins',
-    role: 'BIM Coordinator',
-    fitScore: 94,
-    appliedFor: 'Senior BIM Manager',
-    skills: ['Revit', 'Navisworks', 'Dynamo', 'IFC'],
-    avatar: null,
-  },
-  {
-    name: 'Michael Chang',
-    role: 'Revit Modeler',
-    fitScore: 88,
-    appliedFor: 'BIM Specialist',
-    skills: ['Revit Architecture', 'AutoCAD', 'BIM 360'],
-    avatar: null,
-  },
-  {
-    name: 'Emma Watson',
-    role: 'VDC Engineer',
-    fitScore: 82,
-    appliedFor: 'VDC Coordinator',
-    skills: ['Synchro', 'Navisworks', 'Solibri'],
-    avatar: null,
-  },
-  {
-    name: 'David Miller',
-    role: 'Structural BIM Tech',
-    fitScore: 78,
-    appliedFor: 'Structural Modeler',
-    skills: ['Tekla', 'Revit Structure'],
-    avatar: null,
-  },
-  {
-    name: 'Lisa Anderson',
-    role: 'Computational Designer',
-    fitScore: 71,
-    appliedFor: 'Architectural Designer',
-    skills: ['SketchUp', 'Rhino'],
-    avatar: null,
-  },
-]
-
 function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
   const [activeMenu, setActiveMenu] = useState<MenuItem>('dashboard')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
   const [selectedJobFilter, setSelectedJobFilter] = useState<{ id?: string; title?: string } | null>(null)
   const [highlightedJobId, setHighlightedJobId] = useState<string | null>(null)
-  const { stats, loading: statsLoading, refreshStats } = useEmployerStats()
+  const { stats, recentApplicants, loading: statsLoading, refreshStats } = useEmployerStats()
 
   const handleViewCandidates = (jobId: string, jobTitle: string) => {
     setSelectedJobFilter({ id: jobId, title: jobTitle })
@@ -172,44 +129,6 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
       </aside>
 
       <div className="dashboard-main">
-        <header className="dashboard-header">
-          <div className="header-left">
-            <h1>Employer Dashboard</h1>
-            <p>Overview of your firm's hiring activities.</p>
-          </div>
-          <div className="header-actions">
-            <button className="btn-secondary">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8" />
-                <path d="M21 21l-4.35-4.35" />
-              </svg>
-              Talent Search
-            </button>
-            <button className="btn-primary" onClick={() => setActiveMenu('post-job')}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              Post a Job
-            </button>
-            <div className="header-user-profile">
-              <div className="user-avatar-badge" title="Enterprise Admin">
-                <span>EA</span>
-              </div>
-              <button
-                type="button"
-                className="btn-header-logout"
-                onClick={() => setIsLogoutModalOpen(true)}
-                title="Sign Out of Castallio One"
-              >
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4 M16 17l5-5-5-5 M21 12H9" />
-                </svg>
-                <span>Sign Out</span>
-              </button>
-            </div>
-          </div>
-        </header>
-
         <div className="dashboard-content">
           {activeMenu === 'post-job' && (
             <PostJob 
@@ -218,6 +137,7 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
                 refreshStats()
                 setActiveMenu('my-jobs')
               }}
+              onNavigateToSubscription={() => setActiveMenu('subscription')}
             />
           )}
 
@@ -226,6 +146,7 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
               onPostNewJob={() => setActiveMenu('post-job')}
               onViewCandidates={handleViewCandidates}
               highlightedJobId={highlightedJobId}
+              onNavigateToSubscription={() => setActiveMenu('subscription')}
             />
           )}
 
@@ -240,7 +161,12 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
             />
           )}
           {activeMenu === 'talent-search' && <TalentSearchPage />}
-          {activeMenu === 'shortlisted' && <ShortlistedPage />}
+          {activeMenu === 'shortlisted' && (
+            <ShortlistedPage
+              onNavigateToApplicants={() => setActiveMenu('applicants')}
+              onNavigateToTalentSearch={() => setActiveMenu('talent-search')}
+            />
+          )}
           {activeMenu === 'interviews' && <InterviewsPage />}
           {activeMenu === 'messages' && <MessagesPage />}
           {activeMenu === 'company-profile' && <CompanyProfilePage />}
@@ -259,6 +185,45 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
 
           {activeMenu === 'dashboard' && (
             <>
+              {/* Header Section */}
+              <header className="emp-header-section">
+                <div className="emp-title-wrapper">
+                  <div className="emp-stage-row">
+                    <span className="emp-stage-tag">AEC Talent Deployment</span>
+                    <span className="emp-stage-slash">/</span>
+                    <span className="emp-stage-sub">Workspace Overview</span>
+                  </div>
+                  <h1 className="emp-main-heading">Employer Dashboard</h1>
+                  <p className="emp-lead-description">
+                    Overview of your firm's hiring activities, active job requisitions, and candidate pipeline.
+                  </p>
+                </div>
+
+                <div className="emp-header-actions">
+                  <button
+                    type="button"
+                    className="btn-emp-light"
+                    onClick={() => setActiveMenu('talent-search')}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                      <circle cx="11" cy="11" r="8" />
+                      <path d="M21 21l-4.35-4.35" />
+                    </svg>
+                    <span>Talent Search</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-emp-primary"
+                    onClick={() => setActiveMenu('post-job')}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    <span>Post a Job</span>
+                  </button>
+                </div>
+              </header>
+
               <div className="metrics-grid">
                 <div className="metric-card">
                   <div className="metric-glow blue" />
@@ -268,7 +233,7 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
                       <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16" />
                     </svg>
                   </div>
-                  <span className={`metric-value ${statsLoading ? 'loading' : ''}`}>
+                  <span className={`emp-metric-value metric-value ${statsLoading ? 'loading' : ''}`}>
                     {statsLoading ? '...' : stats.activeJobs}
                   </span>
                   <div className={`metric-trend ${stats.jobsThisWeek > 0 ? 'positive' : 'neutral'}`}>
@@ -299,7 +264,7 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
                       <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2 M9 11a4 4 0 100-8 4 4 0 000 8z M23 21v-2a4 4 0 00-3-3.87 M16 3.13a4 4 0 010 7.75" />
                     </svg>
                   </div>
-                  <span className={`metric-value ${statsLoading ? 'loading' : ''}`}>
+                  <span className={`emp-metric-value metric-value ${statsLoading ? 'loading' : ''}`}>
                     {statsLoading ? '...' : stats.totalApplicants}
                   </span>
                   <div className={`metric-trend ${stats.applicantsThisMonth > 0 ? 'positive' : 'neutral'}`}>
@@ -330,7 +295,7 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
                       <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
                     </svg>
                   </div>
-                  <span className={`metric-value ${statsLoading ? 'loading' : ''}`}>
+                  <span className={`emp-metric-value metric-value ${statsLoading ? 'loading' : ''}`}>
                     {statsLoading ? '...' : stats.hiresThisMonth}
                   </span>
                   <div className={`metric-trend ${
@@ -374,52 +339,72 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
                   <a href="#" className="view-all" onClick={(e) => { e.preventDefault(); setActiveMenu('applicants'); }}>View All</a>
                 </div>
 
-                <div className="applicants-grid">
-                  {recentApplicants.map((applicant, index) => (
-                    <div className="applicant-card" key={index}>
-                      <div className="applicant-top">
-                        <div className="applicant-info">
-                          {applicant.avatar ? (
-                            <img src={applicant.avatar} alt={applicant.name} className="applicant-avatar" />
-                          ) : (
-                            <div className="applicant-avatar placeholder">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8z" />
-                              </svg>
-                            </div>
-                          )}
-                          <div>
-                            <h3>{applicant.name}</h3>
-                            <p>{applicant.role}</p>
-                          </div>
-                        </div>
-                        <div className="fit-score">
-                          <span className="fit-label">FIT SCORE</span>
-                          <div className={`score-circle ${getScoreColor(applicant.fitScore)}`}>
-                            {applicant.fitScore}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="applicant-position">
-                        <span className="position-label">APPLIED FOR</span>
-                        <span className="position-title">{applicant.appliedFor}</span>
-                      </div>
-
-                      <div className="applicant-skills">
-                        {applicant.skills.map((skill, i) => (
-                          <span className="skill-tag" key={i}>{skill}</span>
-                        ))}
-                      </div>
+                {recentApplicants.length === 0 ? (
+                  <div className="emp-applicants-empty">
+                    <div className="emp-empty-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2 M9 11a4 4 0 100-8 4 4 0 000 8z M23 21v-2a4 4 0 00-3-3.87 M16 3.13a4 4 0 010 7.75" />
+                      </svg>
                     </div>
-                  ))}
-                </div>
+                    <h3>No Applicants Yet</h3>
+                    <p>Candidate applications will appear here live when they apply to your open positions.</p>
+                    <div className="emp-empty-actions">
+                      <button className="emp-empty-btn primary" onClick={() => setActiveMenu('talent-search')}>
+                        Search Talent
+                      </button>
+                      <button className="emp-empty-btn secondary" onClick={() => setActiveMenu('my-jobs')}>
+                        View Job Posts
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="applicants-grid">
+                    {recentApplicants.map((applicant, index) => (
+                      <div className="applicant-card" key={index}>
+                        <div className="applicant-top">
+                          <div className="applicant-info">
+                            {applicant.avatar ? (
+                              <img src={applicant.avatar} alt={applicant.name} className="applicant-avatar" />
+                            ) : (
+                              <div className="applicant-avatar placeholder">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8z" />
+                                </svg>
+                              </div>
+                            )}
+                            <div>
+                              <h3>{applicant.name}</h3>
+                              <p>{applicant.role}</p>
+                            </div>
+                          </div>
+                          <div className="fit-score">
+                            <span className="fit-label">FIT SCORE</span>
+                            <div className={`score-circle ${getScoreColor(applicant.fitScore)}`}>
+                              {applicant.fitScore}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="applicant-position">
+                          <span className="position-label">APPLIED FOR</span>
+                          <span className="position-title">{applicant.appliedFor}</span>
+                        </div>
+
+                        <div className="applicant-skills">
+                          {applicant.skills.map((skill, i) => (
+                            <span className="skill-tag" key={i}>{skill}</span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </>
           )}
 
           {/* Placeholder for remaining menus */}
-          {!['dashboard', 'post-job', 'my-jobs', 'applicants', 'talent-search', 'shortlisted', 'interviews', 'messages', 'company-profile', 'subscription', 'billing'].includes(activeMenu) && (
+          {['reports', 'settings'].includes(activeMenu) && (
             <div className="placeholder-view">
               <h2>{activeMenu.replace('-', ' ').toUpperCase()}</h2>
               <p>This module is actively synced with your employer workspace.</p>

@@ -810,14 +810,14 @@
   color: #727784;
 }
 
-.metric-value {
+.inspector-metrics-grid .metric-value {
   font-size: 13px;
   font-weight: 700;
   color: #1a1c1e;
   margin-top: 3px;
 }
 
-.metric-value.green {
+.inspector-metrics-grid .metric-value.green {
   color: #0a7040;
 }
 

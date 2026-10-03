@@ -71,8 +71,6 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
     toggleStarApplicant,
     scheduleInterview,
     sendCandidateMessage,
-    exportDossierCSV,
-    refreshApplicants,
   } = useApplicants(initialJobFilter)
 
   // Modal states
@@ -160,7 +158,7 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
       )}
 
       {/* ── 1. Telemetry & Operational Live Sync Bar ── */}
-      <section className="app-telemetry-bar" aria-label="Operational Live Sync Status">
+      {/* <section className="app-telemetry-bar" aria-label="Operational Live Sync Status">
         <div className="app-telemetry-left">
           <span className="telemetry-tag-active">
             <span className="telemetry-pulse" aria-hidden="true"></span>
@@ -190,7 +188,7 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
             <span>{loading ? 'SYNCING...' : 'SYNC REPO'}</span>
           </button>
         </div>
-      </section>
+      </section> */}
 
       {/* ── 2. Page Header & Action Area ── */}
       <section className="app-header-area">
@@ -207,7 +205,7 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
         </div>
 
         <div className="app-header-actions">
-          <button
+          {/* <button
             type="button"
             className="btn-dossier-secondary"
             onClick={exportDossierCSV}
@@ -217,7 +215,7 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
               download
             </span>
             <span>Export Dossier (CSV)</span>
-          </button>
+          </button> */}
           {onBrowseJobs && (
             <button
               type="button"

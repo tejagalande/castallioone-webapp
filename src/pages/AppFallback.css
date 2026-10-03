@@ -1,0 +1,504 @@
+/* ==========================================================================
+   Castallio One - Android App Fallback Pages (Mobile-First Styles)
+   ========================================================================== */
+
+:root {
+  --af-bg: #f8fafc;
+  --af-card-bg: #ffffff;
+  --af-primary: #00418f;
+  --af-primary-hover: #002d66;
+  --af-primary-light: #e8f0fe;
+  --af-text-main: #0f172a;
+  --af-text-muted: #64748b;
+  --af-text-sub: #475569;
+  --af-border: #e2e8f0;
+  --af-success: #16a34a;
+  --af-success-light: #dcfce7;
+  --af-urgent: #dc2626;
+  --af-urgent-light: #fee2e2;
+  --af-accent: #2563eb;
+  --af-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --af-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  --af-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
+}
+
+.af-page-container {
+  min-height: 100vh;
+  background-color: var(--af-bg);
+  background-image: radial-gradient(#cbd5e1 0.75px, transparent 0.75px);
+  background-size: 20px 20px;
+  display: flex;
+  flex-direction: column;
+  color: var(--af-text-main);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Header */
+.af-header {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--af-border);
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.af-brand-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.af-brand-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.af-brand-name {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #00234b;
+}
+
+.af-header-cta {
+  background: var(--af-primary-light);
+  color: var(--af-primary);
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.af-header-cta:hover {
+  background: #d8e6fd;
+}
+
+/* Main Content Wrapper */
+.af-main {
+  flex: 1;
+  max-width: 680px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* App Smart Banner Alert */
+.af-smart-banner {
+  background: linear-gradient(135deg, #00234b 0%, #00418f 100%);
+  color: #ffffff;
+  border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: var(--af-shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.af-banner-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.af-android-icon-box {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.af-android-icon-box svg {
+  width: 24px;
+  height: 24px;
+  fill: #3ddc84;
+}
+
+.af-banner-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 2px 0;
+  line-height: 1.3;
+}
+
+.af-banner-desc {
+  font-size: 12.5px;
+  color: #d8e2ff;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Primary Card */
+.af-card {
+  background: var(--af-card-bg);
+  border: 1px solid var(--af-border);
+  border-radius: 16px;
+  padding: 24px 20px;
+  box-shadow: var(--af-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.af-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.af-org-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.af-avatar-box {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--af-primary-light);
+  color: var(--af-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 18px;
+  border: 1px solid #bfdbfe;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.af-avatar-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.af-title-group h1 {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--af-text-main);
+  margin: 0 0 4px 0;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.af-company-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--af-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Badge Tags */
+.af-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.af-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: var(--af-text-sub);
+}
+
+.af-badge-urgent {
+  background: var(--af-urgent-light);
+  color: var(--af-urgent);
+  font-weight: 700;
+}
+
+.af-badge-success {
+  background: var(--af-success-light);
+  color: var(--af-success);
+  font-weight: 700;
+}
+
+.af-badge-primary {
+  background: var(--af-primary-light);
+  color: var(--af-primary);
+  font-weight: 700;
+}
+
+/* Highlights Grid */
+.af-info-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px solid var(--af-border);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+@media (min-width: 480px) {
+  .af-info-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.af-info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.af-info-icon {
+  color: var(--af-primary);
+  font-size: 18px;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.af-info-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.af-info-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--af-text-muted);
+  font-weight: 600;
+}
+
+.af-info-val {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--af-text-main);
+  line-height: 1.3;
+}
+
+/* Content Section (Description, Skills, Venue) */
+.af-section-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.af-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--af-text-muted);
+  margin: 0;
+}
+
+.af-desc-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--af-text-sub);
+  white-space: pre-line;
+  margin: 0;
+}
+
+.af-skill-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.af-skill-tag {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Action Buttons Cluster */
+.af-actions-cluster {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.btn-af-primary {
+  background: #00418f;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 14px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(0, 65, 143, 0.25);
+  transition: all 0.15s ease;
+}
+
+.btn-af-primary:hover {
+  background: var(--af-primary-hover);
+  transform: translateY(-1px);
+}
+
+.btn-af-google-play {
+  background: #0f172a;
+  color: #ffffff;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.btn-af-google-play:hover {
+  background: #1e293b;
+}
+
+.btn-af-secondary {
+  background: #ffffff;
+  color: var(--af-text-main);
+  border: 1px solid var(--af-border);
+  border-radius: 10px;
+  padding: 11px 18px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.btn-af-secondary:hover {
+  background: #f1f5f9;
+}
+
+/* App Benefits Card */
+.af-features-card {
+  background: #ffffff;
+  border: 1px solid var(--af-border);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.af-features-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--af-text-muted);
+  margin: 0;
+}
+
+.af-feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.af-feature-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: var(--af-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+.af-feature-body strong {
+  display: block;
+  font-size: 13.5px;
+  color: var(--af-text-main);
+}
+
+.af-feature-body span {
+  font-size: 12px;
+  color: var(--af-text-muted);
+}
+
+/* Footer */
+.af-footer {
+  text-align: center;
+  padding: 20px 16px;
+  font-size: 12px;
+  color: var(--af-text-muted);
+  border-top: 1px solid var(--af-border);
+  margin-top: auto;
+}
+
+.af-footer a {
+  color: var(--af-primary);
+  text-decoration: none;
+  margin: 0 8px;
+}
+
+.af-footer a:hover {
+  text-decoration: underline;
+}
+
+/* Skeleton Loading State */
+.af-skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: af-shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+
+@keyframes af-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

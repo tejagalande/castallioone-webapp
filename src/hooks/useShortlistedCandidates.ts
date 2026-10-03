@@ -305,7 +305,7 @@ function getInitials(name: string): string {
 }
 
 export function useShortlistedCandidates() {
-  const [candidates, setCandidates] = useState<ShortlistedCandidateItem[]>(DEMO_SHORTLISTED)
+  const [candidates, setCandidates] = useState<ShortlistedCandidateItem[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [companyId, setCompanyId] = useState<string | null>(null)
   const [companyName, setCompanyName] = useState<string>('Enterprise Studio')
@@ -336,11 +336,12 @@ export function useShortlistedCandidates() {
   // 1. Fetch real shortlisted candidates from Supabase
   const loadShortlistedData = useCallback(async () => {
     try {
+      setLoading(true)
       const { data: userData } = await supabase.auth.getUser()
       const user = userData?.user
 
       if (!user) {
-        setCandidates(DEMO_SHORTLISTED)
+        setCandidates([])
         setLoading(false)
         return
       }
@@ -349,38 +350,157 @@ export function useShortlistedCandidates() {
       const { data: comp } = await supabase
         .from('companies')
         .select('id, name')
-        .eq('owner_id', user.id)
+        .or(`owner_id.eq.${user.id},id.eq.${user.id}`)
         .maybeSingle()
 
-      if (comp) {
-        setCompanyId(comp.id)
-        setCompanyName(comp.name || 'Enterprise Studio')
-      }
+      const cId = comp?.id || null
+      const cName = comp?.name || 'Enterprise Studio'
+      setCompanyId(cId)
+      setCompanyName(cName)
 
       // Query via RPC web_get_company_applicants
-      const { data: rpcData, error: rpcError } = await supabase.rpc('web_get_company_applicants', {
-        p_company_id: comp?.id || null,
-      })
+      let allApplicants: Array<Record<string, unknown>> = []
+      let rpcSucceeded = false
 
-      if (rpcError || !rpcData || !rpcData.applicants) {
-        console.warn('Could not retrieve candidates via RPC, retaining demo shortlisted profiles:', rpcError?.message)
-        setCandidates(DEMO_SHORTLISTED)
-        setLoading(false)
-        return
+      try {
+        const { data: rpcData, error: rpcError } = await supabase.rpc('web_get_company_applicants', {
+          p_company_id: cId || null,
+        })
+
+        if (!rpcError && rpcData && Array.isArray((rpcData as { applicants?: unknown[] }).applicants)) {
+          allApplicants = (rpcData as { applicants: Array<Record<string, unknown>> }).applicants
+          rpcSucceeded = true
+        } else if (rpcError) {
+          console.warn('RPC web_get_company_applicants notice:', rpcError.message)
+        }
+      } catch (rpcErr) {
+        console.warn('RPC web_get_company_applicants call failed, falling back to direct table query:', rpcErr)
       }
 
-      const allApplicants = (rpcData.applicants as Array<Record<string, unknown>>) || []
+      // Direct SQL table query fallback if RPC didn't return applicants
+      if (!rpcSucceeded || allApplicants.length === 0) {
+        let appsQuery = supabase
+          .from('job_applications')
+          .select('*')
+          .order('applied_at', { ascending: false })
 
-      // Filter candidates that are shortlisted OR starred
+        if (cId) {
+          appsQuery = appsQuery.eq('company_id', cId)
+        }
+
+        const { data: dbApps, error: dbAppsErr } = await appsQuery
+
+        if (!dbAppsErr && dbApps && Array.isArray(dbApps) && dbApps.length > 0) {
+          const candidateIds = Array.from(new Set(dbApps.map((a) => a.candidate_id).filter(Boolean)))
+          const jobIds = Array.from(new Set(dbApps.map((a) => a.job_id).filter(Boolean)))
+
+          const jobsMap: Record<string, Record<string, unknown>> = {}
+          if (jobIds.length > 0) {
+            const { data: dbJobs } = await supabase
+              .from('create_job_post')
+              .select('id, title, location, category, employment_type')
+              .in('id', jobIds)
+            if (dbJobs) {
+              dbJobs.forEach((j) => {
+                jobsMap[j.id] = j
+              })
+            }
+          }
+
+          const candidatesMap: Record<string, Record<string, unknown>> = {}
+          const skillsMap: Record<string, unknown[]> = {}
+          const expsMap: Record<string, unknown[]> = {}
+
+          if (candidateIds.length > 0) {
+            const { data: students } = await supabase
+              .from('student_profile')
+              .select('*')
+              .or(`user_id.in.(${candidateIds.join(',')}),id.in.(${candidateIds.join(',')})`)
+
+            if (students && Array.isArray(students)) {
+              const studentProfileIds: string[] = []
+              students.forEach((st) => {
+                if (st.user_id) candidatesMap[st.user_id] = st
+                if (st.id) {
+                  candidatesMap[st.id] = st
+                  studentProfileIds.push(st.id)
+                }
+              })
+
+              const profileIds = Array.from(new Set([...studentProfileIds, ...candidateIds]))
+
+              if (profileIds.length > 0) {
+                const { data: skillsData } = await supabase
+                  .from('student_skills')
+                  .select('*')
+                  .in('student_id', profileIds)
+
+                if (skillsData && Array.isArray(skillsData)) {
+                  skillsData.forEach((sk) => {
+                    skillsMap[sk.student_id] = sk.skills || []
+                  })
+                }
+
+                const { data: expsData } = await supabase
+                  .from('student_experience')
+                  .select('*')
+                  .in('student_id', profileIds)
+                  .order('start_date', { ascending: false })
+
+                if (expsData && Array.isArray(expsData)) {
+                  expsData.forEach((exp) => {
+                    if (!expsMap[exp.student_id]) expsMap[exp.student_id] = []
+                    expsMap[exp.student_id].push(exp)
+                  })
+                }
+              }
+            }
+          }
+
+          // Fetch interviews
+          const appIds = dbApps.map((a) => a.id)
+          const ivMap: Record<string, unknown[]> = {}
+          if (appIds.length > 0) {
+            const { data: ivs } = await supabase
+              .from('interviews')
+              .select('*')
+              .in('job_application_id', appIds)
+
+            if (ivs && Array.isArray(ivs)) {
+              ivs.forEach((iv) => {
+                if (!ivMap[iv.job_application_id]) ivMap[iv.job_application_id] = []
+                ivMap[iv.job_application_id].push(iv)
+              })
+            }
+          }
+
+          allApplicants = dbApps.map((a) => {
+            const student = candidatesMap[a.candidate_id] || {}
+            const stId = (student.id as string) || a.candidate_id
+            return {
+              ...a,
+              job: jobsMap[a.job_id] || { title: 'General Opening', location: 'Remote' },
+              candidate: {
+                ...student,
+                skills: skillsMap[stId] || skillsMap[a.candidate_id] || [],
+                experiences: expsMap[stId] || expsMap[a.candidate_id] || [],
+              },
+              interviews: ivMap[a.id] || [],
+            }
+          })
+        }
+      }
+
+      // Filter candidates that are shortlisted OR starred (and not rejected)
       const shortlistedRows = allApplicants.filter((row) => {
         const status = String(row.status || '').toLowerCase()
         const isStarred = Boolean(row.is_starred)
         return status === 'shortlisted' || (isStarred && status !== 'rejected')
       })
 
-      // If no applicants are shortlisted yet, show demo candidates so tab is never blank
+      // If no applicants are shortlisted yet, set empty candidates array
       if (shortlistedRows.length === 0) {
-        setCandidates(DEMO_SHORTLISTED)
+        setCandidates([])
         setLoading(false)
         return
       }
@@ -489,7 +609,7 @@ export function useShortlistedCandidates() {
       setCandidates(mapped)
     } catch (err) {
       console.error('Exception loading shortlisted candidates:', err)
-      setCandidates(DEMO_SHORTLISTED)
+      setCandidates([])
     } finally {
       setLoading(false)
     }

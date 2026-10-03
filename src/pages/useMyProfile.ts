@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { uploadTalentResume, uploadTalentAvatar } from '../lib/talentService'
+import { generateCandidateEmbedding } from '../lib/candidateEmbeddingService'
 import {
   PREDEFINED_CORE_SOFTWARE,
   PREDEFINED_TECH_SKILLS,
@@ -708,8 +709,6 @@ export function useMyProfile() {
    */
   const loadProfileData = useCallback(async () => {
     try {
-      setLoading(true)
-
       // 1. Get authenticated user
       const {
         data: { user },
@@ -1185,6 +1184,14 @@ export function useMyProfile() {
       setProfile(editForm)
       setIsEditingProfile(false)
       showToast('Profile & AEC credentials saved to database!')
+
+      // Trigger candidate embedding and search_text regeneration with latest details
+      const effectiveStudentId = updatedRows?.[0]?.id || targetProfileId || targetUserId
+      if (effectiveStudentId) {
+        generateCandidateEmbedding(effectiveStudentId).catch((embErr) => {
+          console.warn('[useMyProfile] Embedding regeneration notice on profile save:', embErr)
+        })
+      }
     } catch (err) {
       console.error('Save profile changes error:', err)
       showToast('Profile updated locally.')
@@ -1381,11 +1388,19 @@ export function useMyProfile() {
 
       setIsManageSkillsOpen(false)
       showToast('Technical software stack & capabilities updated!')
+
+      // Trigger candidate embedding and search_text regeneration with updated skills
+      const embeddingTargetId = targetStudentId || profile.userId
+      if (embeddingTargetId) {
+        generateCandidateEmbedding(embeddingTargetId).catch((embErr) => {
+          console.warn('[useMyProfile] Embedding update notice on skills save:', embErr)
+        })
+      }
     } catch (err) {
       console.error('Save skills error:', err)
       showToast('Failed to save skills.')
     }
-  }, [manageSkillsDraft, profile.id, showToast])
+  }, [manageSkillsDraft, profile.id, profile.userId, showToast])
 
   const openModelViewer = useCallback((project?: PortfolioProject) => {
     if (project) {
@@ -1705,12 +1720,20 @@ export function useMyProfile() {
         contributions: '',
       })
       showToast(`Added experience at ${newExp.company}!`)
+
+      // Trigger candidate embedding and search_text regeneration with updated experience
+      const expStudentTarget = profile.id || profile.userId
+      if (expStudentTarget) {
+        generateCandidateEmbedding(expStudentTarget).catch((embErr) => {
+          console.warn('[useMyProfile] Embedding update notice on experience add:', embErr)
+        })
+      }
     } catch (err) {
       console.error('Add experience error:', err)
       showToast('Experience milestone added locally.')
       setIsAddExpOpen(false)
     }
-  }, [expForm, profile.id, showToast])
+  }, [expForm, profile.id, profile.userId, showToast])
 
   const handleDeleteExperience = useCallback(
     async (expId: string) => {
@@ -1718,6 +1741,14 @@ export function useMyProfile() {
         const { error } = await supabase.from('student_experience').delete().eq('id', expId)
         if (error) {
           console.error('Delete experience error:', error.message)
+        } else {
+          // Trigger candidate embedding and search_text regeneration after experience removal
+          const expStudentTarget = profile.id || profile.userId
+          if (expStudentTarget) {
+            generateCandidateEmbedding(expStudentTarget).catch((embErr) => {
+              console.warn('[useMyProfile] Embedding update notice on experience delete:', embErr)
+            })
+          }
         }
         setExperiences((prev) => prev.filter((e) => e.id !== expId))
         showToast('Experience milestone removed.')
@@ -1725,7 +1756,7 @@ export function useMyProfile() {
         console.error('Delete experience error:', err)
       }
     },
-    [showToast]
+    [profile.id, profile.userId, showToast]
   )
 
   return {

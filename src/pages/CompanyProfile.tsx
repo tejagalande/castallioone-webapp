@@ -13,11 +13,9 @@ export const CompanyProfile: FC<CompanyProfileProps> = () => {
     touched,
     handleBlur,
     isLoading,
-    isSaving,
     isUploadingLogo,
     isUploadingCertificate,
     isUploadingPan,
-    isDirty,
     completeness,
     activeTab,
     setActiveTab,
@@ -28,8 +26,6 @@ export const CompanyProfile: FC<CompanyProfileProps> = () => {
     handleLogoUpload,
     handleRemoveLogo,
     handleDocumentUpload,
-    handleSaveAndPublish,
-    handleDiscardChanges,
   } = useCompanyProfile()
 
   const [previewDoc, setPreviewDoc] = useState<{ title: string; url: string } | null>(null)
@@ -251,7 +247,7 @@ export const CompanyProfile: FC<CompanyProfileProps> = () => {
       />
 
       {/* ── 1. Top Action & Navigation Control Bar ── */}
-      <section className="cp-top-control-bar" aria-label="Company Profile Header Bar">
+      {/* <section className="cp-top-control-bar" aria-label="Company Profile Header Bar">
         <div className="cp-control-inner">
           <div className="cp-breadcrumb-row">
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#727784', fontWeight: 600 }}>
@@ -325,7 +321,7 @@ export const CompanyProfile: FC<CompanyProfileProps> = () => {
             </button>
           </div>
         </div>
-      </section>
+      </section> */}
 
       <div className="cp-main-wrap">
         {/* ── 2. Studio Branding Hero Card ── */}

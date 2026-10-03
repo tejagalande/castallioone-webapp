@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
+import JSZip from 'jszip'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 
@@ -414,60 +415,139 @@ export const useBilling = () => {
     showToast('Enterprise Billing Ledger exported as CSV.')
   }, [filteredInvoices, taxDetails, showToast])
 
+  // Helper to construct official GST Invoice receipt string
+  const formatInvoiceReceiptText = useCallback(
+    (inv: EnterpriseInvoiceItem) => {
+      const cgst = (inv.gst / 2).toFixed(2)
+      const sgst = (inv.gst / 2).toFixed(2)
+
+      return (
+        `============================================================\n` +
+        `CASTALLIO ONE ENTERPRISE TALENT NETWORK INDIA PVT LTD\n` +
+        `GSTIN: 27AAACC4451N1ZP | PAN: AAACC4451N\n` +
+        `SAC CODE: 998311 (Recruitment, Staffing & IT Platform Services)\n` +
+        `Corporate Office: Level 8, Express Towers, Nariman Point, Mumbai, MH\n` +
+        `============================================================\n` +
+        `TAX INVOICE / PAYMENT RECEIPT\n` +
+        `Invoice No: ${inv.id}\n` +
+        `Invoice Date: ${inv.date}\n` +
+        `Billing Period: ${inv.period}\n` +
+        `Billed To: ${taxDetails.companyName}\n` +
+        `Client GSTIN: ${taxDetails.gstin || 'Not Provided'}\n` +
+        `Client PAN: ${taxDetails.pan || 'Not Provided'}\n` +
+        `Billing Address: ${taxDetails.billingAddress || 'Not Provided'}\n` +
+        `------------------------------------------------------------\n` +
+        `Item Description: ${inv.plan} - ${inv.description}\n` +
+        `SAC Code: ${inv.sacCode}\n` +
+        `Taxable Amount: ₹${inv.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` +
+        `Central GST (CGST 9%): ₹${cgst}\n` +
+        `State GST (SGST 9%): ₹${sgst}\n` +
+        `Total Invoice Amount: ₹${inv.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })} INR\n` +
+        `Payment Method: ${inv.paymentMethod.label}\n` +
+        `Payment Status: PAID / SETTLED\n` +
+        `------------------------------------------------------------\n` +
+        `Input Tax Credit (ITC) Eligible under Section 16 of CGST Act.\n` +
+        `This digital invoice satisfies all requirements of Rule 46 of CGST Rules.\n` +
+        `============================================================\n`
+      )
+    },
+    [taxDetails]
+  )
+
   // Download official GST Invoice Text/Receipt
-  const handleDownloadInvoice = useCallback((inv: EnterpriseInvoiceItem) => {
-    const cgst = (inv.gst / 2).toFixed(2)
-    const sgst = (inv.gst / 2).toFixed(2)
+  const handleDownloadInvoice = useCallback(
+    (inv: EnterpriseInvoiceItem) => {
+      const invoiceContent = formatInvoiceReceiptText(inv)
+      const blob = new Blob([invoiceContent], { type: 'text/plain;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `CastallioOne_Invoice_${inv.id}.txt`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      showToast(`Invoice ${inv.id} downloaded successfully.`)
+    },
+    [formatInvoiceReceiptText, showToast]
+  )
 
-    const invoiceContent =
-      `============================================================\n` +
-      `CASTALLIO ONE ENTERPRISE TALENT NETWORK INDIA PVT LTD\n` +
-      `GSTIN: 27AAACC4451N1ZP | PAN: AAACC4451N\n` +
-      `SAC CODE: 998311 (Recruitment, Staffing & IT Platform Services)\n` +
-      `Corporate Office: Level 8, Express Towers, Nariman Point, Mumbai, MH\n` +
-      `============================================================\n` +
-      `TAX INVOICE / PAYMENT RECEIPT\n` +
-      `Invoice No: ${inv.id}\n` +
-      `Invoice Date: ${inv.date}\n` +
-      `Billing Period: ${inv.period}\n` +
-      `Billed To: ${taxDetails.companyName}\n` +
-      `Client GSTIN: ${taxDetails.gstin}\n` +
-      `Client PAN: ${taxDetails.pan}\n` +
-      `Billing Address: ${taxDetails.billingAddress}\n` +
-      `------------------------------------------------------------\n` +
-      `Item Description: ${inv.plan} - ${inv.description}\n` +
-      `SAC Code: ${inv.sacCode}\n` +
-      `Taxable Amount: ₹${inv.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` +
-      `Central GST (CGST 9%): ₹${cgst}\n` +
-      `State GST (SGST 9%): ₹${sgst}\n` +
-      `Total Invoice Amount: ₹${inv.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })} INR\n` +
-      `Payment Method: ${inv.paymentMethod.label}\n` +
-      `Payment Status: PAID / SETTLED\n` +
-      `------------------------------------------------------------\n` +
-      `Input Tax Credit (ITC) Eligible under Section 16 of CGST Act.\n` +
-      `This digital invoice satisfies all requirements of Rule 46 of CGST Rules.\n` +
-      `============================================================\n`
+  // Download All Invoices as a real .ZIP archive
+  const handleDownloadAllZip = useCallback(async () => {
+    const invoicesToZip = filteredInvoices.length > 0 ? filteredInvoices : invoices
 
-    const blob = new Blob([invoiceContent], { type: 'text/plain;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `CastallioOne_Invoice_${inv.id}.txt`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-    showToast(`Invoice ${inv.id} downloaded successfully.`)
-  }, [taxDetails, showToast])
+    if (invoicesToZip.length === 0) {
+      showToast('No invoices available to download.')
+      return
+    }
 
-  // Download All Invoices
-  const handleDownloadAllZip = useCallback(() => {
     setIsDownloadingZip(true)
-    setTimeout(() => {
+    try {
+      const zip = new JSZip()
+      const folder = zip.folder('GST_Invoices') || zip
+
+      // 1. Add each individual invoice text file
+      invoicesToZip.forEach((inv) => {
+        const textContent = formatInvoiceReceiptText(inv)
+        folder.file(`CastallioOne_Invoice_${inv.id}.txt`, textContent)
+      })
+
+      // 2. Also bundle summary CSV report in the archive
+      const headers = [
+        'Invoice Number',
+        'Invoice Date',
+        'Plan / Description',
+        'SAC Code',
+        'Company Name',
+        'Company GSTIN',
+        'Taxable Amount (INR)',
+        'CGST 9% (INR)',
+        'SGST 9% (INR)',
+        'Total Amount (INR)',
+        'Payment Status',
+        'GSTR-2B ITC Status',
+      ]
+      const rows = invoicesToZip.map((inv) => [
+        inv.id,
+        inv.date,
+        `"${inv.plan} - ${inv.description}"`,
+        inv.sacCode,
+        `"${taxDetails.companyName}"`,
+        taxDetails.gstin,
+        inv.amount.toFixed(2),
+        (inv.gst / 2).toFixed(2),
+        (inv.gst / 2).toFixed(2),
+        inv.total.toFixed(2),
+        inv.status.toUpperCase(),
+        `"${inv.itcStatus}"`,
+      ])
+      const csvSummary = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n')
+      zip.file(`Invoices_Summary_Ledger.csv`, csvSummary)
+
+      // 3. Generate the ZIP blob and trigger browser download
+      const zipBlob = await zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 },
+      })
+
+      const url = URL.createObjectURL(zipBlob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `CastallioOne_GST_Invoices_${new Date().getFullYear()}.zip`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      showToast(`Downloaded ZIP containing ${invoicesToZip.length} GST invoices & summary ledger.`)
+    } catch (err) {
+      console.error('Error generating ZIP file:', err)
+      showToast('Failed to create ZIP file. Please try again.')
+    } finally {
       setIsDownloadingZip(false)
-      showToast('All enterprise GST tax invoices bundled and downloaded.')
-    }, 1200)
-  }, [showToast])
+    }
+  }, [filteredInvoices, invoices, taxDetails, formatInvoiceReceiptText, showToast])
 
   return {
     invoices,

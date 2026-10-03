@@ -755,6 +755,138 @@
   color: var(--sub-slate-900);
 }
 
+/* ── GSTIN Claim Input Card ── */
+.sub-gstin-card {
+  margin-top: 18px;
+  background: #f8fafc;
+  border: 1px solid var(--sub-slate-200);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.sub-gstin-card:focus-within {
+  background: #ffffff;
+  border-color: var(--sub-blue-600);
+  box-shadow: 0 0 0 3px rgba(0, 86, 210, 0.08);
+}
+
+.sub-gstin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sub-gstin-title-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sub-gstin-icon {
+  font-size: 18px;
+  color: var(--sub-blue-600);
+}
+
+.sub-gstin-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sub-slate-800);
+  cursor: pointer;
+}
+
+.sub-gstin-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: #059669;
+  background: rgba(5, 150, 105, 0.08);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(5, 150, 105, 0.2);
+}
+
+.sub-gstin-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.sub-gstin-input {
+  width: 100%;
+  background: #ffffff;
+  border: 1.5px solid var(--sub-slate-300);
+  border-radius: 10px;
+  padding: 10px 86px 10px 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--sub-slate-900);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.sub-gstin-input:focus {
+  border-color: var(--sub-blue-600);
+  box-shadow: 0 0 0 3px rgba(0, 86, 210, 0.12);
+}
+
+.sub-gstin-input::placeholder {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: normal;
+  text-transform: none;
+  font-weight: 400;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.sub-gstin-status {
+  position: absolute;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.sub-gstin-status.valid {
+  color: #059669;
+  background: #ecfdf5;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(5, 150, 105, 0.25);
+}
+
+.sub-gstin-counter {
+  position: absolute;
+  right: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.sub-gstin-helper {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+
 /* Gateway Payment Rails Card */
 .sub-gateway-terminal-card {
   background: #ffffff;

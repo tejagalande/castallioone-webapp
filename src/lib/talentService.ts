@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import type { TalentProfileData } from '../hooks/useTalentProfileSetup'
+import { generateCandidateEmbedding } from './candidateEmbeddingService'
 
 export interface CheckTalentProfileResult {
   exists: boolean
@@ -311,6 +312,14 @@ export async function saveTalentProfile(
         { onConflict: 'id' }
       )
     if (profErr) console.warn('user_profiles update notice:', profErr.message)
+
+    // 6. Trigger 1536-dim candidate embedding & search_text generation (parity with mobile app)
+    const embeddingTargetId = upsertedStudent?.id || studentId
+    if (embeddingTargetId) {
+      generateCandidateEmbedding(embeddingTargetId).catch((embErr) => {
+        console.warn('[TalentService] Edge function genarte-candidate-embedding notice:', embErr)
+      })
+    }
   } catch (err) {
     console.warn('Supabase profile persistence encountered error, local cache active:', err)
   }

@@ -8,14 +8,18 @@ import './ShortlistedCandidates.css'
 
 export interface ShortlistedCandidatesProps {
   onNavigateToFindJobs?: () => void
+  onNavigateToApplicants?: () => void
+  onNavigateToTalentSearch?: () => void
 }
 
-export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = () => {
+export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = ({
+  onNavigateToApplicants,
+  onNavigateToTalentSearch,
+}) => {
   const {
     candidates,
     filteredCandidates,
     loading,
-    companyName,
     metrics,
     jobsList,
     selectedDiscipline,
@@ -113,7 +117,7 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = () => {
       )}
 
       {/* ── 1. Telemetry Strip ── */}
-      <section className="sl-telemetry-strip" aria-label="Shortlist Telemetry Strip">
+      {/* <section className="sl-telemetry-strip" aria-label="Shortlist Telemetry Strip">
         <div className="sl-telemetry-left">
           <span className="sl-telemetry-tag-primary">TALENT_PIPELINE</span>
           <span className="sl-telemetry-slash">//</span>
@@ -136,7 +140,7 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = () => {
           <span className="sl-ping-dot" aria-hidden="true"></span>
           <span>SUPABASE SYNC: {loading ? 'FETCHING...' : 'LIVE'}</span>
         </div>
-      </section>
+      </section> */}
 
       {/* ── 2. Header Area ── */}
       <section className="sl-header-area">
@@ -155,19 +159,19 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = () => {
         </div>
 
         <div className="sl-header-ctas">
-          <button
+          {/* <button
             type="button"
             className="btn-sl-secondary"
             onClick={exportDossierCSV}
             title="Download CSV Dossier of Shortlisted Profiles"
-          >
+           >
             <span className="material-symbols-outlined text-primary" aria-hidden="true">
               download
             </span>
             <span>Export Dossier (CSV)</span>
-          </button>
+          </button> */}
 
-          <button
+          {/* <button
             type="button"
             className="btn-sl-secondary"
             onClick={() => setShowMatrixModal(true)}
@@ -177,7 +181,7 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = () => {
               view_column
             </span>
             <span>Compare (Matrix)</span>
-          </button>
+          </button> */}
 
           {filteredCandidates.length > 0 && (
             <button
@@ -213,7 +217,7 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = () => {
               <span style={{ color: '#00418f', fontWeight: 700 }}>{metrics.immediatePct}% POOL</span>
             </div>
             <div className="sl-metric-bar-bg">
-              <div className="sl-metric-bar-fill" style={{ width: `${Math.max(10, metrics.immediatePct)}%` }}></div>
+              <div className="sl-metric-bar-fill" style={{ width: `${metrics.total > 0 ? Math.max(10, metrics.immediatePct) : 0}%` }}></div>
             </div>
           </div>
         </article>
@@ -225,7 +229,7 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = () => {
             <span className="sl-metric-badge">High Precision</span>
           </div>
           <div className="sl-metric-val-row">
-            <span className="sl-metric-num highlight">{metrics.avgMatch || 94}%</span>
+            <span className="sl-metric-num highlight">{metrics.total > 0 ? `${metrics.avgMatch}%` : '—'}</span>
             <span className="sl-metric-subtext">Match Quality</span>
           </div>
           <div className="sl-metric-progress-wrap">
@@ -233,7 +237,7 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = () => {
               Revit, Rhino, Civil 3D &amp; Navisworks
             </p>
             <div className="sl-metric-bar-bg">
-              <div className="sl-metric-bar-fill" style={{ width: `${metrics.avgMatch || 94}%` }}></div>
+              <div className="sl-metric-bar-fill" style={{ width: `${metrics.total > 0 ? metrics.avgMatch : 0}%` }}></div>
             </div>
           </div>
         </article>
@@ -256,7 +260,7 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = () => {
               <span style={{ color: '#00418f', fontWeight: 700 }}>{metrics.resumePct}% READY</span>
             </div>
             <div className="sl-metric-bar-bg">
-              <div className="sl-metric-bar-fill" style={{ width: `${Math.max(12, metrics.resumePct)}%` }}></div>
+              <div className="sl-metric-bar-fill" style={{ width: `${metrics.total > 0 ? Math.max(12, metrics.resumePct) : 0}%` }}></div>
             </div>
           </div>
         </article>
@@ -276,7 +280,7 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = () => {
               Technical Reviews &amp; Portfolios
             </p>
             <div className="sl-metric-bar-bg">
-              <div className="sl-metric-bar-fill" style={{ width: `${Math.min(100, metrics.withInterview * 25)}%` }}></div>
+              <div className="sl-metric-bar-fill" style={{ width: `${metrics.total > 0 ? Math.min(100, metrics.withInterview * 25) : 0}%` }}></div>
             </div>
           </div>
         </article>
@@ -454,6 +458,45 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = () => {
                   </div>
                 </article>
               ))}
+            </div>
+          ) : candidates.length === 0 ? (
+            <div className="sl-candidate-card sl-empty-state-card">
+              <div className="sl-empty-icon-wrapper">
+                <span className="material-symbols-outlined" aria-hidden="true">
+                  bookmark_border
+                </span>
+              </div>
+              <h2 className="sl-empty-title">No Candidates Shortlisted Yet</h2>
+              <p className="sl-empty-desc">
+                You haven&apos;t shortlisted any candidates for your open requisitions yet.
+                Review applications submitted to your active job posts or explore the talent directory to bookmark AEC specialists.
+              </p>
+              <div className="sl-empty-actions-row">
+                {onNavigateToApplicants && (
+                  <button
+                    type="button"
+                    className="btn-sl-primary"
+                    onClick={onNavigateToApplicants}
+                  >
+                    <span className="material-symbols-outlined" aria-hidden="true">
+                      group
+                    </span>
+                    <span>Review Applicants Pipeline</span>
+                  </button>
+                )}
+                {onNavigateToTalentSearch && (
+                  <button
+                    type="button"
+                    className="btn-sl-secondary"
+                    onClick={onNavigateToTalentSearch}
+                  >
+                    <span className="material-symbols-outlined text-primary" aria-hidden="true">
+                      person_search
+                    </span>
+                    <span>Search AEC Talent</span>
+                  </button>
+                )}
+              </div>
             </div>
           ) : filteredCandidates.length === 0 ? (
             <div className="sl-candidate-card" style={{ textAlign: 'center', padding: '48px 24px' }}>
@@ -747,16 +790,18 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = () => {
           )}
 
           {/* Pagination Footer */}
-          <div className="sl-filter-card" style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>
-              SHOWING 1–{filteredCandidates.length} OF {metrics.total} SHORTLISTED PROFILES
-            </span>
-            <div style={{ display: 'flex', gap: '4px' }}>
-              <button type="button" className="sl-tab-btn active">
-                1
-              </button>
+          {filteredCandidates.length > 0 && (
+            <div className="sl-filter-card" style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>
+                SHOWING 1–{filteredCandidates.length} OF {metrics.total} SHORTLISTED PROFILES
+              </span>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button type="button" className="sl-tab-btn active">
+                  1
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Right Sidebar: Intelligence & Collaborative Tools */}
@@ -771,22 +816,28 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = () => {
             </div>
 
             <div className="sl-folder-list">
-              {jobsList.map((j) => (
-                <div
-                  key={j.id}
-                  className={`sl-folder-item ${selectedJobId === j.id ? 'active' : ''}`}
-                  onClick={() => setSelectedJobId(selectedJobId === j.id ? null : j.id)}
-                  title={`Filter by ${j.title}`}
-                >
-                  <div className="sl-folder-left">
-                    <span className="material-symbols-outlined" aria-hidden="true">
-                      business_center
-                    </span>
-                    <span className="sl-folder-name">{j.title}</span>
+              {jobsList.length === 0 ? (
+                <p style={{ fontSize: '13px', color: '#727784', margin: '4px 0', padding: '4px 0' }}>
+                  No active job requisitions with shortlisted candidates.
+                </p>
+              ) : (
+                jobsList.map((j) => (
+                  <div
+                    key={j.id}
+                    className={`sl-folder-item ${selectedJobId === j.id ? 'active' : ''}`}
+                    onClick={() => setSelectedJobId(selectedJobId === j.id ? null : j.id)}
+                    title={`Filter by ${j.title}`}
+                  >
+                    <div className="sl-folder-left">
+                      <span className="material-symbols-outlined" aria-hidden="true">
+                        business_center
+                      </span>
+                      <span className="sl-folder-name">{j.title}</span>
+                    </div>
+                    <span className="sl-folder-count">{j.count} Pros</span>
                   </div>
-                  <span className="sl-folder-count">{j.count} Pros</span>
-                </div>
-              ))}
+                ))
+              )}
             </div>
 
             {selectedJobId && (
@@ -803,47 +854,6 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = () => {
             )}
           </div>
 
-          {/* Widget 2: Quick Comparison Matrix Snapshot */}
-          <div className="sl-sidebar-card">
-            <div className="sl-sidebar-header">
-              <span className="sl-sidebar-title">Quick Comparison Snapshot</span>
-              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f', fontWeight: 700 }}>
-                TOP 3 MATCH
-              </span>
-            </div>
-
-            <div className="sl-matrix-mini-rows">
-              {candidates.slice(0, 3).map((c) => (
-                <div key={c.id} className="sl-matrix-row">
-                  <div className="sl-matrix-row-top">
-                    <span style={{ fontWeight: 600 }}>{c.name}</span>
-                    <span style={{ color: '#00418f', fontFamily: 'JetBrains Mono', fontWeight: 700 }}>
-                      {c.matchScore}%
-                    </span>
-                  </div>
-                  <div className="sl-matrix-row-meta">
-                    <span>{c.skills.slice(0, 2).join(' / ')}</span>
-                    <span style={{ color: '#1a1c1e', fontWeight: 600 }}>{c.expectedCtc}</span>
-                  </div>
-                  <div className="sl-metric-bar-bg" style={{ height: '4px', marginTop: '2px' }}>
-                    <div className="sl-metric-bar-fill" style={{ width: `${c.matchScore}%` }}></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <button
-              type="button"
-              className="btn-sl-primary"
-              style={{ width: '100%', justifyContent: 'center', marginTop: '8px' }}
-              onClick={() => setShowMatrixModal(true)}
-            >
-              <span className="material-symbols-outlined" aria-hidden="true">
-                table_view
-              </span>
-              <span>Launch Full Matrix ({metrics.total})</span>
-            </button>
-          </div>
 
           {/* Widget 3: Upcoming Scheduled Interviews */}
           <div className="sl-sidebar-card">

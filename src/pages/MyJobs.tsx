@@ -9,9 +9,10 @@ export interface MyJobsProps {
   onPostNewJob?: () => void
   onViewCandidates?: (jobId: string, jobTitle: string) => void
   highlightedJobId?: string | null
+  onNavigateToSubscription?: () => void
 }
 
-export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highlightedJobId }) => {
+export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highlightedJobId, onNavigateToSubscription }) => {
   const {
     filteredRequisitions,
     loading,
@@ -31,6 +32,7 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highli
     setIsCandidatesModalOpen,
     isExportModalOpen,
     setIsExportModalOpen,
+    jobQuota,
     toastMessage,
     showToast,
     refreshJobs,
@@ -56,7 +58,7 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highli
       )}
 
       {/* 1. Top Telemetry Meta Strip */}
-      <section className="mj-telemetry-strip" aria-label="Requisitions Management Telemetry">
+      {/* <section className="mj-telemetry-strip" aria-label="Requisitions Management Telemetry">
         <div className="mj-telemetry-left">
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#00418f', fontWeight: 700 }}>
             <span className="pulse-dot-mj" aria-hidden="true" />
@@ -81,6 +83,30 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highli
         </div>
 
         <div className="mj-telemetry-right">
+          {jobQuota && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: jobQuota.isLimitReached ? '#fee2e2' : '#e0f2fe',
+                color: jobQuota.isLimitReached ? '#991b1b' : '#0369a1',
+                padding: '3px 10px',
+                borderRadius: '6px',
+                fontWeight: 700,
+                fontSize: '11px',
+              }}
+              title={jobQuota.isLimitReached ? 'Plan total job post limit reached' : 'Total job posting capacity'}
+            >
+              <span>{jobQuota.planName.toUpperCase()}</span>
+              <span>•</span>
+              <span>
+                {jobQuota.jobPostLimit === null
+                  ? `${jobQuota.totalJobsCount} POSTED (UNLIMITED)`
+                  : `${jobQuota.totalJobsCount}/${jobQuota.jobPostLimit} TOTAL JOBS`}
+              </span>
+            </span>
+          )}
           <span style={{ background: '#d8e2ff', color: '#001a41', padding: '2px 8px', borderRadius: '6px', fontWeight: 700 }}>
             ISO 19650 LEVEL 2
           </span>
@@ -88,7 +114,7 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highli
             openBIM VERIFIED
           </span>
         </div>
-      </section>
+      </section> */}
 
       {/* 2. Top Action Bar & Title Block */}
       <header className="mj-header-section">
@@ -101,6 +127,51 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highli
           <p className="mj-lead-description">
             Monitor real-time candidate pipelines, BIM competency verification, AI talent match velocity, and publishing status across all architectural and computational requisitions.
           </p>
+
+          {/* Quota limit notice banner if reached */}
+          {jobQuota && jobQuota.isLimitReached && (
+            <div
+              style={{
+                marginTop: '12px',
+                background: '#fff1f2',
+                border: '1px solid #fecdd3',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+                flexWrap: 'wrap',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#9f1239', fontSize: '13px', fontWeight: 600 }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                  lock
+                </span>
+                <span>
+                  <strong>Job Posting Limit Reached:</strong> You have posted {jobQuota.totalJobsCount} of {jobQuota.jobPostLimit} total jobs allowed on your {jobQuota.planName}. Upgrade your plan to post more jobs.
+                </span>
+              </div>
+              {onNavigateToSubscription && (
+                <button
+                  type="button"
+                  onClick={onNavigateToSubscription}
+                  style={{
+                    background: '#e11d48',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Upgrade Plan
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="mj-action-cluster">
@@ -129,7 +200,7 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highli
             <span>Refresh</span>
           </button>
 
-          <button
+          {/* <button
             type="button"
             className="btn-mj-light"
             onClick={() => setIsExportModalOpen(true)}
@@ -140,7 +211,7 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highli
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
             <span>Export Ledger (CSV / PDF)</span>
-          </button>
+          </button> */}
 
           <button
             type="button"
@@ -152,7 +223,7 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highli
               <line x1="12" y1="8" x2="12" y2="16" />
               <line x1="8" y1="12" x2="16" y2="12" />
             </svg>
-            <span>Post New Requisition</span>
+            <span>Post New Job</span>
           </button>
         </div>
       </header>

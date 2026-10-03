@@ -96,7 +96,7 @@ export const Billing: FC<BillingProps> = ({
           </div>
 
           <div className="billing-header-actions">
-            <button
+            {/* <button
               type="button"
               className="btn-billing-secondary"
               onClick={() => {
@@ -109,12 +109,12 @@ export const Billing: FC<BillingProps> = ({
                 })
                 setIsTaxModalOpen(true)
               }}
-            >
+             >
               <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
                 badge
               </span>
               <span>Corporate Tax &amp; GST Profile</span>
-            </button>
+            </button> */}
 
             <button
               type="button"

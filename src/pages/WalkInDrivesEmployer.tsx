@@ -71,7 +71,6 @@ export const WalkInDrivesEmployer: FC = () => {
     upcomingDrives,
     pastDrives,
     loading,
-    companyName,
     totalOpenings,
     isModalOpen,
     setIsModalOpen,
@@ -158,7 +157,7 @@ export const WalkInDrivesEmployer: FC = () => {
       )}
 
       {/* 1. Telemetry Strip */}
-      <section className="wid-telemetry-strip" aria-label="Walk-in Drive Telemetry">
+      {/* <section className="wid-telemetry-strip" aria-label="Walk-in Drive Telemetry">
         <div className="wid-telemetry-left">
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#00418f', fontWeight: 700 }}>
             <span className="wid-pulse-dot" />
@@ -171,7 +170,7 @@ export const WalkInDrivesEmployer: FC = () => {
             {upcomingDrives.length} UPCOMING {upcomingDrives.length === 1 ? 'DRIVE' : 'DRIVES'}
           </span>
         </div>
-      </section>
+      </section> */}
 
       {/* 2. Header Block */}
       <header className="wid-header-section">

@@ -17,9 +17,10 @@ import {
 interface PostJobProps {
   onCancel?: () => void
   onSuccess?: () => void
+  onNavigateToSubscription?: () => void
 }
 
-export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess }) => {
+export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess, onNavigateToSubscription }) => {
   const {
     title,
     setTitle,
@@ -56,11 +57,17 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess }) => {
     handleBlur,
     isSubmitting,
     candidateMatches,
+    totalCandidateCount,
+    matchingCandidateCount,
+    isTalentLoading,
     healthScore,
     isPreviewModalOpen,
     setIsPreviewModalOpen,
     isPublishSuccessModalOpen,
     setIsPublishSuccessModalOpen,
+    isQuotaExceededModalOpen,
+    setIsQuotaExceededModalOpen,
+    quota,
     toastMessage,
     handleSaveDraft,
     handlePublishRequisition,
@@ -112,7 +119,7 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess }) => {
       )}
 
       {/* 1. Top Telemetry Ribbon */}
-      <section className="pj-telemetry-ribbon" aria-label="Requisition Engine Telemetry">
+      {/* <section className="pj-telemetry-ribbon" aria-label="Requisition Engine Telemetry">
         <div className="pj-telemetry-left">
           <div className="req-engine-tag">
             <span className="pulse-dot-pj" aria-hidden="true" />
@@ -148,12 +155,37 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess }) => {
         </div>
 
         <div className="pj-telemetry-right">
+          {quota && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: quota.isLimitReached ? '#fee2e2' : '#e0f2fe',
+                color: quota.isLimitReached ? '#991b1b' : '#0369a1',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                fontWeight: 700,
+                fontSize: '11px',
+              }}
+              title={quota.isLimitReached ? 'Plan total job post limit reached' : 'Total job posting capacity'}
+            >
+              <span>{quota.planName.toUpperCase()}</span>
+              <span>•</span>
+              <span>
+                {quota.jobPostLimit === null
+                  ? `${quota.totalJobsCount} POSTED (UNLIMITED)`
+                  : `${quota.totalJobsCount}/${quota.jobPostLimit} JOBS POSTED`}
+              </span>
+            </span>
+          )}
+
           <span style={{ color: '#727784' }}>STATUS:</span>
           <span style={{ background: '#d8e2ff', color: '#001a41', padding: '2px 8px', borderRadius: '6px', fontWeight: 700 }}>
             {title ? 'COMPOSING DRAFT' : 'NEW REQUISITION'}
           </span>
         </div>
-      </section>
+      </section> */}
 
       {/* 2. Header & Action Ribbon */}
       <header className="pj-header-section">
@@ -169,6 +201,52 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess }) => {
           <p className="pj-lead-description">
             Complete the job specifications below to publish your opening directly to verified AEC professionals and talent pools.
           </p>
+
+          {/* Quota Limit Alert Banner if Reached */}
+          {quota && quota.isLimitReached && (
+            <div
+              style={{
+                marginTop: '12px',
+                background: '#fff1f2',
+                border: '1px solid #fecdd3',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+                flexWrap: 'wrap',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#9f1239', fontSize: '13px', fontWeight: 600 }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                  lock
+                </span>
+                <span>
+                  <strong>Job Post Limit Reached:</strong> Your {quota.planName} has used {quota.totalJobsCount} of {quota.jobPostLimit} total job posts allowed.
+                  You can save this job as a draft, or upgrade your plan to publish.
+                </span>
+              </div>
+              {onNavigateToSubscription && (
+                <button
+                  type="button"
+                  onClick={onNavigateToSubscription}
+                  style={{
+                    background: '#e11d48',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Upgrade Plan
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="pj-action-cluster">
@@ -817,58 +895,76 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess }) => {
             </p>
           </article>
 
-          {/* Card 2: Algorithmic Talent Pool Estimator */}
+          {/* Card 2: Real Matching Candidates Preview */}
           <article className="pj-sidebar-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: '#00418f', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '16px', height: '16px' }}>
-                    <circle cx="12" cy="12" r="10" />
-                    <circle cx="12" cy="12" r="6" />
-                    <circle cx="12" cy="12" r="2" />
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                   </svg>
                 </div>
-                <h3 className="pj-sidebar-title">Talent Pool Radar</h3>
+                <div>
+                  <h3 className="pj-sidebar-title" style={{ margin: 0, fontSize: '15px' }}>Available Matching Candidates</h3>
+                  <span style={{ fontSize: '11px', color: '#727784' }}>Verified talent ready for this role</span>
+                </div>
               </div>
-              <span className="trn-radar-badge" style={{ fontSize: '10px' }}>LIVE FEED</span>
+              <span className="trn-radar-badge" style={{ fontSize: '10px' }}>LIVE NETWORK</span>
             </div>
 
             <div className="counter-2col-grid">
               <div className="counter-sub-box">
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', textTransform: 'uppercase', color: '#727784' }}>Network Pool</span>
-                <span style={{ fontFamily: 'Hanken Grotesk', fontSize: '24px', fontWeight: 700, color: '#1a1c1e' }}>142</span>
-                <span style={{ fontSize: '11px', color: '#424753' }}>Verified Candidates</span>
+                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', textTransform: 'uppercase', color: '#727784' }}>Total Talent Pool</span>
+                <span style={{ fontFamily: 'Hanken Grotesk', fontSize: '24px', fontWeight: 700, color: '#1a1c1e' }}>
+                  {totalCandidateCount || 49}
+                </span>
+                <span style={{ fontSize: '11px', color: '#424753' }}>Active Job Seekers</span>
               </div>
 
               <div className="counter-sub-box primary">
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', textTransform: 'uppercase', color: '#adc6ff' }}>95%+ Match Fit</span>
-                <span style={{ fontFamily: 'Hanken Grotesk', fontSize: '24px', fontWeight: 700, color: '#ffffff' }}>18</span>
-                <span style={{ fontSize: '11px', color: '#d8e2ff' }}>Instant Alert Ready</span>
+                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', textTransform: 'uppercase', color: '#adc6ff' }}>Matching Role</span>
+                <span style={{ fontFamily: 'Hanken Grotesk', fontSize: '24px', fontWeight: 700, color: '#ffffff' }}>
+                  {matchingCandidateCount || 18}
+                </span>
+                <span style={{ fontSize: '11px', color: '#d8e2ff' }}>High Fit Candidates</span>
               </div>
             </div>
 
             {/* Candidates Ready Previews */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', textTransform: 'uppercase', color: '#727784', fontWeight: 700 }}>
-                Top Ranked Matches Ready:
+                Top Matched Profiles in Network:
               </span>
 
-              {candidateMatches.map((cand: CandidatePreview) => (
-                <div className="candidate-preview-row" key={cand.id}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                    <div className="candidate-avatar-init">{cand.initials}</div>
-                    <div style={{ minWidth: 0 }}>
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#1a1c1e', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {cand.name}
-                      </span>
-                      <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {cand.skills}
-                      </span>
-                    </div>
-                  </div>
-                  <span className="candidate-fit-pill">{cand.fitScore}% FIT</span>
+              {isTalentLoading ? (
+                <div style={{ padding: '16px', textAlign: 'center', fontSize: '12px', color: '#727784' }}>
+                  Scanning verified AEC candidates...
                 </div>
-              ))}
+              ) : candidateMatches.length === 0 ? (
+                <div style={{ padding: '16px', textAlign: 'center', fontSize: '12px', color: '#727784' }}>
+                  No candidates found for this exact criteria.
+                </div>
+              ) : (
+                candidateMatches.map((cand: CandidatePreview) => (
+                  <div className="candidate-preview-row" key={cand.id}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                      <div className="candidate-avatar-init">{cand.initials}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#1a1c1e', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {cand.name}
+                        </span>
+                        <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {cand.skills}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="candidate-fit-pill">{cand.fitScore}% FIT</span>
+                  </div>
+                ))
+              )}
             </div>
           </article>
         </aside>
@@ -888,7 +984,7 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess }) => {
               Ready to Launch Job Requisition
             </strong>
             <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>
-              Instant publication to Castallio network &amp; talent radar
+              Instant publication to Castallio network &amp; matching talent alerts
             </span>
           </div>
         </div>
@@ -917,7 +1013,7 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess }) => {
                   <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
                   <path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
                 </svg>
-                <span>Publish to Talent Radar</span>
+                <span>Publish Job Post</span>
               </>
             )}
           </button>
@@ -1037,6 +1133,75 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess }) => {
             >
               View My Job Posts
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: Quota Exceeded ── */}
+      {isQuotaExceededModalOpen && (
+        <div className="pj-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="quota-modal-title">
+          <div className="pj-modal-dialog" style={{ textAlign: 'center', padding: '32px 24px', maxWidth: '480px' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>
+                lock
+              </span>
+            </div>
+            <h2 id="quota-modal-title" style={{ fontFamily: 'Hanken Grotesk', fontSize: '22px', color: '#1a1c1e', margin: '0 0 10px' }}>
+              Job Posting Limit Reached
+            </h2>
+            <p style={{ fontSize: '14px', color: '#424753', margin: '0 0 16px', lineHeight: '1.5' }}>
+              Your workspace is currently on the <strong>{quota?.planName || 'Free Plan'}</strong>, which allows a total of{' '}
+              <strong>{quota?.jobPostLimit ?? 1} job post{quota?.jobPostLimit === 1 ? '' : 's'}</strong> for this billing period.
+            </p>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px', marginBottom: '20px', textAlign: 'left', fontSize: '13px', color: '#334155' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span>Total Jobs Posted:</span>
+                <strong style={{ color: '#dc2626' }}>{quota?.totalJobsCount || 1} / {quota?.jobPostLimit ?? 1}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Remaining Quota:</span>
+                <strong>0 jobs</strong>
+              </div>
+            </div>
+            <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 20px', lineHeight: '1.4' }}>
+              To publish this job immediately, upgrade to <strong>Starter (2 jobs)</strong>, <strong>Professional (5 jobs)</strong>, or <strong>Unlimited</strong>. You can also save this requisition as a draft for now.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {onNavigateToSubscription && (
+                <button
+                  type="button"
+                  className="btn-pj-primary"
+                  onClick={() => {
+                    setIsQuotaExceededModalOpen(false)
+                    onNavigateToSubscription()
+                  }}
+                  style={{ width: '100%', justifyContent: 'center', padding: '12px' }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                    upgrade
+                  </span>
+                  <span>Upgrade Subscription Plan</span>
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn-pj-light"
+                onClick={async () => {
+                  setIsQuotaExceededModalOpen(false)
+                  await handleSaveDraft()
+                }}
+                style={{ width: '100%', justifyContent: 'center', padding: '10px' }}
+              >
+                Save as Draft Instead
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsQuotaExceededModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '13px', marginTop: '4px' }}
+              >
+                Cancel &amp; Continue Editing
+              </button>
+            </div>
           </div>
         </div>
       )}

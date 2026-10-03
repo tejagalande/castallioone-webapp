@@ -288,7 +288,10 @@ export const Subscription: FC<SubscriptionProps> = ({
               <button
                 type="button"
                 className="btn-gateway-back"
-                onClick={() => setSelectedPlanForGateway(null)}
+                onClick={() => {
+                  setSelectedPlanForGateway(null)
+                  setUserGstinInput(null)
+                }}
               >
                 <span className="material-symbols-outlined">arrow_back</span>
                 <span>Back to Subscription Plans</span>
@@ -377,21 +380,47 @@ export const Subscription: FC<SubscriptionProps> = ({
                 </div>
 
                 {/* GSTIN Claim Input */}
-                <div className="sub-form-group">
-                  <label className="sub-form-label">
-                    Company GSTIN (For 18% Input Tax Credit):
-                  </label>
-                  <input
-                    type="text"
-                    className="sub-form-input"
-                    placeholder="e.g. 27AAACC4451N1ZP"
-                    value={gstinNumber}
-                    onChange={(e) => setGstinNumber(e.target.value.toUpperCase())}
-                    maxLength={15}
-                  />
-                  <span style={{ fontSize: '11.5px', color: '#64748b' }}>
-                    Invoices will reflect in your GSTR-2B under SAC code 998311.
-                  </span>
+                <div className="sub-gstin-card">
+                  <div className="sub-gstin-header">
+                    <div className="sub-gstin-title-wrap">
+                      <span className="material-symbols-outlined sub-gstin-icon" aria-hidden="true">
+                        receipt_long
+                      </span>
+                      <label htmlFor="companyGstinInput" className="sub-gstin-label">
+                        Company GSTIN
+                      </label>
+                    </div>
+                    <span className="sub-gstin-badge">18% Tax Credit</span>
+                  </div>
+
+                  <div className="sub-gstin-input-wrapper">
+                    <input
+                      id="companyGstinInput"
+                      type="text"
+                      className="sub-gstin-input"
+                      placeholder="e.g. 27AAACC4451N1ZP"
+                      value={gstinNumber}
+                      onChange={(e) => setGstinNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                      maxLength={15}
+                      aria-label="Company GSTIN"
+                    />
+                    {gstinNumber.length === 15 ? (
+                      <span className="sub-gstin-status valid">
+                        <span className="material-symbols-outlined" style={{ fontSize: '15px' }} aria-hidden="true">
+                          check_circle
+                        </span>
+                        <span>15 digits</span>
+                      </span>
+                    ) : gstinNumber.length > 0 ? (
+                      <span className="sub-gstin-counter">{gstinNumber.length}/15</span>
+                    ) : null}
+                  </div>
+
+                  <p className="sub-gstin-helper">
+                    {companyGstin && gstinNumber === companyGstin
+                      ? 'Auto-filled from your Company Profile. You can edit this if needed.'
+                      : 'Optional. Enter your 15-digit GSTIN to receive a GST invoice and claim 18% Input Tax Credit.'}
+                  </p>
                 </div>
               </div>
 
@@ -519,13 +548,13 @@ export const Subscription: FC<SubscriptionProps> = ({
                     </div>
                   </div>
 
-                  <div className="sub-gateway-rail-badge">
+                  {/* <div className="sub-gateway-rail-badge">
                     <span className="material-symbols-outlined">account_balance_wallet</span>
                     <div>
                       <div style={{ fontWeight: 700 }}>Wallets &amp; EMI</div>
                       <div style={{ fontSize: '11px', color: '#64748b' }}>Corporate &amp; NetBanking</div>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
 
                 {/* Live Gateway Action */}

@@ -45,7 +45,6 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
     semanticSearching,
     isSemanticMode,
     setIsSemanticMode,
-    companyName,
     filteredTalent,
     searchQuery,
     setSearchQuery,
@@ -68,7 +67,6 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
     quota,
     metrics,
     toastMessage,
-    exportTalentCSV,
     loadTalentData,
     performSemanticSearch,
   } = useTalentSearch()
@@ -164,7 +162,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
       )}
 
       {/* ── 1. Telemetry Ribbon ── */}
-      <section className="ts-telemetry-ribbon" aria-label="Database and Quota Telemetry">
+      {/* <section className="ts-telemetry-ribbon" aria-label="Database and Quota Telemetry">
         <div className="ts-telemetry-left">
           <span className="ts-telemetry-beacon">
             <span className="ts-pulse-dot" aria-hidden="true"></span>
@@ -194,7 +192,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
             <span>{loading || semanticSearching ? 'SYNCING...' : 'SYNC TALENT'}</span>
           </button>
         </div>
-      </section>
+      </section> */}
 
       {/* ── 2. Header Area ── */}
       <section className="ts-header-area">
@@ -213,7 +211,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
         </div>
 
         <div className="ts-header-ctas">
-          <button
+          {/* <button
             type="button"
             className="btn-ts-secondary"
             onClick={exportTalentCSV}
@@ -223,7 +221,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
               download
             </span>
             <span>Export Talent Pool (CSV)</span>
-          </button>
+          </button> */}
           <div className="semantic-toggle-pill">
             <span className="toggle-label">AI Semantic Search:</span>
             <button

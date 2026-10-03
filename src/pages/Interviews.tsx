@@ -1100,14 +1100,14 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs, onNaviga
             </>
           ) : (
             <>
-              {/* Widget 1: Evaluation Standard Rubric */}
+              {/* Widget 1: Candidate Evaluation Criteria */}
               <div className="int-sidebar-card">
                 <div className="int-sidebar-header">
                   <div className="int-sidebar-title">
                     <span className="material-symbols-outlined" aria-hidden="true">
                       checklist
                     </span>
-                    <span>Evaluation Rubric</span>
+                    <span>Candidate Evaluation Criteria</span>
                   </div>
                   <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', background: '#d8e2ff', color: '#00418f', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
                     STANDARD
