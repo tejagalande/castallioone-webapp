@@ -112,6 +112,61 @@ export function formatRelativeTime(dateString: string): string {
   }
 }
 
+/** Maps a DB `notifications` row (shared with mobile) to the web UI shape. */
+function mapRowToItem(row: Record<string, unknown>): NotificationItem {
+  const dbType = String(row.type ?? 'system_alert')
+  const meta = ((row.metadata as Record<string, unknown> | null) ?? {}) as Record<string, unknown>
+  const metadata: NotificationMetadata = { ...(meta as NotificationMetadata) }
+
+  let type: NotificationType
+  let title = String(row.title || 'Notification Alert')
+  let body = String(row.body || '')
+
+  switch (dbType) {
+    case 'interview_reminder':
+      type = 'interview'
+      metadata.target_tab = metadata.target_tab ?? 'interviews'
+      metadata.priority = metadata.priority ?? 'important'
+      break
+    case 'candidate_match':
+      type = 'application'
+      metadata.target_tab = metadata.target_tab ?? 'applications'
+      metadata.priority = metadata.priority ?? 'important'
+      break
+    case 'application_batch': {
+      type = 'application'
+      const name = meta.candidate_name as string | undefined
+      const job = meta.job_title as string | undefined
+      title = 'New application received'
+      if (!body) body = `${name || 'A candidate'} applied${job ? ` for ${job}` : ''}.`
+      break
+    }
+    case 'project_update':
+      type = 'recommendation'
+      break
+    default:
+      type = 'system'
+  }
+
+  if (!metadata.role_title && typeof meta.job_title === 'string') metadata.role_title = meta.job_title
+  if (!metadata.company_name) {
+    const c = (meta.company_name ?? meta.company) as string | undefined
+    if (c) metadata.company_name = c
+  }
+
+  return {
+    id: String(row.id),
+    user_id: (row.user_id as string | null) ?? null,
+    title,
+    body,
+    type,
+    is_read: Boolean(row.is_read),
+    metadata,
+    created_at: (row.created_at as string) || new Date().toISOString(),
+    job_id: (row.job_id as string | null) || null,
+  }
+}
+
 export function useNotifications() {
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
     try {
@@ -197,20 +252,11 @@ export function useNotifications() {
           .from('notifications')
           .select('*')
           .eq('user_id', resolvedUserId)
+          .lte('visible_at', new Date().toISOString())
           .order('created_at', { ascending: false })
 
         if (!error && dbData && dbData.length > 0) {
-          const mapped: NotificationItem[] = dbData.map((row) => ({
-            id: String(row.id),
-            user_id: row.user_id,
-            title: row.title || 'Notification Alert',
-            body: row.body || '',
-            type: (row.type as NotificationType) || 'system',
-            is_read: Boolean(row.is_read),
-            metadata: row.metadata || null,
-            created_at: row.created_at || new Date().toISOString(),
-            job_id: row.job_id || null,
-          }))
+          const mapped: NotificationItem[] = dbData.map((row) => mapRowToItem(row))
 
           setNotifications(mapped)
           persistNotifications(mapped)
@@ -252,6 +298,36 @@ export function useNotifications() {
 
     return () => {
       isCancelled = true
+    }
+  }, [loadNotifications])
+
+  // Live updates: refresh whenever a new notification row is inserted for this user
+  useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    let cancelled = false
+
+    void supabase.auth.getUser().then(({ data }) => {
+      const uid = data?.user?.id
+      if (!uid || cancelled) return
+      channel = supabase
+        .channel(`notifications:${uid}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` },
+          (payload) => {
+            const row = payload.new as Record<string, unknown>
+            const visibleAt = row.visible_at ? new Date(String(row.visible_at)).getTime() : 0
+            if (visibleAt <= Date.now()) {
+              void loadNotifications()
+            }
+          }
+        )
+        .subscribe()
+    })
+
+    return () => {
+      cancelled = true
+      if (channel) void supabase.removeChannel(channel)
     }
   }, [loadNotifications])
 

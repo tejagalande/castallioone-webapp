@@ -872,18 +872,6 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs, onNaviga
                               <button
                                 type="button"
                                 className="btn-int-secondary"
-                                onClick={() => openFeedbackModal(session)}
-                                title="Submit Evaluation Scorecard"
-                              >
-                                <span className="material-symbols-outlined text-primary" aria-hidden="true">
-                                  rate_review
-                                </span>
-                                <span>Submit Scorecard</span>
-                              </button>
-
-                              <button
-                                type="button"
-                                className="btn-int-secondary"
                                 onClick={() => openRescheduleModal(session)}
                                 title="Reschedule this session"
                               >

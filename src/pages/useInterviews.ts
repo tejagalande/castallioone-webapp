@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
+import { notifyEvent } from '../lib/webPush'
 
 export interface InterviewSession {
   id: string
@@ -417,6 +418,10 @@ export function useInterviews() {
           return false
         }
 
+        if (inserted?.id && matchedCandidateId) {
+          notifyEvent({ event: 'interview_scheduled', interview_id: inserted.id })
+        }
+
         const newSession: InterviewSession = {
           id: inserted?.id || `iv-${Date.now()}`,
           jobApplicationId: payload.jobApplicationId,
@@ -488,6 +493,7 @@ export function useInterviews() {
         console.error('Error updating interview in DB:', err)
       }
 
+      notifyEvent({ event: 'interview_rescheduled', interview_id: sessionId })
       showToast(`Interview rescheduled to ${newDate} at ${newTime}.`)
       setSelectedSessionForReschedule(null)
     },
@@ -550,6 +556,7 @@ export function useInterviews() {
         console.error('Error cancelling interview:', err)
       }
 
+      notifyEvent({ event: 'interview_cancelled', interview_id: sessionId })
       showToast('Interview round marked as cancelled.')
     },
     [showToast]

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { loginOneSignal, logoutOneSignal } from '../lib/onesignal'
 
 export type UserRole = 'talent' | 'employers'
 
@@ -55,6 +56,9 @@ export function useAuth(): UseAuthReturn {
       } else {
         setSession(currentSession)
         setUser(currentSession?.user ?? null)
+        if (currentSession?.user) {
+          void loginOneSignal(currentSession.user.id, localStorage.getItem('castallio_user_role'))
+        }
       }
       setLoading(false)
     })
@@ -62,11 +66,16 @@ export function useAuth(): UseAuthReturn {
     // Listen to auth state changes (login, logout, OAuth callback)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (!mounted) return
       setSession(newSession)
       setUser(newSession?.user ?? null)
       setLoading(false)
+      if (event === 'SIGNED_IN' && newSession?.user) {
+        void loginOneSignal(newSession.user.id, localStorage.getItem('castallio_user_role'))
+      } else if (event === 'SIGNED_OUT') {
+        void logoutOneSignal()
+      }
     })
 
     return () => {

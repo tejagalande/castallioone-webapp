@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { notifyEvent } from '../lib/webPush'
 import {
   computeRecommendationFit,
   formatIndianSalary,
@@ -899,16 +900,22 @@ export function useSavedJobs(options?: UseSavedJobsOptions) {
         } = await supabase.auth.getUser()
 
         if (user) {
-          const { error } = await supabase.from('job_applications').insert({
-            job_id: jobId,
-            candidate_id: user.id,
-            company_id: companyId || null,
-            status: 'applied',
-            applied_at: new Date().toISOString(),
-          })
+          const { data: createdApp, error } = await supabase
+            .from('job_applications')
+            .insert({
+              job_id: jobId,
+              candidate_id: user.id,
+              company_id: companyId || null,
+              status: 'new',
+              applied_at: new Date().toISOString(),
+            })
+            .select('id')
+            .single()
 
           if (error) {
             console.warn('job_applications insert warning:', error.message)
+          } else if (createdApp?.id) {
+            notifyEvent({ event: 'application_submitted', application_id: createdApp.id })
           }
         }
 
@@ -951,12 +958,13 @@ export function useSavedJobs(options?: UseSavedJobsOptions) {
             job_id: jid,
             candidate_id: user.id,
             company_id: matchingJob?.companyId || null,
-            status: 'applied',
+            status: 'new',
             applied_at: new Date().toISOString(),
           }
         })
 
-        await supabase.from('job_applications').insert(rows)
+        const { data: createdApps } = await supabase.from('job_applications').insert(rows).select('id')
+        createdApps?.forEach((a) => notifyEvent({ event: 'application_submitted', application_id: a.id }))
       }
 
       const updated = Array.from(new Set([...appliedJobIds, ...unappliedIds]))

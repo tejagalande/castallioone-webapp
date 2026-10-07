@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { notifyEvent } from '../lib/webPush'
 
 export type ShortlistDisciplineCategory =
   | 'all'
@@ -625,6 +626,8 @@ export function useShortlistedCandidates() {
           showNotification(`Could not schedule interview: ${error.message}`)
           return false
         }
+
+        notifyEvent({ event: 'interview_scheduled', interview_id: inserted.id })
 
         // Also update application status to 'scheduled'
         await supabase

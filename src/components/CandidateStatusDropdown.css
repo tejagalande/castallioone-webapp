@@ -98,9 +98,8 @@
 
 /* ── Popover Menu ── */
 .status-dropdown-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
+  /* Portaled to <body>; top/left are set by useAnchoredMenu */
+  position: fixed;
   width: 270px;
   max-width: 90vw;
   background: #ffffff;
@@ -111,7 +110,7 @@
     0 4px 12px -2px rgba(15, 23, 42, 0.06),
     0 0 0 1px rgba(0, 0, 0, 0.04);
   padding: 6px;
-  z-index: 1050;
+  z-index: 9000;
   animation: statusMenuSlideIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   transform-origin: top right;
 }

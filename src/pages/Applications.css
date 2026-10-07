@@ -774,14 +774,13 @@
 }
 
 .app-sort-menu {
-  position: absolute;
-  top: calc(100% + 5px);
-  right: 0;
+  /* Portaled to <body>; top/left are set by useAnchoredMenu */
+  position: fixed;
   background: #ffffff;
   border-radius: 10px;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04);
   border: 1px solid rgba(194, 198, 213, 0.5);
-  z-index: 100;
+  z-index: 9000;
   min-width: 190px;
   padding: 6px;
   animation: appDropdownPop 0.18s cubic-bezier(0.16, 1, 0.3, 1);

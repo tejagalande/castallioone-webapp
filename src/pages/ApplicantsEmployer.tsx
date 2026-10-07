@@ -7,6 +7,7 @@ import {
 } from '../hooks/useApplicants'
 import { CustomSortDropdown, type SortOptionItem } from '../components/CustomSortDropdown'
 import { CandidateStatusDropdown } from '../components/CandidateStatusDropdown'
+import { formatShortName } from '../lib/formatName'
 import './ApplicantsEmployer.css'
 
 export interface ApplicantsEmployerProps {
@@ -593,9 +594,9 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
                         <h2
                           className="app-card-role-title"
                           onClick={() => setSelectedApplicant(app)}
-                          title="Open Candidate Profile"
+                          title={`Open ${app.name}'s profile`}
                         >
-                          {app.name}
+                          {formatShortName(app.name)}
                         </h2>
                         <div className="app-card-applied-row">
                           <p className="app-card-studio-line">

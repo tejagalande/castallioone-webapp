@@ -5,7 +5,6 @@ import { ChatHeader } from './messages/ChatHeader'
 import { MessageList } from './messages/MessageList'
 import { MessageComposer } from './messages/MessageComposer'
 import { ComposeInquiryModal } from './messages/ComposeInquiryModal'
-import { ContextualInterviewBanner } from './messages/ContextualInterviewBanner'
 import './Messages.css'
 
 export interface MessagesProps {
@@ -205,21 +204,6 @@ export const Messages: FC<MessagesProps> = ({
                 thread={selectedThread}
                 onBack={() => handleSelectThread('')}
               />
-
-              {/* Contextual Interview Banner (if interview scheduled) */}
-              {selectedThread.interviewDetails && (
-                <ContextualInterviewBanner
-                  interview={selectedThread.interviewDetails}
-                  onProposeAlternate={() => {
-                    setMessageInput('Hello, could we look into an alternative time slot for this discussion?')
-                    showToast('Drafted alternate time request in message box.')
-                  }}
-                  onAccept={() => {
-                    showToast('Interview confirmed! Syncing with calendar.')
-                  }}
-                  onExportICS={exportICS}
-                />
-              )}
 
               {/* Message History Pane */}
               <MessageList

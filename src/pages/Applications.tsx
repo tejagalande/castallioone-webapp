@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, type FC, type ChangeEvent } from 'react'
+import { createPortal } from 'react-dom'
+import { useAnchoredMenu, FLOATING_MENU_BASE_STYLE } from '../hooks/useAnchoredMenu'
 import {
   useApplications,
   type SortOption,
@@ -77,13 +79,23 @@ export const Applications: FC<ApplicationsProps> = ({
   }
 
   const sortDropdownRef = useRef<HTMLDivElement>(null)
+  const sortMenuRef = useRef<HTMLDivElement>(null)
+
+  useAnchoredMenu({
+    isOpen: isSortDropdownOpen,
+    anchorRef: sortDropdownRef,
+    menuRef: sortMenuRef,
+    align: 'right',
+    gap: 5,
+  })
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node
       if (
         isSortDropdownOpen &&
-        sortDropdownRef.current &&
-        !sortDropdownRef.current.contains(event.target as Node)
+        !sortDropdownRef.current?.contains(target) &&
+        !sortMenuRef.current?.contains(target)
       ) {
         setIsSortDropdownOpen(false)
       }
@@ -399,30 +411,37 @@ export const Applications: FC<ApplicationsProps> = ({
               </span>
             </button>
 
-            {isSortDropdownOpen && (
-              <div className="app-sort-menu" role="listbox">
-                {(Object.keys(SORT_LABELS) as SortOption[]).map((opt) => (
-                  <button
-                    key={opt}
-                    type="button"
-                    role="option"
-                    aria-selected={sortBy === opt}
-                    className={`app-sort-item ${sortBy === opt ? 'active selected' : ''}`}
-                    onClick={() => {
-                      setSortBy(opt)
-                      setIsSortDropdownOpen(false)
-                    }}
-                  >
-                    <span>{SORT_LABELS[opt]}</span>
-                    {sortBy === opt && (
-                      <span className="material-symbols-outlined app-sort-check" aria-hidden="true">
-                        check
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
+            {isSortDropdownOpen &&
+              createPortal(
+                <div
+                  ref={sortMenuRef}
+                  className="app-sort-menu"
+                  style={FLOATING_MENU_BASE_STYLE}
+                  role="listbox"
+                >
+                  {(Object.keys(SORT_LABELS) as SortOption[]).map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      role="option"
+                      aria-selected={sortBy === opt}
+                      className={`app-sort-item ${sortBy === opt ? 'active selected' : ''}`}
+                      onClick={() => {
+                        setSortBy(opt)
+                        setIsSortDropdownOpen(false)
+                      }}
+                    >
+                      <span>{SORT_LABELS[opt]}</span>
+                      {sortBy === opt && (
+                        <span className="material-symbols-outlined app-sort-check" aria-hidden="true">
+                          check
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>,
+                document.body
+              )}
           </div>
         </div>
       </section>

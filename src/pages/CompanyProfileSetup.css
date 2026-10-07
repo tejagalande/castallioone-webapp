@@ -463,16 +463,15 @@
 }
 
 .year-picker-popover {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  right: 0;
+  /* Portaled to <body>; top/left/width are set by useAnchoredMenu */
+  position: fixed;
+  box-sizing: border-box;
   background: #ffffff;
   border: 1px solid rgba(194, 198, 213, 0.6);
   border-radius: 12px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
   padding: 16px;
-  z-index: 100;
+  z-index: 9000;
   animation: popoverFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 

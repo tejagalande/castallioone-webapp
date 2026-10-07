@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
+import { notifyEvent } from '../lib/webPush'
 
 export interface RecommendedJob {
   id: string
@@ -790,16 +791,22 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
 
         // 1. If not a mock job and user is authenticated, insert to Supabase
         if (user && !job.id.startsWith('seed-job-')) {
-          const { error: insertError } = await supabase.from('job_applications').insert({
-            job_id: job.id,
-            candidate_id: candidateId,
-            company_id: job.companyId || null,
-            status: 'applied',
-            applied_at: new Date().toISOString(),
-          })
+          const { data: createdApp, error: insertError } = await supabase
+            .from('job_applications')
+            .insert({
+              job_id: job.id,
+              candidate_id: candidateId,
+              company_id: job.companyId || null,
+              status: 'new',
+              applied_at: new Date().toISOString(),
+            })
+            .select('id')
+            .single()
 
           if (insertError) {
             console.warn('Backend application insert notice:', insertError.message)
+          } else if (createdApp?.id) {
+            notifyEvent({ event: 'application_submitted', application_id: createdApp.id })
           }
         }
 

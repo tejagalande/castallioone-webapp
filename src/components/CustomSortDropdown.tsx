@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, type FC, type KeyboardEvent } from 'react'
+import { createPortal } from 'react-dom'
+import { useAnchoredMenu, FLOATING_MENU_BASE_STYLE } from '../hooks/useAnchoredMenu'
 import './CustomSortDropdown.css'
 
 export interface SortOptionItem<T extends string> {
@@ -29,15 +31,18 @@ export const CustomSortDropdown = <T extends string>({
 }: CustomSortDropdownProps<T>): ReturnType<FC> => {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const selectedOption = options.find((opt) => opt.value === value) || options[0]
 
-  // Close dropdown on click outside
+  useAnchoredMenu({ isOpen, anchorRef: dropdownRef, menuRef, align, gap: 8 })
+
+  // Close dropdown on click outside (menu is portaled, so check both)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
+      const target = event.target as Node
+      if (dropdownRef.current?.contains(target) || menuRef.current?.contains(target)) return
+      setIsOpen(false)
     }
 
     if (isOpen) {
@@ -117,59 +122,63 @@ export const CustomSortDropdown = <T extends string>({
         </span>
       </button>
 
-      {/* Popover Menu */}
-      {isOpen && (
-        <div
-          className={`cs-dropdown-menu ${align === 'left' ? 'align-left' : 'align-right'}`}
-          role="listbox"
-          aria-labelledby={id}
-        >
-          <div className="cs-dropdown-header">
-            <span className="cs-dropdown-header-title">Sort Criteria</span>
-            <span className="material-symbols-outlined cs-header-icon" aria-hidden="true">
-              tune
-            </span>
-          </div>
+      {/* Popover Menu (portaled to <body> so it always overlays other UI) */}
+      {isOpen &&
+        createPortal(
+          <div
+            ref={menuRef}
+            className="cs-dropdown-menu"
+            style={FLOATING_MENU_BASE_STYLE}
+            role="listbox"
+            aria-labelledby={id}
+          >
+            <div className="cs-dropdown-header">
+              <span className="cs-dropdown-header-title">Sort Criteria</span>
+              <span className="material-symbols-outlined cs-header-icon" aria-hidden="true">
+                tune
+              </span>
+            </div>
 
-          <div className="cs-dropdown-list">
-            {options.map((option) => {
-              const isSelected = option.value === value
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={`cs-dropdown-item ${isSelected ? 'selected' : ''}`}
-                  role="option"
-                  aria-selected={isSelected}
-                  onClick={() => handleSelectOption(option.value)}
-                >
-                  <div className="cs-item-left">
-                    {option.icon && (
-                      <span className="cs-item-icon-box" aria-hidden="true">
-                        <span className="material-symbols-outlined cs-item-icon">
-                          {option.icon}
+            <div className="cs-dropdown-list">
+              {options.map((option) => {
+                const isSelected = option.value === value
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`cs-dropdown-item ${isSelected ? 'selected' : ''}`}
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => handleSelectOption(option.value)}
+                  >
+                    <div className="cs-item-left">
+                      {option.icon && (
+                        <span className="cs-item-icon-box" aria-hidden="true">
+                          <span className="material-symbols-outlined cs-item-icon">
+                            {option.icon}
+                          </span>
                         </span>
+                      )}
+                      <div className="cs-item-text">
+                        <span className="cs-item-label">{option.label}</span>
+                        {option.description && (
+                          <span className="cs-item-desc">{option.description}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {isSelected && (
+                      <span className="material-symbols-outlined cs-item-check" aria-hidden="true">
+                        check
                       </span>
                     )}
-                    <div className="cs-item-text">
-                      <span className="cs-item-label">{option.label}</span>
-                      {option.description && (
-                        <span className="cs-item-desc">{option.description}</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {isSelected && (
-                    <span className="material-symbols-outlined cs-item-check" aria-hidden="true">
-                      check
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   )
 }

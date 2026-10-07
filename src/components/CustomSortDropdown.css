@@ -80,9 +80,9 @@
 
 /* Popover Menu */
 .cs-dropdown-menu {
-  position: absolute;
-  top: calc(100% + 8px);
-  z-index: 9999;
+  /* Portaled to <body>; top/left are set by useAnchoredMenu */
+  position: fixed;
+  z-index: 9000;
   min-width: 260px;
   max-width: 320px;
   width: max-content;
@@ -95,16 +95,6 @@
     0 2px 8px rgba(0, 0, 0, 0.04);
   animation: csMenuScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   backdrop-filter: blur(16px);
-}
-
-.cs-dropdown-menu.align-right {
-  right: 0;
-  left: auto;
-}
-
-.cs-dropdown-menu.align-left {
-  left: 0;
-  right: auto;
 }
 
 @keyframes csMenuScaleIn {
@@ -265,7 +255,5 @@
 @media (max-width: 640px) {
   .cs-dropdown-menu {
     max-width: calc(100vw - 32px);
-    right: 0;
-    left: auto;
   }
 }

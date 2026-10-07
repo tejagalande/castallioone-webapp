@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { notifyEvent, NOTIFIABLE_STATUSES } from '../lib/webPush'
 
 export type ApplicationDBStatus =
   | 'new'
@@ -631,6 +632,9 @@ export function useApplicants(initialJobFilter?: { id?: string; title?: string }
           showNotification(`Failed to sync stage update: ${error.message}`)
         } else {
           showNotification(`Application status updated to "${getStageLabel(newStatus)}".`)
+          if (NOTIFIABLE_STATUSES.has(newStatus)) {
+            notifyEvent({ event: 'application_status', application_id: applicationId, status: newStatus })
+          }
         }
       } catch (err) {
         console.error('Error performing status update:', err)
@@ -704,6 +708,8 @@ export function useApplicants(initialJobFilter?: { id?: string; title?: string }
           showNotification(`Interview schedule error: ${error.message}`)
           return false
         }
+
+        notifyEvent({ event: 'interview_scheduled', interview_id: inserted.id })
 
         // Also update application status to 'scheduled'
         await updateApplicationStatus(payload.jobApplicationId, 'scheduled')

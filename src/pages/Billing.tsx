@@ -105,7 +105,7 @@ export const Billing: FC<BillingProps> = ({
             </div>
             <h1 className="billing-title">Billing History &amp; GST Invoices</h1>
             <p className="billing-subtitle">
-              Manage enterprise recruitment software licenses, export GST-compliant tax invoices (SAC 998311),
+              Manage enterprise recruitment software licenses, export GST-compliant tax invoices,
               reconcile 18% Input Tax Credit (ITC), and maintain corporate accounting records.
             </p>
           </div>
@@ -171,16 +171,10 @@ export const Billing: FC<BillingProps> = ({
             <div className="stat-card-top">
               <div className="stat-card-header">
                 <span>18% GST Input Credit (ITC)</span>
-                <span className="stat-pill-active">
-                  <span className="dot" /> 100% Claimable
-                </span>
               </div>
               <h2 className="stat-card-value-money" style={{ color: '#059669' }}>
                 ₹{summaryMetrics.totalGst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </h2>
-              <p className="stat-card-subvalue" style={{ color: '#059669' }}>
-                SAC 998311 • GSTR-2B Ready
-              </p>
             </div>
             <div className="stat-card-bottom">
               <span>Tax Base: ₹{summaryMetrics.totalTaxable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
@@ -216,8 +210,6 @@ export const Billing: FC<BillingProps> = ({
                 <span>GSTIN: <strong>{taxDetails.gstin || 'Not Provided'}</strong></span>
                 <span>•</span>
                 <span>PAN: <strong>{taxDetails.pan || 'Not Provided'}</strong></span>
-                <span>•</span>
-                <span>SAC: <strong>998311</strong></span>
                 <span>•</span>
                 <span>Invoicing Contact: <strong>{taxDetails.accountsEmail || 'Not Provided'}</strong></span>
               </div>
@@ -259,7 +251,7 @@ export const Billing: FC<BillingProps> = ({
               </div>
               <h3 className="billing-empty-title">No Invoices or Billing History</h3>
               <p className="billing-empty-description">
-                Your enterprise is currently on the <strong>{activePlanName}</strong>. No payment invoices or GST tax receipts have been generated yet. When you upgrade to a paid recruitment plan or purchase candidate CV unlock add-ons, your official GST-compliant tax invoices (SAC 998311) and GSTR-2B Input Tax Credit receipts will appear here.
+                Your enterprise is currently on the <strong>{activePlanName}</strong>. No payment invoices or GST tax receipts have been generated yet. When you upgrade to a paid recruitment plan or purchase candidate CV unlock add-ons, your official GST-compliant tax invoices and GSTR-2B Input Tax Credit receipts will appear here.
               </p>
               <div className="billing-empty-actions">
                 {onNavigateToSubscription && (
@@ -388,7 +380,6 @@ export const Billing: FC<BillingProps> = ({
                       <th>Invoice ID</th>
                       <th>Billing Date</th>
                       <th>Plan &amp; Service Description</th>
-                      <th>SAC Code</th>
                       <th className="text-right">Taxable (INR)</th>
                       <th className="text-right">18% GST</th>
                       <th className="text-right">Total (INR)</th>
@@ -435,7 +426,6 @@ export const Billing: FC<BillingProps> = ({
                             <div className="td-plan-title">{inv.plan}</div>
                             <div className="td-plan-desc">{inv.description}</div>
                           </td>
-                          <td className="td-mono" style={{ color: '#64748b', fontSize: '12px' }}>{inv.sacCode}</td>
                           <td className="text-right td-mono" style={{ fontWeight: 600 }}>
                             ₹{inv.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </td>
@@ -552,10 +542,6 @@ export const Billing: FC<BillingProps> = ({
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#64748b' }}>Client GSTIN:</span>
                   <span>{taxDetails.gstin}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>SAC Code:</span>
-                  <span>{selectedInvoice.sacCode} (Recruitment &amp; Staffing)</span>
                 </div>
               </div>
 

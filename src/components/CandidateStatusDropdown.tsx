@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect, type FC, type KeyboardEvent } from 'react'
+import { createPortal } from 'react-dom'
 import type { ApplicationDBStatus } from '../hooks/useApplicants'
+import { useAnchoredMenu, FLOATING_MENU_BASE_STYLE } from '../hooks/useAnchoredMenu'
 import './CandidateStatusDropdown.css'
 
 export interface StatusConfigItem {
@@ -111,15 +113,18 @@ export const CandidateStatusDropdown: FC<CandidateStatusDropdownProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const currentConfig = STATUS_CONFIG[value] || STATUS_CONFIG.in_review
 
-  // Close when clicking outside
+  useAnchoredMenu({ isOpen, anchorRef: dropdownRef, menuRef, align: 'right' })
+
+  // Close when clicking outside (menu is portaled, so check both)
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsOpen(false)
-      }
+      const target = e.target as Node
+      if (dropdownRef.current?.contains(target) || menuRef.current?.contains(target)) return
+      setIsOpen(false)
     }
 
     if (isOpen) {
@@ -205,59 +210,63 @@ export const CandidateStatusDropdown: FC<CandidateStatusDropdownProps> = ({
         </span>
       </button>
 
-      {/* Popover Menu */}
-      {isOpen && (
-        <div
-          className="status-dropdown-menu"
-          role="listbox"
-          aria-label="Application Stage Options"
-        >
-          <div className="status-menu-header">
-            <span>PIPELINE STAGE</span>
-          </div>
+      {/* Popover Menu (portaled to <body> so it always overlays other UI) */}
+      {isOpen &&
+        createPortal(
+          <div
+            ref={menuRef}
+            className="status-dropdown-menu"
+            style={FLOATING_MENU_BASE_STYLE}
+            role="listbox"
+            aria-label="Application Stage Options"
+          >
+            <div className="status-menu-header">
+              <span>PIPELINE STAGE</span>
+            </div>
 
-          <div className="status-menu-items">
-            {STATUS_OPTIONS.map((opt) => {
-              const isSelected = opt.value === value
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  role="option"
-                  aria-selected={isSelected}
-                  className={`status-menu-item ${isSelected ? 'selected' : ''}`}
-                  onClick={() => handleSelect(opt.value)}
-                >
-                  <div
-                    className="status-item-icon-box"
-                    style={{ background: opt.bg, color: opt.color, borderColor: opt.borderColor }}
-                    aria-hidden="true"
+            <div className="status-menu-items">
+              {STATUS_OPTIONS.map((opt) => {
+                const isSelected = opt.value === value
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    className={`status-menu-item ${isSelected ? 'selected' : ''}`}
+                    onClick={() => handleSelect(opt.value)}
                   >
-                    <span className="material-symbols-outlined">{opt.icon}</span>
-                  </div>
+                    <div
+                      className="status-item-icon-box"
+                      style={{ background: opt.bg, color: opt.color, borderColor: opt.borderColor }}
+                      aria-hidden="true"
+                    >
+                      <span className="material-symbols-outlined">{opt.icon}</span>
+                    </div>
 
-                  <div className="status-item-text">
-                    <div className="status-item-title-row">
-                      <span className="status-item-title">{opt.label}</span>
-                      {isSelected && (
-                        <span
-                          className="material-symbols-outlined status-item-check"
-                          aria-hidden="true"
-                        >
-                          check
-                        </span>
+                    <div className="status-item-text">
+                      <div className="status-item-title-row">
+                        <span className="status-item-title">{opt.label}</span>
+                        {isSelected && (
+                          <span
+                            className="material-symbols-outlined status-item-check"
+                            aria-hidden="true"
+                          >
+                            check
+                          </span>
+                        )}
+                      </div>
+                      {opt.description && (
+                        <span className="status-item-desc">{opt.description}</span>
                       )}
                     </div>
-                    {opt.description && (
-                      <span className="status-item-desc">{opt.description}</span>
-                    )}
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   )
 }

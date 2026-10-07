@@ -9,6 +9,7 @@ import {
   type NotificationPreferences,
 } from './useNotifications'
 import './Notifications.css'
+import { EnablePushButton } from '../components/EnablePushButton'
 
 export interface NotificationsProps {
   onNavigateToFindJobs?: () => void
@@ -207,6 +208,8 @@ export const Notifications: FC<NotificationsProps> = ({
             </span>
             <span>Alert Preferences</span>
           </button> */}
+
+          <EnablePushButton />
 
           <button
             type="button"

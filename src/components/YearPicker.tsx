@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
+import { useAnchoredMenu, FLOATING_MENU_BASE_STYLE } from '../hooks/useAnchoredMenu'
 
 interface YearPickerProps {
   id?: string
@@ -34,15 +36,18 @@ export const YearPicker: React.FC<YearPickerProps> = ({
   const [decadeStart, setDecadeStart] = useState(() => Math.floor(initialYear / 10) * 10)
 
   const containerRef = useRef<HTMLDivElement>(null)
+  const popoverRef = useRef<HTMLDivElement>(null)
 
-  // Close on outside click
+  useAnchoredMenu({ isOpen, anchorRef: containerRef, menuRef: popoverRef, matchWidth: true })
+
+  // Close on outside click (popover is portaled, so check both)
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        if (isOpen) {
-          setIsOpen(false)
-          onBlur?.()
-        }
+      const target = e.target as Node
+      if (containerRef.current?.contains(target) || popoverRef.current?.contains(target)) return
+      if (isOpen) {
+        setIsOpen(false)
+        onBlur?.()
       }
     }
 
@@ -129,72 +134,81 @@ export const YearPicker: React.FC<YearPickerProps> = ({
         </svg>
       </button>
 
-      {isOpen && (
-        <div className="year-picker-popover" role="dialog" aria-modal="true" aria-label="Year Picker">
-          <div className="year-picker-header">
-            <button
-              type="button"
-              className="decade-btn"
-              onClick={handlePrevDecade}
-              disabled={decadeStart <= Math.floor(minYear / 10) * 10}
-              aria-label="Previous Decade"
-            >
-              &lsaquo;
-            </button>
-            <span className="decade-label">
-              {decadeStart} &ndash; {decadeStart + 9}
-            </span>
-            <button
-              type="button"
-              className="decade-btn"
-              onClick={handleNextDecade}
-              disabled={decadeStart >= Math.floor(effectiveMaxYear / 10) * 10}
-              aria-label="Next Decade"
-            >
-              &rsaquo;
-            </button>
-          </div>
-
-          <div className="year-grid">
-            {years.map((y) => {
-              const isOutOfRange = y > effectiveMaxYear || y < minYear
-              const isSelected = value === y.toString()
-
-              return (
-                <button
-                  key={y}
-                  type="button"
-                  className={`year-btn ${isSelected ? 'selected' : ''}`}
-                  disabled={isOutOfRange}
-                  onClick={() => handleSelectYear(y)}
-                  aria-pressed={isSelected}
-                >
-                  {y}
-                </button>
-              )
-            })}
-          </div>
-
-          <div className="year-picker-shortcuts">
-            <span style={{ fontSize: '11px', color: '#9ca3af', alignSelf: 'center', marginRight: '4px' }}>
-              Quick:
-            </span>
-            {[currentYear, 2024, 2023, 2022, 2020, 2018].map((quickYear) => (
+      {isOpen &&
+        createPortal(
+          <div
+            ref={popoverRef}
+            className="year-picker-popover"
+            style={FLOATING_MENU_BASE_STYLE}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Year Picker"
+          >
+            <div className="year-picker-header">
               <button
-                key={quickYear}
                 type="button"
-                className="shortcut-chip"
-                onClick={() => {
-                  setDecadeStart(Math.floor(quickYear / 10) * 10)
-                  handleSelectYear(quickYear)
-                }}
+                className="decade-btn"
+                onClick={handlePrevDecade}
+                disabled={decadeStart <= Math.floor(minYear / 10) * 10}
+                aria-label="Previous Decade"
               >
-                {quickYear}
+                &lsaquo;
               </button>
-            ))}
-          </div>
-        </div>
-      )}
+              <span className="decade-label">
+                {decadeStart} &ndash; {decadeStart + 9}
+              </span>
+              <button
+                type="button"
+                className="decade-btn"
+                onClick={handleNextDecade}
+                disabled={decadeStart >= Math.floor(effectiveMaxYear / 10) * 10}
+                aria-label="Next Decade"
+              >
+                &rsaquo;
+              </button>
+            </div>
+
+            <div className="year-grid">
+              {years.map((y) => {
+                const isOutOfRange = y > effectiveMaxYear || y < minYear
+                const isSelected = value === y.toString()
+
+                return (
+                  <button
+                    key={y}
+                    type="button"
+                    className={`year-btn ${isSelected ? 'selected' : ''}`}
+                    disabled={isOutOfRange}
+                    onClick={() => handleSelectYear(y)}
+                    aria-pressed={isSelected}
+                  >
+                    {y}
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="year-picker-shortcuts">
+              <span style={{ fontSize: '11px', color: '#9ca3af', alignSelf: 'center', marginRight: '4px' }}>
+                Quick:
+              </span>
+              {[currentYear, 2024, 2023, 2022, 2020, 2018].map((quickYear) => (
+                <button
+                  key={quickYear}
+                  type="button"
+                  className="shortcut-chip"
+                  onClick={() => {
+                    setDecadeStart(Math.floor(quickYear / 10) * 10)
+                    handleSelectYear(quickYear)
+                  }}
+                >
+                  {quickYear}
+                </button>
+              ))}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   )
 }
