@@ -103,7 +103,12 @@ export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
     }
   }, [])
 
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth <= 1280
+    }
+    return false
+  })
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
   const [targetChatCompany, setTargetChatCompany] = useState<{ id?: string; name?: string } | null>(null)
 
@@ -134,9 +139,9 @@ export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
 
   const DASHBOARD_REC_LIMIT = 3
 
-  const talentName = profile.fullName || 'Alex Morgan'
-  const talentRole = profile.specificSkill || profile.discipline || 'Senior BIM Coordinator & Computational Specialist'
-  const profileStrength = metrics.profileStrength || 88
+  const talentName = profile.fullName || 'Talent Member'
+  const talentRole = profile.specificSkill || profile.discipline || 'AEC Candidate'
+  const profileStrength = metrics.profileStrength || 0
 
   const getScoreColor = (score: number) => {
     if (score >= 90) return 'high'
@@ -611,18 +616,24 @@ export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
               <div className="activity-section">
                 <h3 className="activity-title">Recent Activity</h3>
                 <div className="activity-timeline">
-                  {recentActivity.map((activity, index) => (
-                    <div className="timeline-item" key={activity.id || index}>
-                      <div className={`timeline-dot ${activity.active ? 'active' : ''}`} />
-                      <div className={`timeline-content ${activity.active ? '' : 'inactive'}`}>
-                        <div className="timeline-header">
-                          <h4>{activity.title}</h4>
-                          <span className="timeline-time">{activity.time}</span>
+                  {recentActivity.length > 0 ? (
+                    recentActivity.map((activity, index) => (
+                      <div className="timeline-item" key={activity.id || index}>
+                        <div className={`timeline-dot ${activity.active ? 'active' : ''}`} />
+                        <div className={`timeline-content ${activity.active ? '' : 'inactive'}`}>
+                          <div className="timeline-header">
+                            <h4>{activity.title}</h4>
+                            <span className="timeline-time">{activity.time}</span>
+                          </div>
+                          <p>{activity.description}</p>
                         </div>
-                        <p>{activity.description}</p>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>
+                      No recent activities yet. Your application updates and scheduled interviews will appear here.
+                    </p>
+                  )}
                 </div>
               </div>
             </section>

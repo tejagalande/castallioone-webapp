@@ -84,137 +84,6 @@ const LOCAL_STORAGE_CACHE_KEY = 'castallio_notifications_cache'
 const LOCAL_STORAGE_PREFS_KEY = 'castallio_notifications_prefs'
 export const NOTIFICATIONS_UPDATED_EVENT = 'castallio-notifications-updated'
 
-// Fallback seed notifications representing authentic AEC talent recruitment workflow
-const SEED_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: 'notif-seed-1',
-    title: 'Technical Interview Defense Confirmed',
-    body: 'Your technical defense round with Foster + Partners is scheduled for tomorrow at 11:30 AM via Google Meet. Architectural lead Marcus Vance will conduct the assessment.',
-    type: 'interview',
-    is_read: false,
-    created_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(), // 15 mins ago
-    metadata: {
-      company_name: 'Foster + Partners',
-      role_title: 'Senior BIM Coordinator & Computational Specialist',
-      action_label: 'View Interview Defense',
-      target_tab: 'interviews',
-      priority: 'urgent',
-      interview_time: '11:30 AM',
-      interview_format: 'Google Meet',
-    },
-  },
-  {
-    id: 'notif-seed-2',
-    title: 'Application Shortlisted by Studio Panel',
-    body: 'Congratulations! Your application for Lead Computational Designer has been shortlisted by Arup India. The digital practice team has requested initial portfolio review.',
-    type: 'application',
-    is_read: false,
-    created_at: new Date(Date.now() - 110 * 60 * 1000).toISOString(), // ~2 hours ago
-    metadata: {
-      company_name: 'Arup India',
-      role_title: 'Lead Computational Designer & Parametric Architect',
-      action_label: 'Track Application Status',
-      target_tab: 'applications',
-      application_status: 'Shortlisted',
-      priority: 'important',
-    },
-  },
-  {
-    id: 'notif-seed-3',
-    title: 'Direct Message from Digital Practice Director',
-    body: '“Alex, we were impressed by your Tekla automated fabrication scripts. Are you available for a brief conversation regarding our new international airport transit package?”',
-    type: 'message',
-    is_read: false,
-    created_at: new Date(Date.now() - 4 * 3600 * 1000).toISOString(), // 4 hours ago
-    metadata: {
-      company_name: 'Mott MacDonald India',
-      role_title: 'Head of Digital Engineering',
-      action_label: 'Open Recruiter Chat',
-      target_tab: 'messages',
-      priority: 'important',
-    },
-  },
-  {
-    id: 'notif-seed-4',
-    title: 'Walk-in Mega Recruitment Drive Invitation',
-    body: 'You are invited to the L&T Construction Walk-in Drive for Senior BIM Modeling Engineers this Saturday at the Bangalore Technology Park campus. Fast-track badge ready.',
-    type: 'drive',
-    is_read: false,
-    created_at: new Date(Date.now() - 18 * 3600 * 1000).toISOString(), // 18 hours ago
-    metadata: {
-      company_name: 'L&T Construction',
-      role_title: 'Senior BIM Modeling Engineers',
-      location: 'Bangalore Technology Park',
-      action_label: 'View Walk-in Drive Pass',
-      target_tab: 'walk-in-drives',
-      priority: 'normal',
-    },
-  },
-  {
-    id: 'notif-seed-5',
-    title: 'New High-Fit AI Recommendation (94% Compatibility)',
-    body: 'A new opportunity for Senior VDC Specialist (₹16 - 22 LPA) in Mumbai matches your verified ISO 19650 and Navisworks clash mitigation stack.',
-    type: 'recommendation',
-    is_read: true,
-    created_at: new Date(Date.now() - 28 * 3600 * 1000).toISOString(), // Yesterday
-    metadata: {
-      company_name: 'Gensler India',
-      role_title: 'Senior VDC Specialist & Project Lead',
-      salary_text: '₹16 - 22 LPA',
-      action_label: 'Explore Job Details',
-      target_tab: 'find-jobs',
-      priority: 'normal',
-    },
-  },
-  {
-    id: 'notif-seed-6',
-    title: 'Profile Integrity Rating Boosted to All-Star (88%)',
-    body: 'Your verified Autodesk Revit Professional credential and computational design project link have increased your recruiter visibility index by +42%.',
-    type: 'system',
-    is_read: true,
-    created_at: new Date(Date.now() - 2 * 86400 * 1000).toISOString(), // 2 days ago
-    metadata: {
-      company_name: 'Castallio One Passport',
-      action_label: 'Inspect Talent Passport',
-      target_tab: 'my-profile',
-      priority: 'normal',
-    },
-  },
-  {
-    id: 'notif-seed-7',
-    title: 'Interview Slot Update: Structural Modeler Round',
-    body: 'Buro Happold talent coordinator has confirmed the revised technical discussion slot for Friday at 02:00 PM via Microsoft Teams.',
-    type: 'interview',
-    is_read: true,
-    created_at: new Date(Date.now() - 3 * 86400 * 1000).toISOString(), // 3 days ago
-    metadata: {
-      company_name: 'Buro Happold',
-      role_title: 'Senior Structural Modeler',
-      interview_time: '02:00 PM',
-      interview_format: 'Microsoft Teams',
-      action_label: 'Review Session Schedule',
-      target_tab: 'interviews',
-      priority: 'urgent',
-    },
-  },
-  {
-    id: 'notif-seed-8',
-    title: 'Application Dossier Downloaded by Employer',
-    body: 'Stantec India downloaded your verified portfolio and BIM documentation sample sheets for internal project allocation assessment.',
-    type: 'application',
-    is_read: true,
-    created_at: new Date(Date.now() - 5 * 86400 * 1000).toISOString(), // 5 days ago
-    metadata: {
-      company_name: 'Stantec India',
-      role_title: 'BIM Coordination Lead',
-      action_label: 'View Application History',
-      target_tab: 'applications',
-      application_status: 'Under Review',
-      priority: 'normal',
-    },
-  },
-]
-
 export function formatRelativeTime(dateString: string): string {
   try {
     const timestamp = new Date(dateString).getTime()
@@ -256,7 +125,7 @@ export function useNotifications() {
     } catch {
       // Fallback
     }
-    return SEED_NOTIFICATIONS
+    return []
   })
 
   const [loading, setLoading] = useState<boolean>(true)
@@ -359,11 +228,11 @@ export function useNotifications() {
         }
       }
 
-      setNotifications(SEED_NOTIFICATIONS)
-      persistNotifications(SEED_NOTIFICATIONS)
+      setNotifications([])
+      persistNotifications([])
     } catch (err) {
       console.warn('Notifications load fallback:', err)
-      setNotifications(SEED_NOTIFICATIONS)
+      setNotifications([])
     } finally {
       setLoading(false)
     }
@@ -507,7 +376,7 @@ export function useNotifications() {
     const testTitles = [
       {
         title: 'New Recruiter Portfolio Inquiry',
-        body: 'Foster + Partners Studio Lead sent an urgent inquiry regarding your parametric computational script dossier.',
+        body: 'Foster + Partners Studio Lead sent an urgent inquiry regarding your parametric computational design files.',
         type: 'message' as NotificationType,
         company: 'Foster + Partners',
         tab: 'messages' as const,

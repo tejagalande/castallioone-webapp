@@ -161,12 +161,12 @@ export const Applications: FC<ApplicationsProps> = ({
               type="button"
               className="app-btn-outline"
               onClick={handleExportDossier}
-              aria-label="Export candidate dossier to text file"
+              aria-label="Export application summary to text file"
             >
               <span className="material-symbols-outlined" aria-hidden="true">
                 description
               </span>
-              Export Dossier (.TXT)
+              Export Summary (.TXT)
             </button>
           )}
           <button
@@ -837,7 +837,7 @@ export const Applications: FC<ApplicationsProps> = ({
           </section>
 
           {/* RIGHT COLUMN: Selected Application Live Detail & Audit Trail (5 Cols) */}
-          <aside className="app-detail-column" aria-label="Selected Application Live Dossier">
+          <aside className="app-detail-column" aria-label="Selected Application Details">
             {selectedApp ? (
               <div className="app-dossier-master-card">
                 {/* Dossier Top Identification Header */}
@@ -847,7 +847,7 @@ export const Applications: FC<ApplicationsProps> = ({
                       {selectedApp.studioInitials}
                     </div>
                     <div className="app-dossier-title-wrap">
-                      <h3 className="app-dossier-title">{selectedApp.studio} Live Dossier</h3>
+                      <h3 className="app-dossier-title">{selectedApp.studio} Application Details</h3>
                       <span className="app-dossier-record">
                         ACTIVE RECORD: {selectedApp.dossierRecordId}
                       </span>
@@ -1086,7 +1086,7 @@ export const Applications: FC<ApplicationsProps> = ({
                   No Application Selected
                 </h3>
                 <p style={{ fontSize: '13px', margin: 0, color: '#727784' }}>
-                  Select an application from the pipeline list to view its verified dossier, live interview room, and communication channels.
+                  Select an application from the pipeline list to view its verified details, live interview room, and communication channels.
                 </p>
               </div>
             )}
@@ -1279,7 +1279,7 @@ export const Applications: FC<ApplicationsProps> = ({
                   </span>
                 </div>
                 <h3 className="app-modal-title" id="dossier-modal-title">
-                  Submitted Candidate Dossier // {selectedApp.studio}
+                  Submitted Candidate Application // {selectedApp.studio}
                 </h3>
               </div>
               <button
@@ -1521,7 +1521,7 @@ export const Applications: FC<ApplicationsProps> = ({
                   setIsDossierModalOpen(true)
                 }}
               >
-                Inspect Submitted Dossier
+                View Submitted Application
               </button>
               <button
                 type="button"

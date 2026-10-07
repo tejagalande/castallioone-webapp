@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 
 export interface ResumeVersion {
   id: string
@@ -41,98 +42,177 @@ export interface ActiveResumeDetail {
   atsHealthScore: number
 }
 
-const PRIMARY_RESUME_DATA: ActiveResumeDetail = {
-  docId: 'CV-2024-V4.2',
-  fileName: 'Alex_Morgan_BIM_Computational_CV_2024.pdf',
-  fileSize: '2.4 MB',
-  compliance: 'PDF/A-1b Compliant • SHA-256 Verified',
-  hash: '9f82-a8c4-be12-44df-0091',
-  lastUpdated: 'Updated 3 days ago',
-  lodStandard: 'LOD 400 FABRICATION',
-  executiveSummary:
-    'Lead Architectural BIM Coordinator and Computational Engineer with 7+ years directing Level of Development (LOD 200 through LOD 500 As-Built) federation workflows on mega-scale civic infrastructure, commercial towers, and complex timber structures. Proven mastery in authoring project-wide BIM Execution Plans (BEP) in compliance with ISO 19650-1/2, establishing common data environments (Autodesk Construction Cloud, Dalux), automating spatial clash resolutions through algorithmic Dynamo and pyRevit pipelines, and federating multi-disciplinary IFC models for zero-variance contractor handover.',
-  atsHealthScore: 98,
+export interface CandidateResumeProfile {
+  fullName: string
+  discipline: string
+  specificSkill: string
+  location: string
+  email: string
+  phone: string
+  skills: string[]
+  experiences: Array<{
+    id: string
+    roleTitle: string
+    company: string
+    period: string
+    contributions: string
+  }>
+  education: Array<{
+    id: string
+    degree: string
+    school: string
+    year: string
+  }>
 }
 
-export const INITIAL_VARIANTS: ResumeVersion[] = [
-  {
-    id: 'v-1',
-    versionCode: 'V2.1',
-    title: 'Computational Façade & Parametric Specialist',
-    targetFirms: 'Foster + Partners, Zaha Hadid Architects, BIG',
-    summary:
-      'Emphasizes algorithmic facade panelling, FEA stress modeling, Rhino.Inside, Python logic, and advanced solar insolation geometry.',
-    tags: ['Grasshopper', 'Rhino.Inside', 'Python API'],
-    downloadsCount: 48,
-    sharedCount: 3,
-    atsScore: 96,
-    lastModified: 'Modified 5d ago',
-    fileSize: '2.1 MB',
-    compliance: 'ISO 19650-2',
-  },
-  {
-    id: 'v-2',
-    versionCode: 'V3.0',
-    title: 'Infrastructure & Rail CDE / BEP Manager',
-    targetFirms: 'Arup, AECOM, WSP, Mott MacDonald',
-    summary:
-      'Emphasizes ISO 19650-2 CDE governance, Civil 3D alignments, multi-million pound railway stations, and IFC openBIM standard compliance.',
-    tags: ['Civil 3D', 'IFC4 openBIM', 'ACC CDE'],
-    downloadsCount: 32,
-    sharedCount: 2,
-    atsScore: 94,
-    lastModified: 'Modified 2w ago',
-    fileSize: '2.5 MB',
-    compliance: 'ISO 19650-1/2',
-  },
-  {
-    id: 'v-3',
-    versionCode: 'V1.8',
-    title: 'Senior VDC & Site Clash Detection Lead',
-    targetFirms: 'General Contractors (Balfour Beatty, Skanska, Mace, Multiplex)',
-    summary:
-      'Highlights constructability analysis, Synchro 4D time simulation, on-site laser scanning, and sub-trade MEP spatial coordination.',
-    tags: ['Navisworks', 'Synchro 4D', 'Laser Point Cloud'],
-    downloadsCount: 19,
-    sharedCount: 1,
-    atsScore: 91,
-    lastModified: 'Modified 1mo ago',
-    fileSize: '1.9 MB',
-    compliance: 'COBie Certified',
-  },
-]
+const PRIMARY_RESUME_DATA: ActiveResumeDetail = {
+  docId: 'CV-PRIMARY',
+  fileName: 'Resume_Document.pdf',
+  fileSize: '—',
+  compliance: 'Verified',
+  hash: 'CASTALLIO-VERIFIED',
+  lastUpdated: 'Recently updated',
+  lodStandard: 'Standard Portfolio',
+  executiveSummary: 'No summary provided yet. Complete your profile details to generate your technical blueprint.',
+  atsHealthScore: 0,
+}
 
-export const ATS_TOKENS: ATSKeywordToken[] = [
-  { name: 'Revit LOD-400', matchPercent: 100, isHighPriority: true },
-  { name: 'ISO 19650-2 BEP', matchPercent: 100, isHighPriority: true },
-  { name: 'Grasshopper Parametric', matchPercent: 96 },
-  { name: 'Clash Detection Navisworks', matchPercent: 95 },
-  { name: 'openBIM / IFC', matchPercent: 92 },
-  { name: 'Python Automation', matchPercent: 88 },
-]
+export const INITIAL_VARIANTS: ResumeVersion[] = []
 
-export const VERIFICATION_SEALS: VerificationSeal[] = [
-  { id: 'seal-1', title: 'BRE Academy ISO 19650', code: '#BRE-9482-UK', issuer: 'BRE Group' },
-  { id: 'seal-2', title: 'Autodesk Certified Pro 2024', code: '#AC-88319-REV', issuer: 'Autodesk' },
-  { id: 'seal-3', title: 'buildingSMART International', code: '#bSI-901-OP', issuer: 'buildingSMART' },
-]
+export const ATS_TOKENS: ATSKeywordToken[] = []
+
+export const VERIFICATION_SEALS: VerificationSeal[] = []
 
 export function useResumeManagement() {
   const [activeResume] = useState<ActiveResumeDetail>(PRIMARY_RESUME_DATA)
   const [variants, setVariants] = useState<ResumeVersion[]>(INITIAL_VARIANTS)
-  const [selectedTargetJob, setSelectedTargetJob] = useState<string>(
-    'Lead Computational Designer • Foster + Partners (Saved)'
-  )
+  const [selectedTargetJob, setSelectedTargetJob] = useState<string>('Target Position')
   const [oneClickDownload, setOneClickDownload] = useState<boolean>(true)
   const [hideContactInfo, setHideContactInfo] = useState<boolean>(false)
   const [digitalWatermark, setDigitalWatermark] = useState<boolean>(true)
   const [activeTab, setActiveTab] = useState<'resumes' | 'cover-letters' | 'bep-samples' | 'certs'>('resumes')
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
+  // Real candidate profile
+  const [profile, setProfile] = useState<CandidateResumeProfile>(() => {
+    try {
+      const raw = localStorage.getItem('castallio_talent_profile_data')
+      const parsed = raw ? JSON.parse(raw) : null
+      return {
+        fullName: parsed?.fullName || '',
+        discipline: parsed?.discipline || '',
+        specificSkill: parsed?.specificSkill || '',
+        location: parsed?.city || '',
+        email: parsed?.email || '',
+        phone: parsed?.phone || '',
+        skills: Array.isArray(parsed?.coreSoftware) ? parsed.coreSoftware : [],
+        experiences: [],
+        education: [],
+      }
+    } catch {
+      return {
+        fullName: '',
+        discipline: '',
+        specificSkill: '',
+        location: '',
+        email: '',
+        phone: '',
+        skills: [],
+        experiences: [],
+        education: [],
+      }
+    }
+  })
+
   // Modal / Preview state
   const [isFullscreenPreview, setIsFullscreenPreview] = useState<boolean>(false)
   const [isTailorModalOpen, setIsTailorModalOpen] = useState<boolean>(false)
   const [previewVariant, setPreviewVariant] = useState<ResumeVersion | null>(null)
+
+  useEffect(() => {
+    const fetchRealData = async () => {
+      try {
+        const { data: userData } = await supabase.auth.getUser()
+        const user = userData?.user
+        if (!user) return
+
+        const { data: student } = await supabase
+          .from('student_profile')
+          .select('*')
+          .or(`user_id.eq.${user.id},id.eq.${user.id}`)
+          .maybeSingle()
+
+        let studentId = user.id
+        if (student) {
+          studentId = student.id || user.id
+          setProfile((prev) => ({
+            ...prev,
+            fullName: student.full_name || prev.fullName,
+            discipline: student.discipline || prev.discipline,
+            location: student.location || prev.location,
+            email: student.email || user.email || prev.email,
+            phone: student.phone || prev.phone,
+          }))
+        }
+
+        // Skills
+        const { data: skillsRows } = await supabase
+          .from('student_skills')
+          .select('skill_name, category')
+          .or(`student_id.eq.${studentId},student_id.eq.${user.id}`)
+
+        if (skillsRows && skillsRows.length > 0) {
+          setProfile((prev) => ({
+            ...prev,
+            skills: skillsRows.map((s) => s.skill_name),
+          }))
+        }
+
+        // Experiences
+        const { data: expRows } = await supabase
+          .from('student_experience')
+          .select('*')
+          .or(`student_id.eq.${studentId},student_id.eq.${user.id}`)
+          .order('start_date', { ascending: false })
+
+        if (expRows && expRows.length > 0) {
+          setProfile((prev) => ({
+            ...prev,
+            experiences: expRows.map((e) => ({
+              id: e.id,
+              roleTitle: e.role_title,
+              company: e.organization_name,
+              period: `${e.start_date ? e.start_date.slice(0, 4) : ''} — ${e.end_date ? e.end_date.slice(0, 4) : 'Present'}`,
+              contributions: e.contributions || '',
+            })),
+          }))
+        }
+
+        // Education
+        const { data: eduRows } = await supabase
+          .from('student_education')
+          .select('*')
+          .or(`student_id.eq.${studentId},student_id.eq.${user.id}`)
+          .order('start_year', { ascending: false })
+
+        if (eduRows && eduRows.length > 0) {
+          setProfile((prev) => ({
+            ...prev,
+            education: eduRows.map((ed) => ({
+              id: ed.id,
+              degree: ed.degree,
+              school: ed.institution_name,
+              year: String(ed.end_year || ed.start_year || ''),
+            })),
+          }))
+        }
+      } catch (err) {
+        console.warn('Error loading resume profile:', err)
+      }
+    }
+
+    void fetchRealData()
+  }, [])
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg)
@@ -145,36 +225,17 @@ export function useResumeManagement() {
     (fileName: string) => {
       const resumeContent = `CASTALLIO ONE // VERIFIED AEC RESUME EXPORT
 =====================================================
-CANDIDATE: Alex Morgan, M.Sc., AIA Assoc., CanBIM Prof.
-ROLE: Senior BIM Coordinator & Computational VDC Specialist
+CANDIDATE: ${profile.fullName || 'Verified AEC Candidate'}
+ROLE: ${profile.specificSkill || profile.discipline || 'AEC Professional'}
 FILE: ${fileName}
-LOD LEVEL: LOD 400 Fabrication
-SECURITY: UK/EU Level II
-HASH: 9f82-a8c4-be12-44df-0091
+SECURITY: Verified Account
 TIMESTAMP: ${new Date().toISOString()}
 
 EXECUTIVE SUMMARY:
 ${activeResume.executiveSummary}
 
 CORE TECHNICAL STACK:
-- Autodesk Revit 2024 (LOD 400, Dynamo Automation) - 98%
-- Navisworks Manage (Clash Detective, 4D Phasing) - 95%
-- Solibri Model Checker (Ruleset, COBie QA) - 92%
-- Rhino + Grasshopper (Parametric Geometry) - 94%
-- Python / pyRevit (Custom Automation Scripts) - 88%
-- Autodesk Construction Cloud / ACC (CDE Lead) - 96%
-- Synchro 4D (Construction Logistics Simulation) - 85%
-
-PROJECT PORTFOLIO EXCERPT:
-1. The Scalpel Commercial Tower (£180M) - LOD 400 MEP/Arch Coordination
-2. Rail Interchange Transit Hub (£420M) - ISO 19650 BEP & Multi-Disciplinary CDE
-3. CLT Innovation Pavilion (£14M) - Grasshopper to CNC Milling Tooling
-
-VERIFIED ACCREDITATIONS:
-- BRE Academy ISO 19650 Information Management (#BRE-9482-UK)
-- Autodesk Certified Professional Revit 2024 (#AC-88319-REV)
-- CanBIM Professional Level 3 (Canada BIM Council)
-- buildingSMART openBIM Foundation Practitioner
+${profile.skills.length > 0 ? profile.skills.map((s) => `- ${s}`).join('\n') : '- Verified AEC Stack'}
 `
       const blob = new Blob([resumeContent], { type: 'text/plain' })
       const url = URL.createObjectURL(blob)
@@ -185,96 +246,81 @@ VERIFIED ACCREDITATIONS:
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
-      showToast(`Downloaded verified document: ${fileName}`)
+      showToast(`Downloaded document: ${fileName}`)
     },
-    [activeResume.executiveSummary, showToast]
+    [activeResume.executiveSummary, profile, showToast]
   )
 
   const handleCopyLink = useCallback(() => {
     if (navigator.clipboard) {
-      navigator.clipboard.writeText('https://castallio.one/cv/alex-morgan-bim')
+      navigator.clipboard.writeText('https://castallio.one/cv/resume')
     }
-    showToast('Personalized recruiter CV link copied!')
+    showToast('Recruiter CV link copied!')
   }, [showToast])
 
   const handleExportZip = useCallback(() => {
-    showToast('Compiling complete BIM Portfolio & CV package (.ZIP)...')
+    const zipName = profile.fullName ? `Resume_${profile.fullName.replace(/\s+/g, '_')}.zip` : 'Resume_Package.zip'
+    showToast(`Compiling package (${zipName})...`)
     setTimeout(() => {
-      showToast('BIM_AlexMorgan_Complete_Package_2024.zip ready and downloaded.')
+      showToast(`${zipName} ready and downloaded.`)
     }, 1200)
-  }, [showToast])
+  }, [profile.fullName, showToast])
 
   const handleExportJsonResume = useCallback(() => {
     const jsonResume = {
       $schema: 'https://raw.githubusercontent.com/jsonresume/resume-schema/v1.0.0/schema.json',
       basics: {
-        name: 'Alex Morgan',
-        label: 'Senior BIM Coordinator & Computational VDC Specialist',
-        email: 'alex.morgan@castallio.one',
-        phone: '+44 20 7946 0912',
-        url: 'https://castallio.one/talent/alex-morgan-bim',
+        name: profile.fullName || 'AEC Candidate',
+        label: profile.specificSkill || profile.discipline || 'AEC Professional',
+        email: profile.email || '',
+        phone: profile.phone || '',
+        url: 'https://castallio.one/cv/resume',
         summary: activeResume.executiveSummary,
         location: {
-          city: 'London',
-          countryCode: 'GB',
-          region: 'Greater London',
+          city: profile.location || '',
+          region: '',
         },
       },
-      skills: [
-        { name: 'Autodesk Revit 2024', level: 'Master', keywords: ['LOD 400', 'Parametric'] },
-        { name: 'Navisworks Manage', level: 'Expert', keywords: ['Clash Detection', 'Timeliner'] },
-        { name: 'Grasshopper & Rhino', level: 'Master', keywords: ['Rhino.Inside', 'Parametric'] },
-        { name: 'ISO 19650-2', level: 'Master', keywords: ['BEP', 'CDE Governance'] },
-      ],
-      education: [
-        {
-          institution: 'University College London (The Bartlett)',
-          area: 'Architectural Computation',
-          studyType: 'Master of Science (Distinction)',
-          startDate: '2016-09-01',
-          endDate: '2017-09-01',
-        },
-      ],
     }
     const blob = new Blob([JSON.stringify(jsonResume, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'Alex_Morgan_BIM_Resume.json'
+    a.download = `${(profile.fullName || 'Candidate').replace(/\s+/g, '_')}_Resume.json`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-    showToast('Exported standard JSON-Resume schema.')
-  }, [activeResume.executiveSummary, showToast])
+    showToast('Exported standard JSON-Resume schema!')
+  }, [activeResume.executiveSummary, profile, showToast])
 
   const handleCreateVariant = useCallback(() => {
     const newVariant: ResumeVersion = {
       id: `v-${Date.now()}`,
-      versionCode: `V${(variants.length + 1).toFixed(1)}`,
-      title: 'Digital Twin & Smart Asset VDC Manager',
-      targetFirms: 'Engineering Consultancies (WSP, Jacobs, Buro Happold)',
-      summary:
-        'Focused on asset lifecycle COBie handover, digital twin telemetry sensor mapping, and openBIM IFC4.3 infrastructure.',
-      tags: ['IFC4.3', 'COBie', 'IoT Twin'],
+      versionCode: `V${variants.length + 1}.0`,
+      title: 'Custom Technical CV Variant',
+      targetFirms: 'Target AEC Firms',
+      summary: 'Custom-tuned version highlighting specific technical competencies and project requirements.',
+      tags: ['Custom', 'Verified'],
       downloadsCount: 0,
       sharedCount: 0,
-      atsScore: 97,
+      atsScore: 90,
       lastModified: 'Created just now',
-      fileSize: '2.3 MB',
-      compliance: 'ISO 19650-3',
+      fileSize: '1.8 MB',
+      compliance: 'Verified',
     }
     setVariants((prev) => [newVariant, ...prev])
     showToast('New customized CV variant generated!')
   }, [variants.length, showToast])
 
   const handleAutoGenerateTailoredDraft = useCallback(() => {
-    showToast(`AI Tailor: Optimized CV for ${selectedTargetJob.split('•')[0].trim()} with 98% LOD fit score!`)
+    showToast(`AI Tailor: Optimized CV for ${selectedTargetJob.split('•')[0].trim()}!`)
   }, [selectedTargetJob, showToast])
 
   return {
     activeResume,
     variants,
+    profile,
     selectedTargetJob,
     setSelectedTargetJob,
     oneClickDownload,

@@ -169,47 +169,7 @@ export const CDE_STANDARDS_TAGS = [
   'OpenBIM bSDD',
 ]
 
-export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = [
-  {
-    id: 'proj-1',
-    title: 'The Scalpel Commercial Tower — London',
-    collaboration: 'Foster + Partners Collab',
-    badge: 'LOD 400',
-    tag: 'Federated Coordination',
-    description:
-      'Acted as Lead LOD 400 Clash Coordinator & Façade Dynamo Automation engineer. Resolved over 1,200 structural-MEP geometric clashes across 38 storeys prior to fabrication sign-off.',
-    stack: ['Revit 2024', 'Navisworks', 'Rhino.Inside', 'Dynamo'],
-    imageSrc:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuD-63vwhYO2WHW_6PgHRdwBq2x_iCdKCNkPm8075nlF4TSmkjNk-ox2zurLmk1eK-FYC8apH486HoL0xDz4nV0FzXeJoNWcXENMu6nsha91FCbOUwSCxJGPnXGwDHGih4BAIj7aTED1GkxlNo3_xu-2rEdmlhWUu8B3vpZU0Fy8LIITWRJHpnJQjabAG5P9eL-gIg4fjsYy6mNvfKWoipiCYBnBviFHH1AI21V89MBYCrrVSRWZIKtxSw',
-    imageAlt: 'Digital architectural rendering and BIM wireframe model of the Scalpel Commercial Tower in London',
-  },
-  {
-    id: 'proj-2',
-    title: 'High-Speed Rail Interchange Transit Hub',
-    collaboration: 'Arup Infrastructure',
-    badge: 'INFRASTRUCTURE',
-    tag: 'ISO 19650 BEP Lead',
-    description:
-      'Authored the project BIM Execution Plan (BEP), supervised IFC4 spatial coordination across Civil 3D alignments, track geometry, and below-grade mechanical tunnels.',
-    stack: ['Civil 3D', 'IFC openBIM', 'Solibri', 'ACC Hub'],
-    imageSrc:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuBU_Xter6AXv0QMJYT-DJQNaajvXtO1P_rJuV-QuLhoL-JVjVvwHj81aii_O5LkQ3gC4ak2iIjyCKFHuVphXlztPfYjkBdH_bDayZyGK7moSXvilzuARDlO3dfO-O7IjdMnnBAnVM5qRgUJFpQdv-24mmjMYcu36YpER6uuetUU16XM6tzQl2pq6Lap-3l9oqgS0tUnBgqyOs7Wvl8J8Ylxj4Jp-nIcgjCKIVzMEF5bmHjFryE8rZ4kCQ',
-    imageAlt: 'High-speed rail interchange station BIM 3D coordination model showing parametric tunnel alignments',
-  },
-  {
-    id: 'proj-3',
-    title: 'Cross-Laminated Timber (CLT) Innovation Pavilion',
-    collaboration: 'Bath Uni & Research Labs',
-    badge: 'TIMBER FEA',
-    tag: 'Carbon & Structural FEA',
-    description:
-      'Algorithmic parametric modeler and carbon life-cycle analyst. Generated robotic timber fabrication tooling paths directly from Grasshopper and Karamba3D stress runs.',
-    stack: ['Grasshopper', 'Karamba3D', 'Python Scripting'],
-    imageSrc:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuANVu9bOLIuAGH3nHXdzRTdP3CwYasjFE2X9I4q7IkIO3irO4H_HuCshU3WT-MC-2NKvUp4nWqUmevY0iBxOQSBAoK4ute3bVghyTD20p3LbXtOu2BKvs4YS6OPz2qDx8gGmNF3DYsTwDjswTwHhptHYEtZqeZXuKwF7XsDKMsMlNaat6UMZNnYqcgGKZ6YUI_kq27w3UbYZepLuJwGNns6sFkmK4meOPplqb7cqU9F_t-i5Qqyj5pjow',
-    imageAlt: 'Parametric mass timber pavilion model in Rhino Grasshopper showing cross-laminated timber diagrid structure',
-  },
-]
+export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = []
 
 const EMPTY_PROFILE: ProfileData = {
   id: '',
@@ -518,7 +478,7 @@ export function generateOfficialResumeDossier(
     <div class="print-bar">
       <div style="display:flex;align-items:center;gap:8px;">
         <img src="/app_icon.png" alt="Castallio One" style="width:22px;height:22px;border-radius:5px;object-fit:cover;" />
-        <span>Castallio One Verified Candidate Dossier</span>
+        <span>Castallio One Verified Candidate Profile</span>
       </div>
       <button class="btn-action" onclick="window.print()">Print / Save to PDF</button>
     </div>
@@ -665,7 +625,7 @@ export function useMyProfile() {
   const [profile, setProfile] = useState<ProfileData>(EMPTY_PROFILE)
   const [isEditingProfile, setIsEditingProfile] = useState<boolean>(false)
   const [isViewerOpen, setIsViewerOpen] = useState<boolean>(false)
-  const [activeViewerProject, setActiveViewerProject] = useState<PortfolioProject>(INITIAL_PORTFOLIO_PROJECTS[0])
+  const [activeViewerProject, setActiveViewerProject] = useState<PortfolioProject | null>(null)
   const [skills, setSkills] = useState<SoftwareSkill[]>([])
   const [experiences, setExperiences] = useState<ExperienceMilestone[]>([])
   const [credentials, setCredentials] = useState<CredentialItem[]>([])
@@ -1569,8 +1529,8 @@ export function useMyProfile() {
         }
       }
 
-      // 3. Fallback: If remote file returned 404 or is unavailable, generate an authentic verified resume dossier
-      showToast(`Generating verified resume dossier...`)
+      // 3. Fallback: If remote file returned 404 or is unavailable, generate an authentic verified resume
+      showToast(`Generating verified resume...`)
       generateOfficialResumeDossier(profile, skills, experiences, credentials, docName)
       showToast(`Downloaded verified resume for ${profile.fullName || 'Candidate'}`)
     },

@@ -16,6 +16,7 @@ const Resume: FC<ResumeProps> = ({ onNavigateToPortfolio, onNavigateToCertificat
   const {
     activeResume,
     variants,
+    profile,
     selectedTargetJob,
     setSelectedTargetJob,
     oneClickDownload,
@@ -37,6 +38,11 @@ const Resume: FC<ResumeProps> = ({ onNavigateToPortfolio, onNavigateToCertificat
     toastMessage,
     showToast,
   } = useResumeManagement()
+
+  const candidateName = profile?.fullName || 'Talent Member'
+  const candidateRole = profile?.specificSkill || profile?.discipline || 'AEC Candidate'
+  const candidateDiscipline = profile?.discipline || 'Architecture / Engineering'
+  const candidateLocation = profile?.location || 'Location Open'
 
   return (
     <div className="resume-page">
@@ -241,13 +247,13 @@ const Resume: FC<ResumeProps> = ({ onNavigateToPortfolio, onNavigateToCertificat
                       <span className="stamp-spec">SCALE: N.T.S.</span>
                       <span className="stamp-spec">DATE: NOV 2024</span>
                     </div>
-                    <h2 className="blueprint-hero-name">ALEX MORGAN, M.Sc., AIA Assoc.</h2>
-                    <p className="blueprint-sub-role">SENIOR BIM COORDINATOR • COMPUTATIONAL VDC SPECIALIST</p>
+                    <h2 className="blueprint-hero-name">{candidateName.toUpperCase()}</h2>
+                    <p className="blueprint-sub-role">{candidateRole.toUpperCase()}</p>
                   </div>
                   <div className="title-banner-right">
-                    <div>DISCIPLINE: ARCH / STRUCT / MEP COORDINATION</div>
+                    <div>DISCIPLINE: {candidateDiscipline.toUpperCase()}</div>
                     <div>SECURITY CLEARANCE: ACTIVE LEVEL II (UK/EU)</div>
-                    <div>LOCATION: LONDON, UK (REMOTE & SITE-READY)</div>
+                    <div>LOCATION: {candidateLocation.toUpperCase()}</div>
                     <div className="highlight">CDE STATUS: ISO 19650-2 COMPLIANT</div>
                   </div>
                 </div>
@@ -274,7 +280,7 @@ const Resume: FC<ResumeProps> = ({ onNavigateToPortfolio, onNavigateToCertificat
                     <span className="sheet-rev-tag">EVAL_DATE: 2024.11</span>
                   </div>
                   <div className="core-stack-grid">
-                    {renderCoreStackTiles()}
+                    {renderCoreStackTiles(profile?.skills, candidateDiscipline)}
                   </div>
                 </div>
 
@@ -285,39 +291,31 @@ const Resume: FC<ResumeProps> = ({ onNavigateToPortfolio, onNavigateToCertificat
                       <span className="section-dot" aria-hidden="true" />
                       03 // CAREER MILESTONES & APPOINTMENTS
                     </span>
-                    <span className="sheet-rev-tag">RECORD: 3 FIRMS</span>
+                    <span className="sheet-rev-tag">RECORD: {profile?.experiences?.length || 0} FIRMS</span>
                   </div>
                   <div className="milestones-sheet-list">
-                    {/* Role 1 */}
-                    <div className="milestone-sheet-item">
-                      <div className="milestone-top-line">
-                        <div>
-                          <span className="milestone-role-text">Senior BIM Coordinator</span>
-                          <span className="milestone-firm-pill">Grimshaw Architects</span>
+                    {profile?.experiences && profile.experiences.length > 0 ? (
+                      profile.experiences.map((exp) => (
+                        <div className="milestone-sheet-item" key={exp.id}>
+                          <div className="milestone-top-line">
+                            <div>
+                              <span className="milestone-role-text">{exp.roleTitle}</span>
+                              <span className="milestone-firm-pill">{exp.company}</span>
+                            </div>
+                            <span className="milestone-period-text">{exp.period}</span>
+                          </div>
+                          {exp.contributions && (
+                            <p style={{ fontSize: '13px', color: '#424753', margin: '6px 0 0', lineHeight: 1.5 }}>
+                              {exp.contributions}
+                            </p>
+                          )}
                         </div>
-                        <span className="milestone-period-text">2022 — Present • London, UK</span>
-                      </div>
-                      <ul className="milestone-bullets">
-                        <li>Author and manage the primary ISO 19650-2 BIM Execution Plan (BEP) for an international rail transport interchange hub valued at £420M.</li>
-                        <li>Orchestrated federation across 14 distinct disciplines (Arch, Structural, MEP, Signalling, Landscape), resolving 1,800+ spatial clashes via Navisworks prior to tender release.</li>
-                        <li>Developed custom pyRevit ribbon tools accelerating family parameter verification across 350+ Revit models, slashing review cycle time by 42%.</li>
-                      </ul>
-                    </div>
-                    {/* Role 2 */}
-                    <div className="milestone-sheet-item">
-                      <div className="milestone-top-line">
-                        <div>
-                          <span className="milestone-role-text">Computational BIM Specialist</span>
-                          <span className="milestone-firm-pill">Foster + Partners</span>
-                        </div>
-                        <span className="milestone-period-text">2019 — 2022 • London, UK</span>
-                      </div>
-                      <ul className="milestone-bullets">
-                        <li>Constructed parametric Grasshopper scripts to automate the panel division and structural bracket alignment for a 52-story curved curtain wall facade.</li>
-                        <li>Streamlined bidirectional IFC geometry pipelines connecting Rhino.Inside.Revit with structural engineering teams, ensuring sub-millimeter tolerances.</li>
-                        <li>Conducted weekly clash reviews in Solibri Office, enforcing strict COBie standard compliance for government client deliverables.</li>
-                      </ul>
-                    </div>
+                      ))
+                    ) : (
+                      <p style={{ color: '#64748b', fontSize: '13px', margin: '8px 0' }}>
+                        No professional experience milestones recorded yet. Add your work history in My Profile.
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -331,62 +329,9 @@ const Resume: FC<ResumeProps> = ({ onNavigateToPortfolio, onNavigateToCertificat
                     <span className="sheet-rev-tag">PORTFOLIO EXCERPT</span>
                   </div>
                   <div className="projects-excerpt-grid">
-                    {/* Project 1 */}
-                    <div className="project-excerpt-card">
-                      <div className="excerpt-img-frame">
-                        <img
-                          src="https://lh3.googleusercontent.com/aida-public/AB6AXuBjnIvsGXJNXplArdEm97mmWx5bCbLxivkPUnqsqPD5Gstc3zBrZznH2f3F6ge-tFWFZjMeGu0-fPL37ySAiIFwmuEHGxD2fjCo1jjiVj7MU1_Ti3oE6oRprRIVbXjEjH4yBB6GuU1lKnLWhzhLyaS1WVJMIwn_MZRjzy-4r0Ji7uXUkCQ8dP01pU-pU-OshdHM5-JqKHkI4fxOi1yuCoZjE18ORLUVkHvOJMuh9goSR2eiA6o5_xhWJg"
-                          alt="The Scalpel Commercial Tower in London"
-                        />
-                      </div>
-                      <div className="excerpt-details">
-                        <div className="excerpt-meta-top">
-                          <span className="lod">LOD 400 • £180M</span>
-                          <span className="type">COMMERCIAL</span>
-                        </div>
-                        <h4 className="excerpt-title">The Scalpel Commercial Tower</h4>
-                        <p className="excerpt-desc">Lead MEP/Architectural clash coordinator across 38 tenant fit-out levels.</p>
-                        <span className="excerpt-firm-foot">Grimshaw Architects • Completed 2023</span>
-                      </div>
-                    </div>
-
-                    {/* Project 2 */}
-                    <div className="project-excerpt-card">
-                      <div className="excerpt-img-frame">
-                        <img
-                          src="https://lh3.googleusercontent.com/aida-public/AB6AXuD2qYh-bNkMlHaMBNiDacrVHF-qWYE1airvhKR2cT4EjDYl89tZ_KEjxfDkBV5x20yQxCo9yB7nWefnviL9oUxf-l6RMguU8Jw47IyTfzdUrPGaCTKjb4F2gnRowsMQOHGezduNpzqi1tJiApRJLKKmz1AMLO_yT4Y-ViQ0YVL17bESGyT1sQBc5nZx_3VoCl3ruhUokXFZ9weW8KDdjEcIsjDPdgZ_4d0deDFSS1PHP7ppoxstEAqT6Q"
-                          alt="Rail Interchange Transit Hub"
-                        />
-                      </div>
-                      <div className="excerpt-details">
-                        <div className="excerpt-meta-top">
-                          <span className="lod">LOD 500 • £420M</span>
-                          <span className="type">INFRASTRUCTURE</span>
-                        </div>
-                        <h4 className="excerpt-title">Rail Interchange Transit Hub</h4>
-                        <p className="excerpt-desc">ISO 19650 BEP management, multi-disciplinary CDE governance for HS2.</p>
-                        <span className="excerpt-firm-foot">Grimshaw Architects • Phase 2 Active</span>
-                      </div>
-                    </div>
-
-                    {/* Project 3 */}
-                    <div className="project-excerpt-card">
-                      <div className="excerpt-img-frame">
-                        <img
-                          src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYcIN5n8ftlUd9X0d91jVwQLyv4b7WJHfPhIXc7MrKcwmkHF0jw4JMBlr4WyW2-OTx97-9Ym6zSredMQ6ciiDys-VknVBhCR_-kA6cgnaSMuhAlKa0MbqKYYkXlNrWWpnqesFwZadT5V9qnTH2u0LdhXjCFTJTjvTzAtc81FTwAGiqj8FFZGSyTq1JyhlqV_Q-kqOI9hNJUJerqPNrBcZsO0FsY_sRLP3vi_4Z6_QZ4054rCJj575tpg"
-                          alt="CLT Innovation Pavilion"
-                        />
-                      </div>
-                      <div className="excerpt-details">
-                        <div className="excerpt-meta-top">
-                          <span className="lod">LOD 350 • £14M</span>
-                          <span className="type">TIMBER CLT</span>
-                        </div>
-                        <h4 className="excerpt-title">CLT Innovation Pavilion</h4>
-                        <p className="excerpt-desc">Computational Grasshopper-to-CNC milling fabrication model generation.</p>
-                        <span className="excerpt-firm-foot">Foster + Partners • Award Winner 2021</span>
-                      </div>
-                    </div>
+                    <p style={{ color: '#64748b', fontSize: '13px', margin: '8px 0', gridColumn: '1 / -1' }}>
+                      No milestone projects attached yet. Connect your verified portfolio projects to display them here.
+                    </p>
                   </div>
                 </div>
 
@@ -400,57 +345,26 @@ const Resume: FC<ResumeProps> = ({ onNavigateToPortfolio, onNavigateToCertificat
                     <span className="sheet-rev-tag">VERIFIED 4 OF 4</span>
                   </div>
                   <div className="accreditations-grid">
-                    <div className="accred-box-item">
-                      <div className="accred-info-left">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                        <div>
-                          <span className="accred-title-main">M.Sc. Architectural Computation</span>
-                          <span className="accred-subtext">University College London (The Bartlett) • Distinction</span>
+                    {profile?.education && profile.education.length > 0 ? (
+                      profile.education.map((edu) => (
+                        <div className="accred-box-item" key={edu.id}>
+                          <div className="accred-info-left">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                            <div>
+                              <span className="accred-title-main">{edu.degree}</span>
+                              <span className="accred-subtext">{edu.school}</span>
+                            </div>
+                          </div>
+                          {edu.year && <span className="accred-badge-pill">{edu.year}</span>}
                         </div>
-                      </div>
-                      <span className="accred-badge-pill">2017</span>
-                    </div>
-
-                    <div className="accred-box-item">
-                      <div className="accred-info-left">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                        <div>
-                          <span className="accred-title-main">BRE Academy ISO 19650 Lead</span>
-                          <span className="accred-subtext">Global Information Management Certification</span>
-                        </div>
-                      </div>
-                      <span className="accred-badge-pill">CERTIFIED</span>
-                    </div>
-
-                    <div className="accred-box-item">
-                      <div className="accred-info-left">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                        <div>
-                          <span className="accred-title-main">CanBIM Professional (CP)</span>
-                          <span className="accred-subtext">Canada BIM Council Certification Level 3</span>
-                        </div>
-                      </div>
-                      <span className="accred-badge-pill">LEVEL 3</span>
-                    </div>
-
-                    <div className="accred-box-item">
-                      <div className="accred-info-left">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                        <div>
-                          <span className="accred-title-main">buildingSMART openBIM Foundation</span>
-                          <span className="accred-subtext">IFC / BCF Schema Certified Practitioner</span>
-                        </div>
-                      </div>
-                      <span className="accred-badge-pill">bSI-2024</span>
-                    </div>
+                      ))
+                    ) : (
+                      <p style={{ color: '#64748b', fontSize: '13px', margin: '8px 0', gridColumn: '1 / -1' }}>
+                        No accreditations or degrees recorded yet.
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -511,7 +425,8 @@ const Resume: FC<ResumeProps> = ({ onNavigateToPortfolio, onNavigateToCertificat
             </div>
 
             <div className="milestones-sheet-list">
-              {variants.map((v: ResumeVersion) => (
+              {variants.length > 0 ? (
+              variants.map((v: ResumeVersion) => (
                 <div className="variant-item-card" key={v.id}>
                   <div className="variant-top-row">
                     <span className="variant-code-badge">{v.versionCode}</span>
@@ -573,7 +488,12 @@ const Resume: FC<ResumeProps> = ({ onNavigateToPortfolio, onNavigateToCertificat
                     </div>
                   </div>
                 </div>
-              ))}
+              ))
+            ) : (
+              <p style={{ color: '#64748b', fontSize: '13px', margin: '8px 0' }}>
+                No discipline-tailored variants created yet. Click "New Variant" to generate a tailored CV.
+              </p>
+            )}
             </div>
           </article>
         </section>
@@ -603,15 +523,7 @@ const Resume: FC<ResumeProps> = ({ onNavigateToPortfolio, onNavigateToCertificat
                 value={selectedTargetJob}
                 onChange={(e) => setSelectedTargetJob(e.target.value)}
               >
-                <option value="Lead Computational Designer • Foster + Partners (Saved)">
-                  Lead Computational Designer • Foster + Partners (Saved)
-                </option>
-                <option value="Senior BIM Manager (Rail) • Arup London">
-                  Senior BIM Manager (Rail) • Arup London
-                </option>
-                <option value="VDC Project Lead • Skanska Construction">
-                  VDC Project Lead • Skanska Construction
-                </option>
+                <option value="Target Position">Target Position (Active Requisition)</option>
                 <option value="Custom Job Description">
                   Custom Job Description (Paste raw text...)
                 </option>
@@ -643,7 +555,7 @@ const Resume: FC<ResumeProps> = ({ onNavigateToPortfolio, onNavigateToCertificat
                     <line x1="12" y1="8" x2="12" y2="16" />
                     <line x1="8" y1="12" x2="16" y2="12" />
                   </svg>
-                  <span>Add <strong>"pyRevit unit-testing"</strong> bullet to Grimshaw experience block.</span>
+                  <span>Add <strong>"pyRevit / automation"</strong> bullet to your latest experience block.</span>
                 </div>
                 <div className="tweak-item">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -774,7 +686,7 @@ const Resume: FC<ResumeProps> = ({ onNavigateToPortfolio, onNavigateToCertificat
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <label className="pref-label">Personalized Recruiter Link:</label>
               <div className="recruiter-url-box">
-                <span className="recruiter-url-text">castallio.one/cv/alex-morgan-bim</span>
+                <span className="recruiter-url-text">castallio.one/cv/resume</span>
                 <button
                   type="button"
                   className="btn-icon-variant"
@@ -823,7 +735,7 @@ const Resume: FC<ResumeProps> = ({ onNavigateToPortfolio, onNavigateToCertificat
                   </svg>
                   <span>Resumes & CVs</span>
                 </div>
-                <span className="hub-count-pill">4 FILES</span>
+                <span className="hub-count-pill">1 FILE</span>
               </button>
 
               <button
@@ -841,7 +753,7 @@ const Resume: FC<ResumeProps> = ({ onNavigateToPortfolio, onNavigateToCertificat
                   </svg>
                   <span>Cover Letters</span>
                 </div>
-                <span className="hub-count-pill">2 TEMPLATES</span>
+                <span className="hub-count-pill">0 TEMPLATES</span>
               </button>
 
               <button
@@ -860,7 +772,7 @@ const Resume: FC<ResumeProps> = ({ onNavigateToPortfolio, onNavigateToCertificat
                   </svg>
                   <span>Technical BEP Portfolio</span>
                 </div>
-                <span className="hub-count-pill">3 SAMPLES</span>
+                <span className="hub-count-pill">0 SAMPLES</span>
               </button>
 
               <button
@@ -879,7 +791,7 @@ const Resume: FC<ResumeProps> = ({ onNavigateToPortfolio, onNavigateToCertificat
                   <span>Certifications & ID Proofs</span>
                 </div>
                 <span className="hub-count-pill" style={{ color: '#00418f' }}>
-                  4 VERIFIED
+                  0 VERIFIED
                 </span>
               </button>
             </nav>
@@ -894,7 +806,7 @@ const Resume: FC<ResumeProps> = ({ onNavigateToPortfolio, onNavigateToCertificat
             <div className="modal-header">
               <div>
                 <h2 style={{ margin: 0, fontSize: '18px', fontFamily: 'Hanken Grotesk' }}>
-                  Alex_Morgan_BIM_Computational_CV_2024.pdf
+                  {activeResume.fileName}
                 </h2>
                 <span style={{ fontSize: '11px', color: '#727784', fontFamily: 'JetBrains Mono' }}>
                   LOD 400 VERIFIED AEC CANDIDATE // SHA-256 HASH: {activeResume.hash}
@@ -918,10 +830,10 @@ const Resume: FC<ResumeProps> = ({ onNavigateToPortfolio, onNavigateToCertificat
                 <div className="blueprint-title-banner">
                   <div>
                     <h3 style={{ margin: 0, fontFamily: 'Hanken Grotesk', fontSize: '20px', color: '#00418f' }}>
-                      ALEX MORGAN, M.Sc., AIA Assoc.
+                      {candidateName.toUpperCase()}
                     </h3>
                     <p style={{ margin: '2px 0 0', fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#39464f' }}>
-                      SENIOR BIM COORDINATOR • COMPUTATIONAL VDC SPECIALIST
+                      {candidateRole.toUpperCase()}
                     </p>
                   </div>
                   <div style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f', fontWeight: 700 }}>
@@ -961,27 +873,24 @@ const Resume: FC<ResumeProps> = ({ onNavigateToPortfolio, onNavigateToCertificat
   )
 }
 
-function renderCoreStackTiles() {
-  const stackItems = [
-    { name: 'Autodesk Revit', tag: '2024', disc: 'Parametric / LOD 400', pct: 98 },
-    { name: 'Navisworks Manage', tag: 'EXPERT', disc: 'Clash Detective & 4D', pct: 95 },
-    { name: 'Solibri Office', tag: 'RULESET', disc: 'QA/QC & COBie', pct: 92 },
-    { name: 'Rhino + Grasshopper', tag: 'PARAMETRIC', disc: 'Algorithmic Geometry', pct: 94 },
-    { name: 'Python / pyRevit', tag: 'DEV', disc: 'Automation Scripts', pct: 88 },
-    { name: 'Autodesk CC / ACC', tag: 'CDE LEAD', disc: 'BIM 360 & Hub Admin', pct: 96 },
-    { name: 'Synchro 4D', tag: 'VDC', disc: 'Construction Phasing', pct: 85 },
-    { name: 'Dynamo Studio', tag: 'SCRIPTING', disc: 'Batch Parameter Flow', pct: 91 },
-  ]
+function renderCoreStackTiles(skills?: string[], disc?: string) {
+  if (!skills || skills.length === 0) {
+    return (
+      <p style={{ color: '#64748b', fontSize: '13px', margin: '8px 0', gridColumn: '1 / -1' }}>
+        No verified software skills added yet. Add your core software proficiencies in My Profile.
+      </p>
+    )
+  }
 
-  return stackItems.map((item) => (
-    <div className="stack-blueprint-box" key={item.name}>
+  return skills.map((skill) => (
+    <div className="stack-blueprint-box" key={skill}>
       <div className="stack-box-top">
-        <span className="stack-tool-title">{item.name}</span>
-        <span className="stack-tool-badge">{item.tag}</span>
+        <span className="stack-tool-title">{skill}</span>
+        <span className="stack-tool-badge">VERIFIED</span>
       </div>
-      <span className="stack-sub-disc">{item.disc}</span>
+      <span className="stack-sub-disc">{disc || 'Technical Software'}</span>
       <div className="stack-progress-bar">
-        <div className="stack-fill" style={{ width: `${item.pct}%` }} />
+        <div className="stack-fill" style={{ width: '90%' }} />
       </div>
     </div>
   ))

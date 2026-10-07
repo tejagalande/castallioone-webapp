@@ -32,117 +32,74 @@ export interface EnterpriseTaxDetails {
   billingAddress: string
 }
 
-const INITIAL_ENTERPRISE_INVOICES: EnterpriseInvoiceItem[] = [
-  {
-    id: 'INV-2026-0412',
-    date: '19 Sep 2026',
-    year: 2026,
-    plan: 'Starter Plan (Monthly)',
-    description: '2 Job Posts per Month & AI-Powered Candidate Search',
-    period: 'Sep 2026 - Oct 2026',
-    sacCode: '998311',
-    amount: 1499.0,
-    gst: 269.82,
-    total: 1768.82,
-    paymentMethod: { type: 'UPI', label: 'UPI AutoPay (NPCI Mandate)' },
-    status: 'paid',
-    itcStatus: '18% ITC Eligible (GSTR-2B)',
-  },
-  {
-    id: 'INV-2026-0388',
-    date: '09 Sep 2026',
-    year: 2026,
-    plan: 'Starter + CV Add-on (100 Unlocks)',
-    description: '100 Verified CV Unlocks & Advanced Candidate Filters',
-    period: 'Sep 2026 - Oct 2026',
-    sacCode: '998311',
-    amount: 799.0,
-    gst: 143.82,
-    total: 942.82,
-    paymentMethod: { type: 'MC', label: 'Mastercard •••• 8412' },
-    status: 'paid',
-    itcStatus: '18% ITC Eligible (GSTR-2B)',
-  },
-  {
-    id: 'INV-2026-0301',
-    date: '07 Sep 2026',
-    year: 2026,
-    plan: 'Starter Plan (Monthly)',
-    description: '2 Job Posts per Month & Candidate Filters',
-    period: 'Aug 2026 - Sep 2026',
-    sacCode: '998311',
-    amount: 1499.0,
-    gst: 269.82,
-    total: 1768.82,
-    paymentMethod: { type: 'UPI', label: 'UPI Direct Pay' },
-    status: 'paid',
-    itcStatus: '18% ITC Eligible (GSTR-2B)',
-  },
-  {
-    id: 'INV-2026-0155',
-    date: '02 Aug 2026',
-    year: 2026,
-    plan: 'Professional Plan (Monthly)',
-    description: '5 Job Posts per Month & Priority Candidate Search',
-    period: 'Jul 2026 - Aug 2026',
-    sacCode: '998311',
-    amount: 1999.0,
-    gst: 359.82,
-    total: 2358.82,
-    paymentMethod: { type: 'VISA', label: 'Visa Corporate •••• 3109' },
-    status: 'paid',
-    itcStatus: '18% ITC Eligible (GSTR-2B)',
-  },
-  {
-    id: 'INV-2025-0982',
-    date: '15 Dec 2025',
-    year: 2025,
-    plan: 'Professional + CV Add-on (200 Unlocks)',
-    description: '200 Verified Talent Portfolio Unlocks',
-    period: 'Dec 2025 - Jan 2026',
-    sacCode: '998311',
-    amount: 1299.0,
-    gst: 233.82,
-    total: 1532.82,
-    paymentMethod: { type: 'MC', label: 'Mastercard •••• 8412' },
-    status: 'paid',
-    itcStatus: '18% ITC Eligible (GSTR-2B)',
-  },
-  {
-    id: 'INV-2025-0810',
-    date: '01 Nov 2025',
-    year: 2025,
-    plan: 'Starter Plan (Monthly)',
-    description: '2 Job Posts per Month & Candidate Search Filters',
-    period: 'Nov 2025 - Dec 2025',
-    sacCode: '998311',
-    amount: 1499.0,
-    gst: 269.82,
-    total: 1768.82,
-    paymentMethod: { type: 'NETBANKING', label: 'HDFC Corporate NetBanking' },
-    status: 'paid',
-    itcStatus: '18% ITC Eligible (GSTR-2B)',
-  },
-]
+export const extractPanFromGstin = (gstin?: string | null): string => {
+  if (!gstin) return ''
+  const clean = gstin.trim().toUpperCase()
+  if (clean.length === 15) {
+    const candidate = clean.slice(2, 12)
+    if (/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(candidate)) {
+      return candidate
+    }
+  }
+  return ''
+}
 
-const INITIAL_TAX_DETAILS: EnterpriseTaxDetails = {
-  companyName: 'Castallio One Enterprise Studio Pvt Ltd',
-  gstin: '27AAACC4451N1ZP',
-  pan: 'AAACC4451N',
+const EMPTY_TAX_DETAILS: EnterpriseTaxDetails = {
+  companyName: '',
+  gstin: '',
+  pan: '',
   sacCode: '998311',
   taxRate: '18.0% (9% CGST + 9% SGST / 18% IGST)',
-  accountsEmail: 'finance@castallio.com',
-  billingAddress: 'Level 8, Express Towers, Nariman Point, Mumbai, Maharashtra 400021, India',
+  accountsEmail: '',
+  billingAddress: '',
+}
+
+interface RpcTransaction {
+  id?: string
+  date?: string
+  year?: number
+  plan_id?: string
+  amount?: number | string
+  gst?: number | string
+  total?: number | string
+  payment_mode?: string
+  payment_method?: string
+  status?: string
+}
+
+interface SubWithPlan {
+  plan_id?: string
+  expires_at?: string
+  subscription_plans?: {
+    name?: string
+    price_inr?: number | string
+  } | null
+}
+
+interface TxnRecord {
+  id?: string
+  purchased_at?: string
+  created_at?: string
+  raw_event?: {
+    amount?: number | string
+    gst18Percent?: number | string
+    totalPaid?: number | string
+    paymentMode?: string
+  } | null
+  razorpay_payment_id?: string
+  transaction_id?: string
+  plan_id?: string
 }
 
 export const useBilling = () => {
   const { user } = useAuth()
   const [companyId, setCompanyId] = useState<string | null>(null)
-  const [invoices, setInvoices] = useState<EnterpriseInvoiceItem[]>(INITIAL_ENTERPRISE_INVOICES)
-  const [taxDetails, setTaxDetails] = useState<EnterpriseTaxDetails>(INITIAL_TAX_DETAILS)
-  const [activePlanName, setActivePlanName] = useState<string>('Starter Plan')
-  const [activePlanPrice, setActivePlanPrice] = useState<string>('₹1,499.00 / month')
-  const [nextRenewalDate, setNextRenewalDate] = useState<string>('19 Oct 2026')
+  const [invoices, setInvoices] = useState<EnterpriseInvoiceItem[]>([])
+  const [taxDetails, setTaxDetails] = useState<EnterpriseTaxDetails>(EMPTY_TAX_DETAILS)
+  const [activePlanName, setActivePlanName] = useState<string>('Free Plan')
+  const [activePlanPrice, setActivePlanPrice] = useState<string>('Free Tier')
+  const [nextRenewalDate, setNextRenewalDate] = useState<string>('No Expiry (Free Plan)')
+  const [isLoading, setIsLoading] = useState<boolean>(true)
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('')
@@ -164,57 +121,80 @@ export const useBilling = () => {
 
   // Fetch real company data & subscription transactions via Supabase RPC
   useEffect(() => {
+    let isMounted = true
+
     const loadBillingData = async () => {
-      if (!user) return
+      if (!user) {
+        if (isMounted) setIsLoading(false)
+        return
+      }
 
       try {
         // 1. Call Backend RPC: web_get_company_subscription_billing
         const { data: rpcData, error: rpcErr } = await supabase.rpc('web_get_company_subscription_billing')
 
         if (!rpcErr && rpcData && rpcData.has_company) {
+          if (!isMounted) return
+
           if (rpcData.company) {
             setCompanyId(rpcData.company.id)
+            const gstin = (rpcData.company.gstin || '').trim().toUpperCase()
+            const derivedPan = extractPanFromGstin(gstin)
+
             setTaxDetails((prev) => ({
               ...prev,
-              companyName: rpcData.company.name || prev.companyName,
-              gstin: rpcData.company.gstin || prev.gstin,
-              accountsEmail: rpcData.company.email || prev.accountsEmail,
-              billingAddress: rpcData.company.address || prev.billingAddress,
+              companyName: rpcData.company.name || prev.companyName || 'Enterprise Account',
+              gstin: gstin,
+              pan: derivedPan || (prev.pan && prev.pan !== 'AAACC4451N' ? prev.pan : ''),
+              accountsEmail: rpcData.company.email || prev.accountsEmail || user.email || '',
+              billingAddress: rpcData.company.address || prev.billingAddress || '',
             }))
           }
 
           if (rpcData.subscription) {
-            setActivePlanName(rpcData.subscription.plan_name || 'Starter Plan')
-            setActivePlanPrice(`₹${(rpcData.subscription.price_inr || 1499).toLocaleString('en-IN')}.00 / month`)
+            const planId = (rpcData.subscription.plan_id || 'free').toLowerCase()
+            const planName = rpcData.subscription.plan_name || (planId === 'free' ? 'Free Plan' : 'Enterprise Plan')
+            const priceInr = Number(rpcData.subscription.price_inr ?? 0)
 
-            if (rpcData.subscription.expires_at) {
-              const exp = new Date(rpcData.subscription.expires_at)
-              setNextRenewalDate(exp.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }))
+            setActivePlanName(planName)
+
+            if (planId === 'free' || priceInr === 0) {
+              setActivePlanPrice('Free Tier')
+              setNextRenewalDate('No Expiry (Free Plan)')
+            } else {
+              setActivePlanPrice(`₹${priceInr.toLocaleString('en-IN')}.00 / month`)
+
+              if (rpcData.subscription.expires_at) {
+                const exp = new Date(rpcData.subscription.expires_at)
+                setNextRenewalDate(exp.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }))
+              } else {
+                setNextRenewalDate('Monthly Renewal')
+              }
             }
           }
 
           if (rpcData.transactions && Array.isArray(rpcData.transactions) && rpcData.transactions.length > 0) {
-            const mappedInvoices: EnterpriseInvoiceItem[] = rpcData.transactions.map((t: any, idx: number) => {
-              const planNames: Record<string, string> = {
-                free: 'Free Plan',
-                starter: 'Starter Plan (Monthly)',
-                professional: 'Professional Plan (Monthly)',
-                unlimited: 'Unlimited Plan (Monthly)',
-                starter_cv: 'Starter + CV Add-on (100 Unlocks)',
-                professional_cv: 'Professional + CV Add-on (200 Unlocks)',
-              }
+            const planNames: Record<string, string> = {
+              free: 'Free Plan',
+              starter: 'Starter Plan (Monthly)',
+              professional: 'Professional Plan (Monthly)',
+              unlimited: 'Unlimited Plan (Monthly)',
+              starter_cv: 'Starter + CV Add-on (100 Unlocks)',
+              professional_cv: 'Professional + CV Add-on (200 Unlocks)',
+            }
 
+            const mappedInvoices: EnterpriseInvoiceItem[] = rpcData.transactions.map((t: RpcTransaction, idx: number) => {
               return {
                 id: t.id || `INV-${t.year || 2026}-${String(idx + 1).padStart(4, '0')}`,
                 date: t.date || 'Recent',
                 year: t.year || 2026,
-                plan: planNames[t.plan_id] || t.plan_id || 'Enterprise Plan',
+                plan: (t.plan_id && planNames[t.plan_id]) || t.plan_id || 'Enterprise Plan',
                 description: `${(t.plan_id || 'ENTERPRISE').toUpperCase()} Recruitment Software License`,
                 period: `${t.date?.split(' ')[1] || 'Current'} ${t.year || 2026}`,
                 sacCode: '998311',
-                amount: Number(t.amount || 1499.00),
-                gst: Number(t.gst || 269.82),
-                total: Number(t.total || 1768.82),
+                amount: Number(t.amount || 0),
+                gst: Number(t.gst || 0),
+                total: Number(t.total || 0),
                 paymentMethod: {
                   type: 'UPI',
                   label: t.payment_mode || 'Gateway AutoPay',
@@ -225,6 +205,8 @@ export const useBilling = () => {
             })
 
             setInvoices(mappedInvoices)
+          } else {
+            setInvoices([])
           }
           return
         }
@@ -236,15 +218,51 @@ export const useBilling = () => {
           .eq('owner_id', user.id)
           .maybeSingle()
 
+        if (!isMounted) return
+
         if (comp) {
           setCompanyId(comp.id)
+          const gstin = (comp.gst_number || '').trim().toUpperCase()
+          const derivedPan = extractPanFromGstin(gstin)
+
           setTaxDetails((prev) => ({
             ...prev,
-            companyName: comp.name || prev.companyName,
-            gstin: comp.gst_number || prev.gstin,
-            accountsEmail: comp.email || prev.accountsEmail,
-            billingAddress: comp.office_address || prev.billingAddress,
+            companyName: comp.name || prev.companyName || 'Enterprise Account',
+            gstin: gstin,
+            pan: derivedPan || (prev.pan && prev.pan !== 'AAACC4451N' ? prev.pan : ''),
+            accountsEmail: comp.email || prev.accountsEmail || user.email || '',
+            billingAddress: comp.office_address || prev.billingAddress || '',
           }))
+
+          // Also check active subscription from company_subscriptions
+          const { data: sub } = await supabase
+            .from('company_subscriptions')
+            .select('*, subscription_plans(name, price_inr)')
+            .eq('company_id', comp.id)
+            .eq('is_active', true)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+          if (isMounted && sub) {
+            const subTyped = sub as unknown as SubWithPlan
+            const planId = (subTyped.plan_id || 'free').toLowerCase()
+            const planName = subTyped.subscription_plans?.name || (planId === 'free' ? 'Free Plan' : 'Enterprise Plan')
+            const priceInr = Number(subTyped.subscription_plans?.price_inr ?? 0)
+
+            setActivePlanName(planName)
+
+            if (planId === 'free' || priceInr === 0) {
+              setActivePlanPrice('Free Tier')
+              setNextRenewalDate('No Expiry (Free Plan)')
+            } else {
+              setActivePlanPrice(`₹${priceInr.toLocaleString('en-IN')}.00 / month`)
+              if (sub.expires_at) {
+                const exp = new Date(sub.expires_at)
+                setNextRenewalDate(exp.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }))
+              }
+            }
+          }
 
           // Also fetch transactions directly if RPC didn't return them
           const { data: dbTxns } = await supabase
@@ -252,6 +270,8 @@ export const useBilling = () => {
             .select('*')
             .eq('company_id', comp.id)
             .order('purchased_at', { ascending: false })
+
+          if (!isMounted) return
 
           if (dbTxns && dbTxns.length > 0) {
             const planNames: Record<string, string> = {
@@ -263,9 +283,9 @@ export const useBilling = () => {
               professional_cv: 'Professional + CV Add-on (200 Unlocks)',
             }
 
-            const fallbackInvoices: EnterpriseInvoiceItem[] = dbTxns.map((t: any, idx: number) => {
+            const fallbackInvoices: EnterpriseInvoiceItem[] = dbTxns.map((t: TxnRecord, idx: number) => {
               const pDate = new Date(t.purchased_at || t.created_at || Date.now())
-              const amt = Number(t.raw_event?.amount || 1499.00)
+              const amt = Number(t.raw_event?.amount || 0)
               const gstAmt = Number(t.raw_event?.gst18Percent || (amt * 0.18).toFixed(2))
               const totAmt = Number(t.raw_event?.totalPaid || (amt * 1.18).toFixed(2))
 
@@ -273,7 +293,7 @@ export const useBilling = () => {
                 id: t.razorpay_payment_id || t.transaction_id || `INV-${pDate.getFullYear()}-${String(idx + 1).padStart(4, '0')}`,
                 date: pDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
                 year: pDate.getFullYear(),
-                plan: planNames[t.plan_id] || t.plan_id || 'Enterprise Plan',
+                plan: (t.plan_id && planNames[t.plan_id]) || t.plan_id || 'Enterprise Plan',
                 description: `${(t.plan_id || 'ENTERPRISE').toUpperCase()} Recruitment Software License`,
                 period: pDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }),
                 sacCode: '998311',
@@ -290,14 +310,25 @@ export const useBilling = () => {
             })
 
             setInvoices(fallbackInvoices)
+          } else {
+            setInvoices([])
           }
+        } else {
+          setInvoices([])
         }
       } catch (err) {
         console.warn('Error loading enterprise billing data:', err)
+        if (isMounted) setInvoices([])
+      } finally {
+        if (isMounted) setIsLoading(false)
       }
     }
 
     loadBillingData()
+
+    return () => {
+      isMounted = false
+    }
   }, [user])
 
   // Filtered invoices
@@ -569,6 +600,7 @@ export const useBilling = () => {
     setIsTaxModalOpen,
     isDownloadingZip,
     toastMessage,
+    isLoading,
     handleSaveTaxDetails,
     handleExportCsv,
     handleDownloadInvoice,

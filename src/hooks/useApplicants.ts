@@ -121,100 +121,6 @@ export interface UpcomingInterviewItem {
   status: 'scheduled' | 'completed' | 'cancelled'
 }
 
-// Fallback preview data for unauthenticated or demonstration sessions
-const DEMO_APPLICANTS: ApplicantItem[] = [
-  {
-    id: '774448b2-26da-4ed4-8cc3-646089cc002c',
-    jobId: '87b744c0-5a90-467f-9e48-1fc03caf07f2',
-    candidateId: '3f383df0-5ff7-4930-b0b1-f1b376d97a84',
-    name: 'Passionate Learner',
-    avatarInitials: 'PL',
-    email: 'student16999@gmail.com',
-    phone: '8080969636',
-    role: 'Junior Structural Engineer',
-    jobLocation: 'Pune, Maharashtra, India',
-    firmOrDept: 'Structural Engineering Studio',
-    stageStatus: 'in_review',
-    stageLabel: 'In Review',
-    isStarred: true,
-    appliedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
-    appliedDaysAgo: 2,
-    appliedDateLabel: 'Applied 2d ago',
-    lastUpdatedLabel: 'Updated today',
-    skills: ['AutoCAD', 'STAAD.Pro', 'Revit Structure', 'ETABS', 'Civil 3D'],
-    matchScore: 94,
-    bio: 'Dedicated civil and structural engineering graduate with hands-on exposure to seismic analysis, reinforced concrete modeling, and BIM detailing.',
-    education: 'B.Tech Civil Engineering',
-    institution: 'Government College Of Engineering',
-    discipline: 'Civil Engineering',
-    graduationYear: '2025',
-    candidateLocation: 'Pune, Maharashtra, India',
-    workMode: 'Flexible',
-    expectedCtc: '₹15,00,000 / annum',
-    noticePeriod: 'Immediately',
-    portfolioUrl: 'https://github.com',
-    resumeFileUrl:
-      'https://pmqtsplqnwexxnojeezg.supabase.co/storage/v1/object/public/profile-resume/profiles/3f383df0-5ff7-4930-b0b1-f1b376d97a84/resume_1789632371836.pdf',
-    linkedinUrl: 'https://linkedin.com',
-    experiences: [
-      {
-        id: 'exp-1',
-        roleTitle: 'Graduate Engineering Trainee',
-        organizationName: 'L&T Infrastructure',
-        contributions: 'Assisted in structural validation and foundation layout reviews using STAAD.Pro.',
-        startDate: '2024-06-01',
-        endDate: '2025-01-15',
-      },
-    ],
-    interviews: [],
-  },
-  {
-    id: 'a6abaf30-c4f8-42e1-a7dc-ce01f1f3bff6-app',
-    jobId: '87b744c0-5a90-467f-9e48-1fc03caf07f2',
-    candidateId: 'ec0e83b8-c5cd-4a8a-8397-06d03893989b',
-    name: 'Kashish Chhajed',
-    avatarInitials: 'KC',
-    email: 'kashishjain07123@gmail.com',
-    phone: '8668856464',
-    role: 'Junior Structural Engineer',
-    jobLocation: 'Pune, Maharashtra, India',
-    firmOrDept: 'Applied Structural Engineering',
-    stageStatus: 'shortlisted',
-    stageLabel: 'Shortlisted',
-    isStarred: false,
-    appliedAt: new Date(Date.now() - 4 * 86400000).toISOString(),
-    appliedDaysAgo: 4,
-    appliedDateLabel: 'Applied 4d ago',
-    lastUpdatedLabel: 'Updated yesterday',
-    skills: ['Revit Architecture', 'Tekla', 'Rhino 3D', 'BIM Coordination'],
-    matchScore: 88,
-    bio: 'Civil engineering professional with high aptitude in 3D BIM coordination, quantity takeoff, and structural detail drawings.',
-    education: 'B.Eng Civil Engineering',
-    institution: 'Sant Gadge Baba Amravati University',
-    discipline: 'Civil Engineering',
-    graduationYear: '2026',
-    candidateLocation: 'Nagpur, Maharashtra, India',
-    workMode: 'Remote',
-    expectedCtc: '₹12,00,000 / annum',
-    noticePeriod: 'Immediately',
-    portfolioUrl: 'https://www.linkedin.com',
-    resumeFileUrl:
-      'https://pmqtsplqnwexxnojeezg.supabase.co/storage/v1/object/public/profile-resume/profiles/ec0e83b8-c5cd-4a8a-8397-06d03893989b/resume_1789122610513.pdf',
-    linkedinUrl: 'https://www.linkedin.com',
-    experiences: [],
-    interviews: [
-      {
-        id: 'int-kc-1',
-        interviewDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10),
-        interviewTime: '15:00',
-        interviewType: 'Technical Review',
-        locationType: 'Video Call',
-        locationValue: 'https://meet.google.com/abc-defg-hij',
-        status: 'scheduled',
-      },
-    ],
-  },
-]
 
 function getInitials(name: string): string {
   if (!name) return 'CA'
@@ -244,42 +150,53 @@ function getStageLabel(status: ApplicationDBStatus): string {
   }
 }
 
-export function useApplicants(initialJobFilter?: { id?: string; title?: string } | null) {
-  const [loading, setLoading] = useState<boolean>(true)
-  const [companyId, setCompanyId] = useState<string | null>(null)
-  const [companyName, setCompanyName] = useState<string>('Enterprise Studio')
-  const [applicants, setApplicants] = useState<ApplicantItem[]>([])
-  const [companyJobs, setCompanyJobs] = useState<RequisitionOption[]>([])
-  const [selectedStage, setSelectedStage] = useState<StageCategoryFilter>('all')
-  const [searchQuery, setSearchQuery] = useState<string>('')
-  const [selectedRequisition, setSelectedRequisition] = useState<string>(() => {
-    if (initialJobFilter?.id) return initialJobFilter.id
-    if (initialJobFilter?.title) return initialJobFilter.title
-    return 'all'
-  })
-  const [sortBy, setSortBy] = useState<SortOption>('recent')
-  const [selectedApplicant, setSelectedApplicant] = useState<ApplicantItem | null>(null)
-  const [toastMessage, setToastMessage] = useState<string | null>(null)
-  const [upcomingInterviews, setUpcomingInterviews] = useState<UpcomingInterviewItem[]>([])
+// Helper interfaces for raw applicants query mapping
+interface RawApplicantCandidate {
+  id?: string
+  full_name?: string
+  bio?: string
+  email?: string
+  phone?: number | string
+  location?: string
+  institution?: string
+  discipline?: string
+  graduation_year?: string
+  portfolio_url?: string
+  profile_image_url?: string
+  resume_file_url?: string
+  work_mode?: string
+  expected_ctc?: string
+  notice_period?: string
+  linkedin_url?: string
+  skills?: Array<string | { skill_name?: string }>
+  experiences?: Array<{
+    id?: string
+    role_title?: string
+    organization_name?: string
+    contributions?: string
+    start_date?: string | null
+    end_date?: string | null
+  }>
+}
 
-  useEffect(() => {
-    if (initialJobFilter) {
-      if (initialJobFilter.id) {
-        setSelectedRequisition(initialJobFilter.id)
-      } else if (initialJobFilter.title) {
-        setSelectedRequisition(initialJobFilter.title)
-      }
-    }
-  }, [initialJobFilter])
+interface RawApplicantJob {
+  id?: string
+  title?: string
+  location?: string
+  category?: string
+  employment_type?: string | string[]
+}
 
-  const showNotification = useCallback((msg: string) => {
-    setToastMessage(msg)
-    setTimeout(() => {
-      setToastMessage(null)
-    }, 4000)
-  }, [])
+interface RawApplicantInterview {
+  id?: string
+  interview_date?: string
+  interview_time?: string
+  interview_type?: string
+  location_type?: string
+  location_value?: string
+  status?: 'scheduled' | 'completed' | 'cancelled'
+}
 
-// Helper to map either RPC row or direct table join row into ApplicantItem
 interface RawApplicantRow {
   id: string
   job_id: string | null
@@ -291,49 +208,9 @@ interface RawApplicantRow {
   updated_at?: string | null
   rejection_reason?: string | null
   match_score?: number
-  job?: {
-    id?: string
-    title?: string
-    location?: string
-    category?: string
-    employment_type?: string | string[]
-  } | null
-  candidate?: {
-    id?: string
-    full_name?: string
-    bio?: string
-    email?: string
-    phone?: number | string
-    location?: string
-    institution?: string
-    discipline?: string
-    graduation_year?: string
-    portfolio_url?: string
-    profile_image_url?: string
-    resume_file_url?: string
-    work_mode?: string
-    expected_ctc?: string
-    notice_period?: string
-    linkedin_url?: string
-    skills?: Array<string | { skill_name?: string }>
-    experiences?: Array<{
-      id?: string
-      role_title?: string
-      organization_name?: string
-      contributions?: string
-      start_date?: string | null
-      end_date?: string | null
-    }>
-  } | null
-  interviews?: Array<{
-    id?: string
-    interview_date?: string
-    interview_time?: string
-    interview_type?: string
-    location_type?: string
-    location_value?: string
-    status?: 'scheduled' | 'completed' | 'cancelled'
-  }> | null
+  job?: RawApplicantJob | null
+  candidate?: RawApplicantCandidate | null
+  interviews?: RawApplicantInterview[] | null
 }
 
 function mapRawApplicant(
@@ -446,6 +323,38 @@ function mapRawApplicant(
   return { applicant: appItem, scheduledInterview }
 }
 
+export function useApplicants(initialJobFilter?: { id?: string; title?: string } | null) {
+  const [loading, setLoading] = useState<boolean>(true)
+  const [companyId, setCompanyId] = useState<string | null>(null)
+  const [companyName, setCompanyName] = useState<string>('Enterprise Studio')
+  const [applicants, setApplicants] = useState<ApplicantItem[]>([])
+  const [companyJobs, setCompanyJobs] = useState<RequisitionOption[]>([])
+  const [selectedStage, setSelectedStage] = useState<StageCategoryFilter>('all')
+  const [searchQuery, setSearchQuery] = useState<string>('')
+  const [prevFilter, setPrevFilter] = useState(initialJobFilter)
+  const [selectedRequisition, setSelectedRequisition] = useState<string>(() => {
+    if (initialJobFilter?.id) return initialJobFilter.id
+    if (initialJobFilter?.title) return initialJobFilter.title
+    return 'all'
+  })
+
+  if (initialJobFilter !== prevFilter) {
+    setPrevFilter(initialJobFilter)
+    setSelectedRequisition(initialJobFilter?.id || initialJobFilter?.title || 'all')
+  }
+
+  const [sortBy, setSortBy] = useState<SortOption>('recent')
+  const [selectedApplicant, setSelectedApplicant] = useState<ApplicantItem | null>(null)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [upcomingInterviews, setUpcomingInterviews] = useState<UpcomingInterviewItem[]>([])
+
+  const showNotification = useCallback((msg: string) => {
+    setToastMessage(msg)
+    setTimeout(() => {
+      setToastMessage(null)
+    }, 4000)
+  }, [])
+
   // Fetch full applicant data via remote PostgreSQL database (RPC with direct table join fallback)
   const fetchApplicantsData = useCallback(async () => {
     try {
@@ -454,23 +363,9 @@ function mapRawApplicant(
       const { data: userData, error: userError } = await supabase.auth.getUser()
       const user = userData?.user
 
-      // If user is unauthenticated, fallback to demonstration preview applicants
       if (!user || userError) {
-        setApplicants(DEMO_APPLICANTS)
-        setUpcomingInterviews([
-          {
-            id: 'int-demo-1',
-            candidateId: 'ec0e83b8-c5cd-4a8a-8397-06d03893989b',
-            candidateName: 'Kashish Chhajed',
-            candidateRole: 'Junior Structural Engineer',
-            interviewDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10),
-            interviewTime: '15:00',
-            interviewType: 'Technical Review',
-            locationType: 'Video Call',
-            locationValue: 'https://meet.google.com/abc-defg-hij',
-            status: 'scheduled',
-          },
-        ])
+        setApplicants([])
+        setUpcomingInterviews([])
         setLoading(false)
         return
       }
@@ -548,9 +443,16 @@ function mapRawApplicant(
 
         if (!dbAppsErr && dbApps && Array.isArray(dbApps) && dbApps.length > 0) {
           const candidateIds = Array.from(new Set(dbApps.map((a) => a.candidate_id).filter(Boolean)))
-          const candidatesMap: Record<string, any> = {}
-          const skillsMap: Record<string, any[]> = {}
-          const expsMap: Record<string, any[]> = {}
+          const candidatesMap: Record<string, RawApplicantCandidate> = {}
+          const skillsMap: Record<string, Array<string | { skill_name?: string }>> = {}
+          const expsMap: Record<string, Array<{
+            id?: string
+            role_title?: string
+            organization_name?: string
+            contributions?: string
+            start_date?: string | null
+            end_date?: string | null
+          }>> = {}
 
           if (candidateIds.length > 0) {
             // Query student_profile
@@ -603,7 +505,7 @@ function mapRawApplicant(
 
           // Query interviews
           const appIds = dbApps.map((a) => a.id)
-          const ivsMap: Record<string, any[]> = {}
+          const ivsMap: Record<string, RawApplicantInterview[]> = {}
           if (appIds.length > 0) {
             const { data: ivsData } = await supabase
               .from('interviews')
@@ -618,16 +520,16 @@ function mapRawApplicant(
             }
           }
 
-          const jobsMap: Record<string, any> = {}
+          const jobsMap: Record<string, RawApplicantJob> = {}
           jobsList.forEach((j) => {
             jobsMap[j.id] = j
           })
 
           rawApplicantRows = dbApps.map((app) => {
             const st = candidatesMap[app.candidate_id] || {}
-            const j = jobsMap[app.job_id] || { title: 'General Applicant', location: 'Remote' }
-            const sk = skillsMap[st.id] || skillsMap[app.candidate_id] || []
-            const ex = expsMap[st.id] || expsMap[app.candidate_id] || []
+            const j = (app.job_id ? jobsMap[app.job_id] : null) || { title: 'General Applicant', location: 'Remote' }
+            const sk = (st.id ? skillsMap[st.id] : null) || skillsMap[app.candidate_id] || []
+            const ex = (st.id ? expsMap[st.id] : null) || expsMap[app.candidate_id] || []
             const iv = ivsMap[app.id] || []
 
             return {
@@ -953,7 +855,7 @@ function mapRawApplicant(
         // Default 'recent'
         return a.appliedDaysAgo - b.appliedDaysAgo
       })
-  }, [applicants, selectedStage, selectedRequisition, searchQuery, sortBy])
+  }, [applicants, selectedStage, selectedRequisition, searchQuery, sortBy, availableRequisitions])
 
   // Real Aggregate Metrics
   const metrics: ApplicantMetrics = useMemo(() => {

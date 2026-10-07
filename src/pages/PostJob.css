@@ -1,6 +1,8 @@
 /* ── Post an AEC Technical Requisition Page Styling ── */
 .post-job-page {
   width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -322,10 +324,8 @@
 
 /* ── 4. Main Grid: 8 Cols Form / 4 Cols Sidebar ── */
 .pj-main-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 24px;
-  align-items: start;
+  display: block;
+  width: 100%;
 }
 
 .pj-form-col {
@@ -880,13 +880,35 @@
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1300px) {
   .pj-stepper-grid {
     grid-template-columns: repeat(4, 1fr);
   }
+}
 
-  .pj-main-grid {
-    grid-template-columns: 8fr 4fr;
+@media (max-width: 1280px) {
+  .post-job-page {
+    max-width: 100%;
+    padding: 0 2px;
+    gap: 18px;
+  }
+
+  .pj-main-heading {
+    font-size: 24px;
+    line-height: 30px;
+  }
+}
+
+@media (max-height: 740px) {
+  .pj-modal-dialog {
+    max-height: 92vh;
+  }
+  .pj-modal-body {
+    max-height: calc(92vh - 110px);
+    padding: 14px;
+  }
+  .pj-modal-footer {
+    padding: 10px 16px;
   }
 }
 

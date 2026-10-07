@@ -2,7 +2,6 @@ import type { FC } from 'react'
 import './PostJob.css'
 import {
   usePostJob,
-  type CandidatePreview,
   CATEGORIES,
   PROJECT_TYPES,
   EXPERIENCE_LEVELS,
@@ -56,11 +55,6 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess, onNavigateToSub
     touched,
     handleBlur,
     isSubmitting,
-    candidateMatches,
-    totalCandidateCount,
-    matchingCandidateCount,
-    isTalentLoading,
-    healthScore,
     isPreviewModalOpen,
     setIsPreviewModalOpen,
     isPublishSuccessModalOpen,
@@ -863,111 +857,6 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess, onNavigateToSub
             </div>
           </section>
         </div>
-
-        {/* Right Column: Live Intelligence & Radar */}
-        <aside className="pj-sidebar-col">
-          {/* Card 1: Requisition Health Score */}
-          <article className="pj-sidebar-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 className="pj-sidebar-title">Requisition Health Score</h3>
-              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '13px', fontWeight: 700, color: healthScore >= 80 ? '#16a34a' : healthScore >= 50 ? '#00418f' : '#dc2626' }}>
-                {healthScore}%
-              </span>
-            </div>
-
-            <div className="benchmark-progress-track">
-              <div
-                className="benchmark-progress-fill"
-                style={{
-                  width: `${healthScore}%`,
-                  background: healthScore >= 80 ? '#16a34a' : healthScore >= 50 ? '#00418f' : '#dc2626',
-                  transition: 'width 0.3s ease',
-                }}
-              />
-            </div>
-
-            <p style={{ fontSize: '12px', color: '#424753', margin: 0 }}>
-              {healthScore >= 80
-                ? 'Optimal funnel quality. Requisition has comprehensive criteria to match high-value AEC talent.'
-                : healthScore >= 50
-                ? 'Good progress. Fill out technical requirements and responsibilities to achieve 90%+ match accuracy.'
-                : 'Initial draft. Provide more details to unlock talent radar syndication.'}
-            </p>
-          </article>
-
-          {/* Card 2: Real Matching Candidates Preview */}
-          <article className="pj-sidebar-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: '#00418f', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '16px', height: '16px' }}>
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="pj-sidebar-title" style={{ margin: 0, fontSize: '15px' }}>Available Matching Candidates</h3>
-                  <span style={{ fontSize: '11px', color: '#727784' }}>Verified talent ready for this role</span>
-                </div>
-              </div>
-              <span className="trn-radar-badge" style={{ fontSize: '10px' }}>LIVE NETWORK</span>
-            </div>
-
-            <div className="counter-2col-grid">
-              <div className="counter-sub-box">
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', textTransform: 'uppercase', color: '#727784' }}>Total Talent Pool</span>
-                <span style={{ fontFamily: 'Hanken Grotesk', fontSize: '24px', fontWeight: 700, color: '#1a1c1e' }}>
-                  {totalCandidateCount || 49}
-                </span>
-                <span style={{ fontSize: '11px', color: '#424753' }}>Active Job Seekers</span>
-              </div>
-
-              <div className="counter-sub-box primary">
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', textTransform: 'uppercase', color: '#adc6ff' }}>Matching Role</span>
-                <span style={{ fontFamily: 'Hanken Grotesk', fontSize: '24px', fontWeight: 700, color: '#ffffff' }}>
-                  {matchingCandidateCount || 18}
-                </span>
-                <span style={{ fontSize: '11px', color: '#d8e2ff' }}>High Fit Candidates</span>
-              </div>
-            </div>
-
-            {/* Candidates Ready Previews */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10.5px', textTransform: 'uppercase', color: '#727784', fontWeight: 700 }}>
-                Top Matched Profiles in Network:
-              </span>
-
-              {isTalentLoading ? (
-                <div style={{ padding: '16px', textAlign: 'center', fontSize: '12px', color: '#727784' }}>
-                  Scanning verified AEC candidates...
-                </div>
-              ) : candidateMatches.length === 0 ? (
-                <div style={{ padding: '16px', textAlign: 'center', fontSize: '12px', color: '#727784' }}>
-                  No candidates found for this exact criteria.
-                </div>
-              ) : (
-                candidateMatches.map((cand: CandidatePreview) => (
-                  <div className="candidate-preview-row" key={cand.id}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                      <div className="candidate-avatar-init">{cand.initials}</div>
-                      <div style={{ minWidth: 0 }}>
-                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#1a1c1e', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {cand.name}
-                        </span>
-                        <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {cand.skills}
-                        </span>
-                      </div>
-                    </div>
-                    <span className="candidate-fit-pill">{cand.fitScore}% FIT</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </article>
-        </aside>
       </main>
 
       {/* 4. Sticky Bottom Deployment Bar */}

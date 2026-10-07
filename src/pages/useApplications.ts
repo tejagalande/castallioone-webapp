@@ -461,9 +461,9 @@ export function useApplications() {
               progressPercent = 60
             } else if (rawStatus === 'in_review') {
               stage = 'review'
-              stageLabel = 'Stage 2: Dossier Under Review'
+              stageLabel = 'Stage 2: Application Under Review'
               currentStageNumber = 2
-              stageTitle = 'STAGE 2 OF 5: DOSSIER UNDER REVIEW'
+              stageTitle = 'STAGE 2 OF 5: APPLICATION UNDER REVIEW'
               progressPercent = 40
             } else if (rawStatus === 'rejected' || rawStatus === 'withdrawn') {
               stage = 'archived'
@@ -608,7 +608,7 @@ export function useApplications() {
                 icon: 'task_alt',
                 title: 'Candidate Shortlisted by Hiring Team',
                 description: `${studioName} has verified your qualifications and moved your application to the interview scheduling stage.`,
-                buttonText: 'Inspect Dossier',
+                buttonText: 'View Application',
                 buttonAction: 'dossier',
               }
             } else {
@@ -617,7 +617,7 @@ export function useApplications() {
                 icon: 'model_training',
                 title: 'Application Under Initial Review',
                 description: `${studioName} talent acquisition is evaluating your portfolio and credentials.`,
-                buttonText: 'Inspect Dossier',
+                buttonText: 'View Application',
                 buttonAction: 'dossier',
               }
             }
@@ -638,7 +638,7 @@ export function useApplications() {
               auditTrail.push({
                 id: `aud-${row.id}-short`,
                 time: formatRelativeTime(row.updated_at).toUpperCase(),
-                description: `${studioName} recruitment team moved candidate dossier to Shortlist.`,
+                description: `${studioName} recruitment team moved application to Shortlist.`,
                 isRecent: !latestIv,
               })
             }
@@ -707,7 +707,7 @@ export function useApplications() {
               accessNote: 'Verified Candidate Access',
               primaryBtnText: hasScheduledIv ? 'Join Virtual Defense Room' : 'View Job Details',
               primaryBtnIcon: hasScheduledIv ? 'videocam' : 'article',
-              secondaryBtnText: 'Inspect Submitted Dossier',
+              secondaryBtnText: 'View Submitted Application',
               dossierRecordId: `${studioInitials}-${row.id.slice(0, 8).toUpperCase()}`,
               confirmedSession,
               submittedArtifacts: artifacts,
@@ -842,10 +842,10 @@ export function useApplications() {
 
   const handleExportDossier = useCallback(() => {
     if (!selectedApp) return
-    showToast(`Generating Verified PDF Dossier for ${selectedApp.studio}... Download ready.`)
+    showToast(`Generating Verified PDF Summary for ${selectedApp.studio}... Download ready.`)
     const blob = new Blob(
       [
-        `CASTALLIO ONE AEC TALENT DOSSIER\n` +
+        `CASTALLIO ONE AEC APPLICATION SUMMARY\n` +
           `Applicant: ${candidateProfile.fullName} (${candidateProfile.discipline})\n` +
           `Active Pipeline: ${selectedApp.studio} - ${selectedApp.role}\n` +
           `Stage: ${selectedApp.stageTitle}\n` +
@@ -858,7 +858,7 @@ export function useApplications() {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `CastallioOne_Dossier_${selectedApp.studio.replace(/\s+/g, '_')}.txt`
+    link.download = `CastallioOne_Application_${selectedApp.studio.replace(/\s+/g, '_')}.txt`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)

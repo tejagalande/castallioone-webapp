@@ -63,76 +63,7 @@ export interface TalentMetrics {
 }
 
 // Fallback candidates for offline or unauthenticated development mode
-export const DEMO_TALENT: CandidateTalentItem[] = [
-  {
-    id: 'a6abaf30-c4f8-42e1-a7dc-ce01f1f3bff6',
-    userId: 'ec0e83b8-c5cd-4a8a-8397-06d03893989b',
-    name: 'Kashish Chhajed',
-    avatarInitials: 'KC',
-    profileImageUrl:
-      'https://pmqtsplqnwexxnojeezg.supabase.co/storage/v1/object/public/profile-picture/profiles/ec0e83b8-c5cd-4a8a-8397-06d03893989b/profile_1789122608686.jpg',
-    bio: 'Civil engineer with strong foundations in Rhino, AutoCAD, Civil 3D, and BIM Coordination. Dedicated to sustainable infrastructure and parametric workflows.',
-    email: 'kashishjain07123@gmail.com',
-    phone: '8668856464',
-    location: 'Nagpur, Maharashtra, India',
-    discipline: 'Civil Engineering',
-    institution: 'Sant Gadge Baba Amravati University',
-    graduationYear: '2026',
-    workMode: 'Remote',
-    expectedCtc: '₹15,000 / month',
-    noticePeriod: 'Immediately',
-    portfolioUrl:
-      'https://www.linkedin.com/in/kashish-chhajed-986362320',
-    resumeFileUrl:
-      'https://pmqtsplqnwexxnojeezg.supabase.co/storage/v1/object/public/profile-resume/profiles/ec0e83b8-c5cd-4a8a-8397-06d03893989b/resume_1789122610513.pdf',
-    hasResume: true,
-    linkedinUrl: 'https://linkedin.com',
-    isUnlocked: true,
-    hasEmbedding: true,
-    matchScore: 98,
-    experienceYears: 1.2,
-    skills: ['Rhino', 'AutoCAD', 'Civil 3D', 'SketchUp', 'Navisworks', 'Grasshopper', 'Revit', 'BIM Coordination'],
-    experiences: [],
-  },
-  {
-    id: '0a772d8b-81f0-4882-a2a6-aea76a17f51d',
-    userId: '3f383df0-5ff7-4930-b0b1-f1b376d97a84',
-    name: 'Passionate Learner',
-    avatarInitials: 'PL',
-    profileImageUrl:
-      'https://pmqtsplqnwexxnojeezg.supabase.co/storage/v1/object/public/profile-picture/profiles/3f383df0-5ff7-4930-b0b1-f1b376d97a84/profile_1789632371135.png',
-    bio: 'Structural Engineer specializing in analysis and design of RCC and steel structures for residential and commercial complexes.',
-    email: 'st••••@gmail.com',
-    phone: null,
-    location: 'Pune, Maharashtra, India',
-    discipline: 'Civil Engineering',
-    institution: 'Government College Of Engineering',
-    graduationYear: '2025',
-    workMode: 'Flexible',
-    expectedCtc: '₹15,00,000 / annum',
-    noticePeriod: 'Immediately',
-    portfolioUrl: 'https://github.com',
-    resumeFileUrl:
-      'https://pmqtsplqnwexxnojeezg.supabase.co/storage/v1/object/public/profile-resume/profiles/3f383df0-5ff7-4930-b0b1-f1b376d97a84/resume_1789632371836.pdf',
-    hasResume: true,
-    linkedinUrl: 'https://linkedin.com',
-    isUnlocked: false,
-    hasEmbedding: true,
-    matchScore: 94,
-    experienceYears: 1.5,
-    skills: ['Revit', 'Grasshopper', 'AutoCAD', 'BIM Coordination', 'STAAD.Pro', 'ETABS'],
-    experiences: [
-      {
-        id: 'e7c5144b-a009-4794-aff9-8d831fa0c45f',
-        roleTitle: 'Junior Structural Engineer',
-        organizationName: 'Genitt',
-        contributions: 'Assisted in structural validation, reinforcement details, and design compliance with IS codes.',
-        startDate: '2025-06-01',
-        endDate: null,
-      },
-    ],
-  },
-]
+export const DEMO_TALENT: CandidateTalentItem[] = []
 
 function getInitials(name?: string | null): string {
   if (!name || typeof name !== 'string') return 'CA'
@@ -150,7 +81,7 @@ export function useTalentSearch() {
   const [isSemanticMode, setIsSemanticMode] = useState<boolean>(true)
   const [companyId, setCompanyId] = useState<string | null>(null)
   const [companyName, setCompanyName] = useState<string>('Enterprise Studio')
-  const [talent, setTalent] = useState<CandidateTalentItem[]>(DEMO_TALENT)
+  const [talent, setTalent] = useState<CandidateTalentItem[]>([])
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [selectedDiscipline, setSelectedDiscipline] = useState<TalentDisciplineFilter>('all')
   const [selectedWorkMode, setSelectedWorkMode] = useState<string>('all')
@@ -306,18 +237,18 @@ export function useTalentSearch() {
             hasEmbedding: c.has_embedding,
             matchScore: c.has_embedding ? 95 : 85,
             experienceYears: Number(c.experience_years) || 0,
-            skills: skillsList.length > 0 ? skillsList : ['AutoCAD', 'BIM Modeling'],
+            skills: skillsList,
             experiences: expsList,
           }
         })
 
         setTalent(mapped)
       } else {
-        setTalent(DEMO_TALENT)
+        setTalent([])
       }
     } catch (err) {
       console.error('Error loading talent:', err)
-      setTalent(DEMO_TALENT)
+      setTalent([])
     } finally {
       setLoading(false)
     }
@@ -657,7 +588,7 @@ export function useTalentSearch() {
     link.click()
     document.body.removeChild(link)
 
-    showNotification('Talent export complete: Downloaded CSV dossier.')
+    showNotification('Talent export complete: Downloaded CSV profile list.')
   }, [filteredTalent, showNotification])
 
   return {

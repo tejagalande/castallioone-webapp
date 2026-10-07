@@ -707,3 +707,102 @@
     transform: scale(1) translateY(0);
   }
 }
+
+/* ── 720p & Laptop Screen Responsiveness Overhaul ── */
+@media (max-width: 1280px) {
+  .billing-page-container {
+    padding: 20px 16px 60px 16px !important;
+  }
+  .billing-content-body {
+    gap: 20px;
+  }
+}
+
+@media (max-height: 740px) {
+  .billing-modal-window {
+    max-height: 92vh;
+  }
+  .billing-modal-body {
+    padding: 14px 18px;
+  }
+  .billing-modal-footer {
+    padding: 10px 18px;
+  }
+}
+
+/* ── Empty State for Zero Transactions / Free Plan ── */
+.billing-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 56px 24px;
+  background: #ffffff;
+}
+
+.billing-empty-icon-wrapper {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(0, 86, 210, 0.08) 0%, rgba(14, 165, 233, 0.12) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.billing-empty-icon {
+  font-size: 36px;
+  color: #0056d2;
+}
+
+.billing-empty-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 10px 0;
+  letter-spacing: -0.3px;
+}
+
+.billing-empty-description {
+  font-size: 14px;
+  color: #64748b;
+  max-width: 580px;
+  line-height: 1.6;
+  margin: 0 0 28px 0;
+}
+
+.billing-empty-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* ── Loading Spinner State ── */
+.billing-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 64px 24px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.billing-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(0, 86, 210, 0.15);
+  border-top-color: #0056d2;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+

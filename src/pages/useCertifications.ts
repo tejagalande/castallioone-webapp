@@ -42,166 +42,25 @@ export interface VerificationTelemetry {
   ledgerShort: string
 }
 
-const INITIAL_CERTIFICATIONS: CertificationLicense[] = [
-  {
-    id: 'cert-bre',
-    title: 'BRE Academy — ISO 19650 Information Management Lead',
-    issuingBody: 'BRE Global Academy',
-    location: 'Watford, UK',
-    certNumber: 'BRE-IM-94820-UK',
-    tierLabel: 'TIER 1 GLOBAL STANDARD',
-    status: 'verified',
-    issueDate: 'Oct 24, 2022',
-    validUntil: 'Oct 24, 2025',
-    accreditationType: 'Professional Lead',
-    ledgerHash: '0x8F4AE39120BC84F9B91C771',
-    category: 'bim-cde',
-    apiSyncStatus: 'Automated API verification via BRE Credential Registry',
-    competencies: [
-      'ISO 19650-1 / -2',
-      'CDE Workflow Architecture',
-      'BEP Authoring',
-      'MIDP & TIDP Matrices',
-      'EIR Alignment',
-      'Information Handover (COBie)',
-    ],
-    hasDirectApiSync: true,
-  },
-  {
-    id: 'cert-autodesk',
-    title: 'Autodesk Certified Professional — Revit Architecture 2024',
-    issuingBody: 'Autodesk Inc. via Certiport',
-    location: 'San Francisco, CA',
-    certNumber: 'AC-REVIT-2024-88319',
-    tierLabel: 'VENDOR EXPERT',
-    status: 'verified',
-    issueDate: 'Jan 15, 2024',
-    validUntil: 'Release Tier 2024',
-    accreditationType: 'Vendor Certification',
-    ledgerHash: '0x3C91004A81BC2210FA98124',
-    category: 'parametric',
-    scoreAchieved: '960 / 1000 (96%)',
-    apiSyncStatus: 'Sync status: Live token validated 2 hours ago (Credly Synced)',
-    competencies: [
-      'Parametric Family Fabrication',
-      'Multi-discipline Worksets',
-      'Clash Resolution',
-      'Dynamo Visual Scripting',
-      'Design Options & Phasing',
-    ],
-    hasDirectApiSync: true,
-  },
-  {
-    id: 'cert-bsi',
-    title: 'buildingSMART International — openBIM Professional Foundation',
-    issuingBody: 'buildingSMART International',
-    location: 'London / Worldwide',
-    certNumber: 'BSI-PCERT-2023-441',
-    tierLabel: 'OPENBIM CERTIFIED',
-    status: 'verified',
-    issueDate: 'May 11, 2023',
-    validUntil: 'May 11, 2026',
-    accreditationType: 'openBIM Practitioner',
-    ledgerHash: '0x992BCA129984BC8120FF456',
-    category: 'bim-cde',
-    apiSyncStatus: 'Standard ISO 16739-1:2018 conformity audited',
-    competencies: [
-      'IFC4 Schema Architecture',
-      'BCF Issue Tracking',
-      'Model View Definitions (MVD)',
-      'Information Delivery Manual (IDM)',
-    ],
-    hasDirectApiSync: true,
-  },
-  {
-    id: 'cert-canbim',
-    title: 'CanBIM Professional Certification — Level 3 (CP)',
-    issuingBody: 'Building Transformations / CanBIM',
-    location: 'Toronto, Canada',
-    certNumber: 'CANBIM-L3-0941',
-    tierLabel: 'NATIONAL COUNCIL',
-    status: 'verified',
-    issueDate: 'Aug 19, 2021',
-    validUntil: 'Aug 19, 2025',
-    accreditationType: 'Level 3 Senior Coordination',
-    ledgerHash: '0x77A199BC44D120AA888123C',
-    category: 'institutions',
-    apiSyncStatus: 'CanBIM certified council reviewer authenticated',
-    competencies: [
-      'VDC Field Coordination',
-      'LOD 400 Trade Coordination',
-      'Multi-Consultant Conflict Resolution',
-      'Navisworks Coordination',
-    ],
-    hasDirectApiSync: false,
-  },
-  {
-    id: 'cert-mcneel',
-    title: 'Rhino & Grasshopper Level 2 Specialist (McNeel Europe)',
-    issuingBody: 'Robert McNeel & Associates',
-    location: 'Barcelona, Spain',
-    certNumber: 'MCN-GH-8201',
-    tierLabel: 'COMPUTATIONAL EXPERT',
-    status: 'verified',
-    issueDate: 'Nov 14, 2022',
-    validUntil: 'Lifetime / No expiration',
-    accreditationType: 'Computational Design Track',
-    ledgerHash: '0x44BC201A9876543210FEDCBA',
-    category: 'parametric',
-    apiSyncStatus: 'Issued Nov 2022 • No expiration • Computational Design Track',
-    competencies: [
-      'NURBS Surface Topology',
-      'Kangaroo Physics Simulation',
-      'Ladybug Environmental Solar Study',
-      'Rhino.Inside Revit API',
-    ],
-    hasDirectApiSync: true,
-  },
-  {
-    id: 'cert-cscs',
-    title: 'Safety & Site Protocol — CSCS Professionally Qualified Person (PQP)',
-    issuingBody: 'Construction Skills Certification Scheme (CITB)',
-    location: 'UK Nationwide',
-    certNumber: 'CSCS-PQP-449102',
-    tierLabel: 'ON-SITE HEALTH & SAFETY',
-    status: 'expiring',
-    issueDate: 'Jan 01, 2020',
-    validUntil: 'Dec 31, 2024',
-    daysRemaining: 65,
-    accreditationType: 'Site Qualified Person',
-    ledgerHash: '0x123456789ABCDEF012345678',
-    category: 'safety',
-    renewalActionRequired: true,
-    renewalNotes:
-      'Your card expires on Dec 31, 2024. Submit your updated professional membership audit to CITB to prevent site audit downtime.',
-    apiSyncStatus: 'CITB Card Checker Database synchronized',
-    competencies: [
-      'UK Construction Site Health & Safety',
-      'CDM 2015 Regulations',
-      'Site Risk Assessment',
-      'Laser Scanning Site Safety',
-    ],
-    hasDirectApiSync: true,
-  },
-]
+const INITIAL_CERTIFICATIONS: CertificationLicense[] = []
 
 const INITIAL_CPD: CPDProgress = {
-  totalHours: 84,
+  totalHours: 0,
   targetHours: 100,
   cycle: '2024-2025 CYCLE',
   breakdown: {
-    bimCoordination: 42,
-    computationalScripting: 26,
-    isoLegalProtocol: 16,
+    bimCoordination: 0,
+    computationalScripting: 0,
+    isoLegalProtocol: 0,
   },
 }
 
 const INITIAL_TELEMETRY: VerificationTelemetry = {
-  activeCount: 6,
-  complianceScore: 99.4,
-  trustIndex: 100,
-  cryptographicHash: '0x8F4AE39120BC84F9B91C771',
-  ledgerShort: '0x8F4A...B91C',
+  activeCount: 0,
+  complianceScore: 0,
+  trustIndex: 0,
+  cryptographicHash: '—',
+  ledgerShort: '—',
 }
 
 export function useCertifications() {
@@ -272,7 +131,7 @@ export function useCertifications() {
 
   const handleCopyShareLink = useCallback(() => {
     if (navigator.clipboard) {
-      navigator.clipboard.writeText('https://castallio.one/verify/alex-morgan-vdc')
+      navigator.clipboard.writeText('https://castallio.one/verify/credentials')
     }
     showToast('Public shareable verification ledger URL copied!')
   }, [showToast])
@@ -280,7 +139,7 @@ export function useCertifications() {
   const handleDownloadTranscriptPDF = useCallback(() => {
     const transcriptText = `CASTALLIO ONE // VERIFIED CREDENTIAL TRANSCRIPT
 =====================================================
-CANDIDATE: Alex Morgan, M.Sc., AIA Assoc., CanBIM Prof.
+CANDIDATE: Verified AEC Candidate
 LEDGER HASH: ${telemetry.cryptographicHash}
 COMPLIANCE SCORE: ${telemetry.complianceScore}% (ISO 19650 Level 2)
 TRUST INDEX: 100/100

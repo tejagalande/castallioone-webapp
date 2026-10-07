@@ -320,7 +320,7 @@
   }
 }
 
-@media (min-width: 1180px) {
+@media (min-width: 1350px) {
   .sub-plans-grid.four-columns {
     grid-template-columns: repeat(4, 1fr);
   }
@@ -1389,3 +1389,32 @@
   gap: 8px;
   margin-top: 4px;
 }
+
+/* ── 720p & Laptop Screen Responsiveness Overhaul ── */
+@media (max-width: 1280px) {
+  .sub-page-wrapper {
+    padding: 0 4px 40px;
+    gap: 16px;
+  }
+  .sub-title {
+    font-size: 24px;
+    line-height: 30px;
+  }
+  .sub-plans-grid.four-columns {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 16px;
+  }
+}
+
+@media (max-height: 740px) {
+  .sub-modal-content {
+    max-height: 92vh;
+  }
+  .sub-modal-body {
+    padding: 14px 18px;
+  }
+  .sub-modal-footer {
+    padding: 10px 18px;
+  }
+}
+

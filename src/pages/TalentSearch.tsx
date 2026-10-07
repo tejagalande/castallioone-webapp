@@ -255,7 +255,6 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
             <span className="ts-metric-num">{metrics?.totalTalentCount ?? 0}</span>
             <span className="ts-metric-pill-verified">Indexed</span>
           </div>
-          <p className="ts-metric-desc">Civil, Structural &amp; Architecture Specialists</p>
         </article>
 
         {/* Metric 2 */}
@@ -273,7 +272,6 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
               1536 Dim
             </span>
           </div>
-          <p className="ts-metric-desc">Ready for Semantic Cosine Search</p>
         </article>
 
         {/* Metric 3 */}
@@ -291,7 +289,6 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
               Used / {quota?.cvUnlockLimit ?? 50} Total
             </span>
           </div>
-          <p className="ts-metric-desc">{quota?.remainingCvs ?? 0} Unlocks remaining in active plan</p>
         </article>
 
         {/* Metric 4 */}
@@ -307,7 +304,6 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
             <span className="ts-metric-num">{metrics?.savedCount ?? 0}</span>
             <span className="ts-metric-pill-verified">Bookmarked</span>
           </div>
-          <p className="ts-metric-desc">Candidates shortlisted for direct outreach</p>
         </article>
       </section>
 
@@ -836,85 +832,6 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
           </>
         )}
         </div>
-
-        {/* Right Column: Sidebar Quota & Search Intelligence */}
-        <aside className="ts-sidebar-column">
-          {/* Subscription & CV Unlock Quota Box */}
-          <div className="ts-sidebar-card">
-            <div className="sidebar-card-header">
-              <div className="sidebar-card-title-group">
-                <span className="material-symbols-outlined text-primary" style={{ color: '#00418f' }} aria-hidden="true">
-                  credit_score
-                </span>
-                <h3 className="sidebar-card-title">Talent Sourcing Quota</h3>
-              </div>
-              <span className="sidebar-badge-count">{quota.remainingCvs} LEFT</span>
-            </div>
-
-            <div className="quota-progress-box">
-              <div className="quota-numbers-line">
-                <span>{quota.cvsUnlocked} Unlocked This Month</span>
-                <strong>{quota.cvUnlockLimit} Plan Limit</strong>
-              </div>
-              <div className="quota-bar-track">
-                <div
-                  className="quota-bar-fill"
-                  style={{
-                    width: `${quota.cvUnlockLimit ? (quota.cvsUnlocked / quota.cvUnlockLimit) * 100 : 0}%`,
-                  }}
-                ></div>
-              </div>
-            </div>
-
-            <p className="sidebar-quota-desc">
-              Unlocking a profile grants permanent access to verified email, direct contact phone, and official resume PDF.
-            </p>
-          </div>
-
-          {/* AI Semantic Engine Card */}
-          <div className="ts-sidebar-card">
-            <div className="sidebar-card-header">
-              <div className="sidebar-card-title-group">
-                <span className="material-symbols-outlined text-primary" style={{ color: '#00418f' }} aria-hidden="true">
-                  neurology
-                </span>
-                <h3 className="sidebar-card-title">Vector Search Engine</h3>
-              </div>
-              <span className="sidebar-badge-mono">GEMINI-001</span>
-            </div>
-
-            <p className="sidebar-info-desc">
-              Our semantic matching converts natural language queries into <strong>1536-dimensional embeddings</strong>,
-              matching candidates based on semantic skill graphs, project contributions, and discipline depth.
-            </p>
-
-            <div className="quick-search-samples">
-              <span className="samples-title">Try Example Prompts:</span>
-              <button
-                type="button"
-                className="sample-prompt-chip"
-                onClick={() => {
-                  setSearchQuery('Revit BIM structural designer with reinforced concrete detailing')
-                  setIsSemanticMode(true)
-                  void performSemanticSearch('Revit BIM structural designer with reinforced concrete detailing')
-                }}
-              >
-                &ldquo;Revit BIM structural designer...&rdquo;
-              </button>
-              <button
-                type="button"
-                className="sample-prompt-chip"
-                onClick={() => {
-                  setSearchQuery('Civil engineer with AutoCAD and parametric modeling experience')
-                  setIsSemanticMode(true)
-                  void performSemanticSearch('Civil engineer with AutoCAD and parametric modeling experience')
-                }}
-              >
-                &ldquo;Civil engineer with AutoCAD...&rdquo;
-              </button>
-            </div>
-          </div>
-        </aside>
       </section>
 
       {/* ── MODAL 1: Candidate Quick Dossier ── */}
@@ -932,7 +849,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
                   folder_shared
                 </span>
                 <div>
-                  <h3 className="modal-header-title">Candidate Talent Dossier</h3>
+                  <h3 className="modal-header-title">Candidate Profile</h3>
                   <span className="modal-header-sub">
                     {selectedCandidate.discipline} • {selectedCandidate.location}
                   </span>
@@ -942,7 +859,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
                 type="button"
                 className="btn-modal-close"
                 onClick={() => setSelectedCandidate(null)}
-                aria-label="Close Dossier"
+                aria-label="Close Profile"
               >
                 ✕
               </button>

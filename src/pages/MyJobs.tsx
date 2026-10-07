@@ -241,23 +241,11 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highli
               </svg>
             </div>
           </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-              <span className="mj-metric-huge-num">{loading ? '...' : String(activeCount).padStart(2, '0')}</span>
-              <span style={{ fontFamily: 'JetBrains Mono', color: '#00418f', fontWeight: 700, fontSize: '13px' }}>
-                {activeCount > 0 ? 'Live / Synced' : 'No Active Posts'}
-              </span>
-            </div>
-            <p className="mj-metric-subtext" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '15px', height: '15px' }}>
-                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-                <polyline points="17 6 23 6 23 12" />
-              </svg>
-              Live radar syndication active
-            </p>
-          </div>
-          <div style={{ width: '100%', height: '6px', borderRadius: '4px', background: '#eeeef0', overflow: 'hidden', display: 'flex' }}>
-            <div style={{ width: activeCount > 0 ? '100%' : '0%', height: '100%', background: '#00418f' }} />
+          <div className="mj-metric-value-row">
+            <span className="mj-metric-huge-num">{loading ? '...' : String(activeCount).padStart(2, '0')}</span>
+            <span className="mj-metric-badge">
+              {activeCount > 0 ? 'Live / Synced' : 'No Active Posts'}
+            </span>
           </div>
         </article>
 
@@ -274,21 +262,9 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highli
               </svg>
             </div>
           </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-              <span className="mj-metric-huge-num">{loading ? '...' : totalApplicantsCount}</span>
-              <span style={{ fontFamily: 'JetBrains Mono', color: '#00418f', fontWeight: 700, fontSize: '13px' }}>Profiles</span>
-            </div>
-            <p className="mj-metric-subtext" style={{ marginTop: '4px' }}>
-              Across {totalCount} total {totalCount === 1 ? 'job post' : 'job posts'}
-            </p>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '13px', height: '13px' }}>
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-            Applicant Tracking System Synced
+          <div className="mj-metric-value-row">
+            <span className="mj-metric-huge-num">{loading ? '...' : totalApplicantsCount}</span>
+            <span className="mj-metric-badge">Profiles</span>
           </div>
         </article>
 
@@ -303,18 +279,9 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highli
               </svg>
             </div>
           </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-              <span className="mj-metric-huge-num">{loading ? '...' : String(draftCount).padStart(2, '0')}</span>
-              <span style={{ fontFamily: 'JetBrains Mono', color: '#00418f', fontWeight: 700, fontSize: '13px' }}>In Vault</span>
-            </div>
-            <p className="mj-metric-subtext" style={{ marginTop: '4px' }}>
-              Unpublished drafts awaiting launch
-            </p>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>
-            <span>Vault Status</span>
-            <span style={{ color: '#00418f', fontWeight: 700 }}>Ready to configure</span>
+          <div className="mj-metric-value-row">
+            <span className="mj-metric-huge-num">{loading ? '...' : String(draftCount).padStart(2, '0')}</span>
+            <span className="mj-metric-badge">In Vault</span>
           </div>
         </article>
 
@@ -329,21 +296,9 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highli
               </svg>
             </div>
           </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-              <span className="mj-metric-huge-num">{loading ? '...' : String(closedCount).padStart(2, '0')}</span>
-              <span style={{ fontFamily: 'JetBrains Mono', color: '#39464f', fontWeight: 700, fontSize: '13px' }}>Archived</span>
-            </div>
-            <p className="mj-metric-subtext" style={{ marginTop: '4px' }}>
-              Past completed hiring campaigns
-            </p>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f' }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '13px', height: '13px' }}>
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-              <polyline points="22 4 12 14.01 9 11.01" />
-            </svg>
-            Ledger historical record intact
+          <div className="mj-metric-value-row">
+            <span className="mj-metric-huge-num">{loading ? '...' : String(closedCount).padStart(2, '0')}</span>
+            <span className="mj-metric-badge muted">Archived</span>
           </div>
         </article>
       </section>
@@ -836,37 +791,28 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highli
             </div>
 
             <div className="mj-modal-body">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ background: '#f3f3f6', borderRadius: '10px', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <strong style={{ fontSize: '14px', color: '#1a1c1e', display: 'block' }}>Alex Morgan</strong>
-                    <span style={{ fontSize: '12px', color: '#424753' }}>Senior BIM Coordinator • ISO 19650 Level 2 Certified</span>
-                  </div>
-                  <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', background: '#d8e2ff', color: '#00418f', padding: '3px 8px', borderRadius: '4px', fontWeight: 700 }}>
-                    98% Match
-                  </span>
+              {selectedReqForCandidates.pipeline.applied > 0 ? (
+                <div style={{ textAlign: 'center', padding: '16px 8px' }}>
+                  <p style={{ fontSize: '14px', color: '#1a1c1e', margin: '0 0 8px' }}>
+                    <strong>{selectedReqForCandidates.pipeline.applied} candidate(s)</strong> have applied for this position.
+                  </p>
+                  <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+                    Click below to review candidate credentials, interview stages, and resumes in your Applicants pipeline.
+                  </p>
                 </div>
-
-                <div style={{ background: '#f3f3f6', borderRadius: '10px', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <strong style={{ fontSize: '14px', color: '#1a1c1e', display: 'block' }}>David Kim</strong>
-                    <span style={{ fontSize: '12px', color: '#424753' }}>Façade Scripting Specialist • Scalpel Façade cluster author</span>
-                  </div>
-                  <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', background: '#d8e2ff', color: '#00418f', padding: '3px 8px', borderRadius: '4px', fontWeight: 700 }}>
-                    94% Match
+              ) : (
+                <div style={{ textAlign: 'center', padding: '24px 8px' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '40px', color: '#94a3b8', marginBottom: '8px' }}>
+                    group_off
                   </span>
+                  <p style={{ fontSize: '14px', fontWeight: 600, color: '#1a1c1e', margin: '0 0 6px' }}>
+                    No Candidates Applied Yet
+                  </p>
+                  <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+                    Inbound candidate applications for this position will appear here as soon as applicants apply.
+                  </p>
                 </div>
-
-                <div style={{ background: '#f3f3f6', borderRadius: '10px', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <strong style={{ fontSize: '14px', color: '#1a1c1e', display: 'block' }}>Elena V. Kowalski</strong>
-                    <span style={{ fontSize: '12px', color: '#424753' }}>CDE Information Lead • Arup Berlin</span>
-                  </div>
-                  <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', background: '#d8e2ff', color: '#00418f', padding: '3px 8px', borderRadius: '4px', fontWeight: 700 }}>
-                    91% Match
-                  </span>
-                </div>
-              </div>
+              )}
             </div>
 
             <div className="mj-modal-footer">

@@ -38,7 +38,6 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = ({
     toggleStarCandidate,
     scheduleInterview,
     exportDossierCSV,
-    upcomingInterviews,
     showMatrixModal,
     setShowMatrixModal,
     showScheduleModal,
@@ -154,7 +153,7 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = ({
           <h1 className="sl-header-title">Shortlisted Candidates</h1>
           <p className="sl-header-desc">
             Curated directory of pre-screened AEC professionals, BIM directors, and structural specialists shortlisted
-            for your open requisitions. Coordinate interview rounds, inspect resumes, and download dossiers.
+            for your open requisitions. Coordinate interview rounds, inspect resumes, and download candidate profiles.
           </p>
         </div>
 
@@ -163,12 +162,12 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = ({
             type="button"
             className="btn-sl-secondary"
             onClick={exportDossierCSV}
-            title="Download CSV Dossier of Shortlisted Profiles"
+            title="Download CSV of Shortlisted Profiles"
            >
             <span className="material-symbols-outlined text-primary" aria-hidden="true">
               download
             </span>
-            <span>Export Dossier (CSV)</span>
+            <span>Export Candidates (CSV)</span>
           </button> */}
 
           {/* <button
@@ -211,15 +210,6 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = ({
             <span className="sl-metric-num">{metrics.total}</span>
             <span className="sl-metric-subtext">AEC Candidates</span>
           </div>
-          <div className="sl-metric-progress-wrap">
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>
-              <span>{metrics.immediate} Available Immediately</span>
-              <span style={{ color: '#00418f', fontWeight: 700 }}>{metrics.immediatePct}% POOL</span>
-            </div>
-            <div className="sl-metric-bar-bg">
-              <div className="sl-metric-bar-fill" style={{ width: `${metrics.total > 0 ? Math.max(10, metrics.immediatePct) : 0}%` }}></div>
-            </div>
-          </div>
         </article>
 
         {/* Metric 2 */}
@@ -231,14 +221,6 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = ({
           <div className="sl-metric-val-row">
             <span className="sl-metric-num highlight">{metrics.total > 0 ? `${metrics.avgMatch}%` : '—'}</span>
             <span className="sl-metric-subtext">Match Quality</span>
-          </div>
-          <div className="sl-metric-progress-wrap">
-            <p style={{ fontSize: '12px', color: '#424753', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              Revit, Rhino, Civil 3D &amp; Navisworks
-            </p>
-            <div className="sl-metric-bar-bg">
-              <div className="sl-metric-bar-fill" style={{ width: `${metrics.total > 0 ? metrics.avgMatch : 0}%` }}></div>
-            </div>
           </div>
         </article>
 
@@ -254,15 +236,6 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = ({
             <span className="sl-metric-num">{metrics.withResume}</span>
             <span className="sl-metric-subtext">Profiles Attached</span>
           </div>
-          <div className="sl-metric-progress-wrap">
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>
-              <span>PDF Documents in Vault</span>
-              <span style={{ color: '#00418f', fontWeight: 700 }}>{metrics.resumePct}% READY</span>
-            </div>
-            <div className="sl-metric-bar-bg">
-              <div className="sl-metric-bar-fill" style={{ width: `${metrics.total > 0 ? Math.max(12, metrics.resumePct) : 0}%` }}></div>
-            </div>
-          </div>
         </article>
 
         {/* Metric 4 */}
@@ -274,14 +247,6 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = ({
           <div className="sl-metric-val-row">
             <span className="sl-metric-num">{metrics.withInterview}</span>
             <span className="sl-metric-subtext">Confirmed Rounds</span>
-          </div>
-          <div className="sl-metric-progress-wrap">
-            <p style={{ fontSize: '12px', color: '#424753', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              Technical Reviews &amp; Portfolios
-            </p>
-            <div className="sl-metric-bar-bg">
-              <div className="sl-metric-bar-fill" style={{ width: `${metrics.total > 0 ? Math.min(100, metrics.withInterview * 25) : 0}%` }}></div>
-            </div>
           </div>
         </article>
       </section>
@@ -803,122 +768,6 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = ({
             </div>
           )}
         </div>
-
-        {/* Right Sidebar: Intelligence & Collaborative Tools */}
-        <aside className="sl-sidebar-column">
-          {/* Widget 1: Shortlisted by Job Listing */}
-          <div className="sl-sidebar-card">
-            <div className="sl-sidebar-header">
-              <span className="sl-sidebar-title">Shortlisted by Job</span>
-              <span className="material-symbols-outlined text-primary" style={{ color: '#00418f' }} aria-hidden="true">
-                work
-              </span>
-            </div>
-
-            <div className="sl-folder-list">
-              {jobsList.length === 0 ? (
-                <p style={{ fontSize: '13px', color: '#727784', margin: '4px 0', padding: '4px 0' }}>
-                  No active job requisitions with shortlisted candidates.
-                </p>
-              ) : (
-                jobsList.map((j) => (
-                  <div
-                    key={j.id}
-                    className={`sl-folder-item ${selectedJobId === j.id ? 'active' : ''}`}
-                    onClick={() => setSelectedJobId(selectedJobId === j.id ? null : j.id)}
-                    title={`Filter by ${j.title}`}
-                  >
-                    <div className="sl-folder-left">
-                      <span className="material-symbols-outlined" aria-hidden="true">
-                        business_center
-                      </span>
-                      <span className="sl-folder-name">{j.title}</span>
-                    </div>
-                    <span className="sl-folder-count">{j.count} Pros</span>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {selectedJobId && (
-              <button
-                type="button"
-                className="btn-new-folder"
-                onClick={() => setSelectedJobId(null)}
-              >
-                <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
-                  filter_alt_off
-                </span>
-                <span>Clear Job Filter</span>
-              </button>
-            )}
-          </div>
-
-
-          {/* Widget 3: Upcoming Scheduled Interviews */}
-          <div className="sl-sidebar-card">
-            <div className="sl-sidebar-header">
-              <span className="sl-sidebar-title">Upcoming Interviews</span>
-              <span className="material-symbols-outlined text-primary" style={{ color: '#00418f' }} aria-hidden="true">
-                event
-              </span>
-            </div>
-
-            {upcomingInterviews.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '16px 8px', color: '#727784', fontSize: '13px' }}>
-                <span className="material-symbols-outlined" style={{ fontSize: '28px', color: '#a0a6b5' }}>
-                  calendar_today
-                </span>
-                <p style={{ margin: '8px 0 0' }}>No interview rounds scheduled yet.</p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {upcomingInterviews.slice(0, 3).map((iv) => (
-                  <div key={iv.id} className="sl-deadline-item">
-                    <div className="sl-deadline-top">
-                      <div>
-                        <h4 className="sl-deadline-title">{iv.candidateName}</h4>
-                        <span className="sl-deadline-sub">{iv.role}</span>
-                      </div>
-                      <span className="sl-folder-count">{iv.type}</span>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f', fontWeight: 600 }}>
-                      <span>DATE: {iv.date}</span>
-                      <span>TIME: {iv.time}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Widget 4: Talent Verification & Contact Access */}
-          <div className="sl-sidebar-card">
-            <div className="sl-sidebar-header">
-              <span className="sl-sidebar-title">Talent Access &amp; Compliance</span>
-              <span className="material-symbols-outlined text-primary" style={{ color: '#00418f' }} aria-hidden="true">
-                verified_user
-              </span>
-            </div>
-
-            <div className="sl-privacy-box">
-              <div className="sl-privacy-title">
-                <span className="material-symbols-outlined text-primary" aria-hidden="true">
-                  lock
-                </span>
-                <span>Direct Contact Access</span>
-              </div>
-              <p className="sl-privacy-desc">
-                Shortlisted candidates have consented to direct recruiter contact and portfolio evaluation on Castallio One.
-              </p>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784', paddingTop: '4px' }}>
-                <span>RESUMES VAULT: ACTIVE</span>
-                <span style={{ color: '#00418f', fontWeight: 700 }}>100% VERIFIED</span>
-              </div>
-            </div>
-          </div>
-        </aside>
       </section>
 
       {/* ── MODAL 1: Comparison Matrix ── */}

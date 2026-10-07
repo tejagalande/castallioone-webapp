@@ -1,7 +1,7 @@
 import type { FC } from 'react'
 import Notifications, { type NotificationsProps } from './Notifications'
 
-export interface JobAlertsProps extends NotificationsProps {}
+export type JobAlertsProps = NotificationsProps
 
 /**
  * JobAlerts has been replaced by the Notifications feature to align with

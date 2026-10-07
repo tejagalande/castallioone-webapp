@@ -80,7 +80,7 @@ BEGIN
         'company', jsonb_build_object(
             'id', v_company.id,
             'name', COALESCE(v_company.name, 'Enterprise Studio'),
-            'gstin', COALESCE(v_company.gst_number, '27AAACC4451N1ZP'),
+            'gstin', COALESCE(v_company.gst_number, ''),
             'address', COALESCE(v_company.office_address, ''),
             'email', COALESCE(v_company.email, v_company.hr_contact_email, '')
         ),

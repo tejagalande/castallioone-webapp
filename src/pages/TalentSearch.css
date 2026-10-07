@@ -330,7 +330,7 @@
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1300px) {
   .ts-metrics-grid {
     grid-template-columns: repeat(4, 1fr);
   }
@@ -348,7 +348,7 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 130px;
+  gap: 12px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -625,15 +625,13 @@
 .ts-main-grid {
   position: relative;
   z-index: 1;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 24px;
-  align-items: flex-start;
+  display: block;
+  width: 100%;
 }
 
 @media (min-width: 1024px) {
   .ts-main-grid {
-    grid-template-columns: 8fr 4fr;
+    display: block;
   }
 }
 
@@ -1253,6 +1251,7 @@
   padding: 16px 20px;
   border-bottom: 1px solid #eeeef0;
   background: #f9f9fc;
+  flex-shrink: 0;
 }
 
 .modal-header-left {
@@ -1282,6 +1281,7 @@
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
+  flex-shrink: 0;
 }
 
 .btn-modal-close:hover {
@@ -1290,8 +1290,10 @@
 }
 
 .ts-modal-body {
-  padding: 20px;
+  padding: 18px 20px;
   overflow-y: auto;
+  min-height: 0;
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -1305,6 +1307,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 /* Dossier Components */
@@ -2530,5 +2533,43 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ── 720p & Laptop Screen Responsiveness Overhaul ── */
+@media (max-width: 1280px) {
+  .ts-container {
+    padding: 0 4px 40px;
+    gap: 16px;
+  }
+  .ts-header-title {
+    font-size: 24px;
+    line-height: 30px;
+  }
+  .ts-metrics-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px;
+  }
+  .ts-filter-bar {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .ts-card-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+@media (max-height: 740px) {
+  .ts-modal-window {
+    max-height: 92vh;
+  }
+  .ts-modal-body {
+    padding: 14px 18px;
+    gap: 12px;
+  }
+  .ts-modal-footer {
+    padding: 10px 18px;
+  }
+}
+
 
 

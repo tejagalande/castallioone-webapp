@@ -76,90 +76,6 @@ export interface UseTalentDashboardReturn {
   refreshData: () => Promise<void>
 }
 
-// Fallback seed jobs denominated in Indian Rupees (LPA / INR)
-const FALLBACK_SEED_JOBS: Array<{
-  id: string
-  title: string
-  company: string
-  companyId?: string
-  location: string
-  workType: string
-  category: string
-  skills: string[]
-  salaryText: string
-  experience: string
-  description: string
-}> = [
-  {
-    id: 'seed-job-1',
-    title: 'BIM Manager - Digital Practice',
-    company: 'BDP India',
-    location: 'Bengaluru, KA (Hybrid)',
-    workType: 'Hybrid',
-    category: 'BIM Management',
-    skills: ['Revit', 'Navisworks', 'BIM 360', 'Dynamo', 'ISO 19650'],
-    salaryText: '₹14 - 18.5 LPA',
-    experience: '5+ Years',
-    description: 'Leading federated coordination workflows, CDE management, and automation scripts across international healthcare and commercial projects.',
-  },
-  {
-    id: 'seed-job-2',
-    title: 'Lead Computational Designer & Parametric Architect',
-    company: 'Foster + Partners',
-    location: 'Mumbai, MH (Hybrid)',
-    workType: 'Hybrid',
-    category: 'Computational Design',
-    skills: ['Rhino.Inside', 'Grasshopper', 'Python', 'Revit 2024', 'Dynamo Core'],
-    salaryText: '₹16 - 22 LPA',
-    experience: '4+ Years',
-    description: 'Spearheading complex geometry rationalization and algorithmic paneling workflows on major airport and transit hub developments.',
-  },
-  {
-    id: 'seed-job-3',
-    title: 'Principal Structural Engineer - Digital Delivery',
-    company: 'Mott MacDonald India',
-    location: 'Noida / New Delhi (Hybrid)',
-    workType: 'Hybrid',
-    category: 'Structural Engineering',
-    skills: ['AutoCAD', 'Tekla', 'SAP2000', 'Revit Structure', 'Python'],
-    salaryText: '₹18 - 25 LPA',
-    experience: '6+ Years',
-    description: 'Driving seismic analysis, LOD 400 modeling standards, and automated fabrication detailing across major infrastructure developments.',
-  },
-  {
-    id: 'seed-job-4',
-    title: 'Senior VDC / MEP Coordination Specialist',
-    company: 'Arup India',
-    location: 'Pune / Remote',
-    workType: 'Remote',
-    category: 'MEP Engineering',
-    skills: ['AutoCAD MEP', 'Navisworks Manage', 'Solibri', 'BIM Track'],
-    salaryText: '₹11 - 15 LPA',
-    experience: '5+ Years',
-    description: 'Directing multi-trade spatial clash mitigation and 4D construction phasing schedules for mission critical data centers.',
-  },
-]
-
-// Fallback seed activities
-const FALLBACK_ACTIVITIES: DashboardActivity[] = [
-  {
-    id: 'act-1',
-    title: 'Lead BIM Coordinator - Application Forwarded',
-    description: 'Your verified credentials and portfolio were reviewed by recruiter team.',
-    time: '2 days ago',
-    active: true,
-    type: 'application',
-  },
-  {
-    id: 'act-2',
-    title: 'Senior Structural Engineer - Application Sent',
-    description: 'Your application was successfully submitted to Arup India.',
-    time: '5 days ago',
-    active: false,
-    type: 'application',
-  },
-]
-
 /**
  * Formats salary into Indian Rupee LPA format (e.g. ₹12 - 18 LPA or ₹8.5 LPA)
  */
@@ -382,26 +298,26 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
       const savedCompleteness = parseInt(localStorage.getItem('castallio_talent_profile_completeness') || '0', 10)
 
       return {
-        id: parsed?.userId || 'guest-talent',
-        fullName: parsed?.fullName || 'Alex Morgan',
-        discipline: parsed?.discipline || 'BIM Management',
-        specificSkill: parsed?.specificSkill || 'Senior BIM Coordinator & Computational Specialist',
-        location: parsed?.city || 'Bengaluru, India',
-        workMode: parsed?.workMode || 'Hybrid',
-        skills: Array.isArray(parsed?.coreSoftware) ? parsed.coreSoftware : ['Revit', 'Navisworks', 'Dynamo'],
-        profileStrength: savedCompleteness || (parsed ? 92 : 88),
+        id: parsed?.userId || '',
+        fullName: parsed?.fullName || '',
+        discipline: parsed?.discipline || '',
+        specificSkill: parsed?.specificSkill || '',
+        location: parsed?.city || '',
+        workMode: parsed?.workMode || '',
+        skills: Array.isArray(parsed?.coreSoftware) ? parsed.coreSoftware : [],
+        profileStrength: savedCompleteness || (parsed ? 92 : 0),
         avatarUrl: parsed?.profileImagePreview || undefined,
       }
     } catch {
       return {
-        id: 'guest-talent',
-        fullName: 'Alex Morgan',
-        discipline: 'BIM Management',
-        specificSkill: 'Senior BIM Coordinator & Computational Specialist',
-        location: 'Bengaluru, India',
-        workMode: 'Hybrid',
-        skills: ['Revit', 'Navisworks', 'Dynamo'],
-        profileStrength: 88,
+        id: '',
+        fullName: '',
+        discipline: '',
+        specificSkill: '',
+        location: '',
+        workMode: '',
+        skills: [],
+        profileStrength: 0,
       }
     }
   })
@@ -410,13 +326,13 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
   const [activeAppsCount, setActiveAppsCount] = useState<number>(() => {
     const raw = localStorage.getItem('castallio_applied_jobs')
     try {
-      return raw ? JSON.parse(raw).length : 3
+      return raw ? JSON.parse(raw).length : 0
     } catch {
-      return 3
+      return 0
     }
   })
 
-  const [profileViewsCount] = useState<number>(12)
+  const [profileViewsCount] = useState<number>(0)
 
   // Recommendation Jobs
   const [rawJobs, setRawJobs] = useState<RecommendedJob[]>([])
@@ -425,7 +341,7 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
   const [upcomingEvents, setUpcomingEvents] = useState<DashboardUpcomingEvent[]>([])
 
   // Recent Activity
-  const [recentActivity, setRecentActivity] = useState<DashboardActivity[]>(FALLBACK_ACTIVITIES)
+  const [recentActivity, setRecentActivity] = useState<DashboardActivity[]>([])
 
   /**
    * Main fetcher attached to Supabase backend
@@ -617,7 +533,7 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
 
       // Update active apps count
       const finalAppsCount = Math.max(dbAppliedCount, userAppliedSet.size)
-      setActiveAppsCount(finalAppsCount > 0 ? finalAppsCount : 3)
+      setActiveAppsCount(finalAppsCount)
 
       // 5. Query REAL Interviews for Upcoming Events Section
       let realUpcomingEvents: DashboardUpcomingEvent[] = []
@@ -787,19 +703,7 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
           }
         })
       } else {
-        // Fallback seed jobs with dynamic scoring against current profile
-        compiledRecommendedJobs = FALLBACK_SEED_JOBS.map((seed) => {
-          const { fitScore, matchReasons } = computeRecommendationFit(seed, candidateProfileForAlgo)
-          return {
-            ...seed,
-            fitScore,
-            matchReasons,
-            isApplied: userAppliedSet.has(seed.id),
-            isSaved: loadedSaved.has(seed.id),
-            expiresAt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
-            validityDaysLeft: 15,
-          }
-        })
+        compiledRecommendedJobs = []
       }
 
       // Sort by highest fitScore first
@@ -838,31 +742,11 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
         })
       }
 
-      if (dynamicActivities.length === 0) {
-        dynamicActivities.push(...FALLBACK_ACTIVITIES)
-      }
-
       setRecentActivity(dynamicActivities)
     } catch (err: unknown) {
-      console.warn('loadDashboardData error, maintaining local fallback:', err)
-      const candidateProfileForAlgo = {
-        discipline: profile.discipline,
-        specificSkill: profile.specificSkill,
-        skills: profile.skills,
-        workMode: profile.workMode,
-      }
-      const fallbackJobs = FALLBACK_SEED_JOBS.map((seed) => {
-        const { fitScore, matchReasons } = computeRecommendationFit(seed, candidateProfileForAlgo)
-        return {
-          ...seed,
-          fitScore,
-          matchReasons,
-          isApplied: false,
-          isSaved: false,
-        }
-      })
-      fallbackJobs.sort((a, b) => b.fitScore - a.fitScore)
-      setRawJobs(fallbackJobs)
+      console.warn('loadDashboardData error:', err)
+      setRawJobs([])
+      setRecentActivity([])
     } finally {
       setLoading(false)
     }

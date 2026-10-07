@@ -10,201 +10,6 @@ import type {
 
 export type { ConversationThread, ChatMessage, MessageFilterType, RecipientOption, ProposedInterview }
 
-const DEMO_CONVERSATIONS: ConversationThread[] = [
-  {
-    id: 'demo-thread-elena',
-    partnerId: 'partner-elena',
-    candidateId: 'demo-candidate-alex',
-    companyId: 'demo-comp-fp',
-    name: 'Elena Rostova',
-    avatar:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuDp7lsjsvHe5P5hcs_oeW6RbbbsKpAq0Kt7iyQX56upgWD0j51KjYDSpI03Ub7II-jXL2ep7j9SktU6xH9jChI1whoJ7vQSbIRMvsN8RWZ3aSX1x-7_alQ1CBOEY3AfLG0e7qE3rpVOpLAjmyUzkGwtC_lu6aPZAJFMJQ-EKR2gW2TNj5m9y7SgbsbCs35p2djy_A0j27-71X8qzx_TafUbM8iVvAFAEHwW8GnDr8r08yLaoRT2kcjb3w',
-    roleOrDiscipline: 'Head of Talent Acquisition & Computational Practice',
-    firmOrSchool: 'Foster + Partners',
-    lastMessage: 'Hi Alex! Our Applied R&D practice reviewed your Scalpel tower Grasshopper scripts...',
-    lastMessageTime: '14m ago',
-    lastMessageTimestamp: Date.now() - 14 * 60 * 1000,
-    unreadCount: 1,
-    isOnline: true,
-    isVerified: true,
-    matchScore: 98,
-    fitLabel: '98% MATCH',
-    salaryRange: '£130k – £145k',
-    hasAttachments: true,
-    attachmentCount: 2,
-    hasInterviewTag: true,
-    tagBadgeText: 'INTERVIEW PROPOSED',
-    tagBadgeType: 'primary',
-    interviewDetails: {
-      id: 'int-elena-01',
-      roleTitle: 'Stage 03 / 04 – Technical Algorithm & LOD-400 Model Defense',
-      dateText: 'Thursday, Nov 14, 2024 @ 14:00 GMT (45 mins)',
-      duration: '45 mins',
-      location: 'WebRTC LOD-400 Defense Room',
-      panel: 'Dr. K. Aris (Partner Computation) + Elena Rostova',
-      status: 'scheduled',
-    },
-    messages: [
-      {
-        id: 'msg-demo-1',
-        senderId: 'partner-elena',
-        isMe: false,
-        senderName: 'Elena Rostova',
-        senderAvatar:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuBqbnzPpz9WRAD4VdQO-4G2BhqkCUxIqXlzuyRylJUn2WMLIs4IeryIWmXwhsFV_72vA9B6bSthu8Ev_8L5qjHHiwteQjYjoYUpEI39Y2Xak8eZlvmDCQYFs2XYRCpoMGt1VD_ZibydYc_VzioeuMYrhJzSO6y8m1fzHsovOf_FskyIlas6jXZQWJebszFhsJIfzMO0m761oWPVQQENg4cCCTpodLJMzh2x7OXDfpVN9hbjttLKbt7_jg',
-        text: 'Hi Alex! Our Applied R&D and Computational Design practice leads reviewed your Castallio verified profile and your published Scalpel tower Grasshopper scripts. The LOD-400 double-curved façade rationalization and solar panel panelization nodes matched our upcoming Canary Wharf commercial tower scope precisely.\n\nI have attached our full role specification and the project brief. Would you be free for a 45-minute technical review call with our Partner of Computation this Thursday at 14:00 GMT?',
-        time: '13:42 GMT',
-        createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-        attachments: [
-          {
-            id: 'att-1',
-            name: 'Foster_Partners_Comp_Lead.pdf',
-            meta: '1.4 MB • Official Spec',
-            type: 'pdf',
-          },
-          {
-            id: 'att-2',
-            name: 'Technical_Panel_Invite.ics',
-            meta: 'Nov 14 • 14:00 GMT',
-            type: 'ics',
-          },
-          {
-            id: 'att-3',
-            name: 'Scalpel_Facade_Cluster.ghx',
-            meta: 'LOD 400 • Verified',
-            type: 'ghx',
-          },
-        ],
-      },
-      {
-        id: 'msg-demo-2',
-        senderId: 'demo-candidate-alex',
-        isMe: true,
-        senderName: 'Alex Morgan (You)',
-        text: "Hi Elena, thank you! The Canary Wharf scope sounds incredible. Thursday at 14:00 GMT works perfectly for me. I've also uploaded the sanitized GHX cluster definitions and our IFC 4x3 federated model schema for your computational review team to inspect ahead of the defense.",
-        time: '13:54 GMT',
-        createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-        attachments: [
-          {
-            id: 'att-4',
-            name: 'Alex_Morgan_Verified_CV_v4.2.pdf',
-            meta: '2.1 MB',
-            type: 'pdf',
-          },
-          {
-            id: 'att-5',
-            name: 'CanaryWharf_Façade_Script_v2.ghx',
-            meta: '0 Clash Defects',
-            type: 'ghx',
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'demo-thread-shona',
-    partnerId: 'partner-shona',
-    candidateId: 'demo-candidate-alex',
-    companyId: 'demo-comp-zha',
-    name: 'Shona Macleod',
-    avatar:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuDUZggTsyyaOgMQXDNlLvp_TV_V3Pk7Uclkmy0uYaYLChH5kbnsZrVKMdEqbrJXcBxnyeTHjdtJBepkkYAsXJgwUZ1k-XHGQqewTd5x2pUPmtdZm2xJhxhTHP3ovSw9uCirpfQrE-lOZB9HWOEQRwmaNrOXTeVoiDESskHMht6VFvOx7z0AvnRnHdcWrkRtAzdlM75DBF8D5oDZcgsvnbXT-Q6cWB4mALxqZKGGmuOlnwQEvITzW8c_7w',
-    roleOrDiscipline: 'Lead Computational Architect',
-    firmOrSchool: 'Zaha Hadid CODE',
-    lastMessage: 'Slot selection confirmed for tomorrow 11:00 GMT. We loaded the Rhino geometry sandbox...',
-    lastMessageTime: '1h ago',
-    lastMessageTimestamp: Date.now() - 60 * 60 * 1000,
-    unreadCount: 1,
-    isOnline: true,
-    isVerified: true,
-    matchScore: 94,
-    fitLabel: '94% FIT',
-    salaryRange: '£125k – £145k',
-    hasInterviewTag: true,
-    tagBadgeText: 'DEFENSE READY',
-    tagBadgeType: 'neutral',
-    messages: [
-      {
-        id: 'msg-demo-shona-1',
-        senderId: 'partner-shona',
-        isMe: false,
-        senderName: 'Shona Macleod',
-        text: 'Slot selection confirmed for tomorrow 11:00 GMT. We loaded the Rhino geometry sandbox and verified the topological continuity on mesh subdivision nodes.',
-        time: '12:30 GMT',
-        createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-      },
-    ],
-  },
-  {
-    id: 'demo-thread-marcus',
-    partnerId: 'partner-marcus',
-    candidateId: 'demo-candidate-alex',
-    companyId: 'demo-comp-grimshaw',
-    name: 'Marcus Vance',
-    avatar:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuA8X4M8wMWhUxLfr7235BFacmcd3s2p2Gt-Y9IUd3frZE85LhLQfPZTVHGRN7idLJ1uwIx_JUZE-YKFUXpI3JzZERzwePdV7Ju5i13EM5utnnVKw-lSYMe8zmrh8ACGG9SpSB0MO5bCwBJmbeI1BI2VaLI3RzO8VUoODCpGKqsTGUzEdrOfkrnFEqY8ONwh0hyvg4bLYAAHXXG0P-X8UF7AnrmSt0FfAKbPrs6HzDUQqogLEUinKw1rfw',
-    roleOrDiscipline: 'Director of VDC and Infrastructure',
-    firmOrSchool: 'Grimshaw Architects',
-    lastMessage: 'Alex, your CDE management experience under ISO 19650-2 is exactly what our HS2 team needs for the interchange...',
-    lastMessageTime: '3h ago',
-    lastMessageTimestamp: Date.now() - 3 * 60 * 60 * 1000,
-    unreadCount: 0,
-    isOnline: false,
-    isVerified: false,
-    matchScore: 92,
-    fitLabel: '92% MATCH',
-    salaryRange: '£135k – £150k',
-    hasInterviewTag: false,
-    tagBadgeText: 'IFC-4x3-SCHEMA',
-    tagBadgeType: 'neutral',
-    messages: [
-      {
-        id: 'msg-demo-marcus-1',
-        senderId: 'partner-marcus',
-        isMe: false,
-        senderName: 'Marcus Vance',
-        text: 'Alex, your CDE management experience under ISO 19650-2 is exactly what our HS2 team needs for the interchange phase 2A package.',
-        time: '10:15 GMT',
-        createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-      },
-    ],
-  },
-  {
-    id: 'demo-thread-sarah',
-    partnerId: 'partner-sarah',
-    candidateId: 'demo-candidate-alex',
-    companyId: 'demo-comp-arup',
-    name: 'Dr. Sarah Jenkins',
-    avatar:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuDXuN4gzLNBmXpkpQ3Pdu5UJGoRVrktvQ7NLyznWly5guEStkcj6MnCLB3RHpR3ZsgsA5vUppSnu0qIRqMtFoRKsMi0gJbetfBlfGcq7QelN3dVCH0Eilyg2_RCr2Zwz2c1AXtC8Hwc8pspLXqj2SeWoWoswkFS_zUifvlTabAzX0XtXH3ixNyEvpg2SRDuesV3te5Qen7JHEPger4F3mbxX5SMr_cLr9V1mR35WgbeCBE0BOLQTy78TQ',
-    roleOrDiscipline: 'Lead Partner // Advanced Digital Practice',
-    firmOrSchool: 'Arup Advanced Digital',
-    lastMessage: 'Scorecard released for your computational panel review: 96.8% LOD 400 verified. Let’s talk compensation tier.',
-    lastMessageTime: 'Yesterday',
-    lastMessageTimestamp: Date.now() - 24 * 60 * 60 * 1000,
-    unreadCount: 0,
-    isOnline: true,
-    isVerified: true,
-    matchScore: 96,
-    fitLabel: '96% MATCH',
-    salaryRange: '£140k – £160k',
-    hasInterviewTag: false,
-    tagBadgeText: 'LOD 400 VERIFIED',
-    tagBadgeType: 'primary',
-    messages: [
-      {
-        id: 'msg-demo-sarah-1',
-        senderId: 'partner-sarah',
-        isMe: false,
-        senderName: 'Dr. Sarah Jenkins',
-        text: 'Scorecard released for your computational panel review: 96.8% LOD 400 verified. Let’s talk compensation tier and onboarding timelines for the London design lab.',
-        time: 'Yesterday 17:10',
-        createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-      },
-    ],
-  },
-]
-
 export interface UseMessagesOptions {
   targetCompany?: { id?: string; name?: string } | null
   onClearTargetCompany?: () => void
@@ -262,8 +67,8 @@ export function useMessages(options?: UseMessagesOptions) {
 
       if (!user) {
         if (isMountedRef.current) {
-          setConversations(DEMO_CONVERSATIONS)
-          setSelectedThreadId('demo-thread-elena')
+          setConversations([])
+          setSelectedThreadId('')
           setUserRole('guest')
           setLoading(false)
         }
@@ -311,8 +116,8 @@ export function useMessages(options?: UseMessagesOptions) {
       if (chatError) {
         console.warn('chatsession fetch error, fallback to demo data:', chatError.message)
         if (isMountedRef.current) {
-          setConversations(DEMO_CONVERSATIONS)
-          setSelectedThreadId('demo-thread-elena')
+          setConversations([])
+          setSelectedThreadId('')
           setLoading(false)
         }
         return
@@ -501,7 +306,7 @@ export function useMessages(options?: UseMessagesOptions) {
               id: m.id,
               senderId: m.sender_id,
               isMe,
-              senderName: isMe ? 'Alex Morgan (You)' : firmName,
+              senderName: isMe ? 'You' : firmName,
               text: m.message,
               time: createdAtDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               createdAt: createdAtDate.toISOString(),
@@ -837,7 +642,7 @@ export function useMessages(options?: UseMessagesOptions) {
         id: `msg-${Date.now()}`,
         senderId: currentUserId || 'me',
         isMe: true,
-        senderName: userRole === 'employer' ? 'Company (You)' : 'Alex Morgan (You)',
+        senderName: 'You',
         text,
         time: timeStr,
         createdAt: now.toISOString(),
@@ -886,7 +691,7 @@ export function useMessages(options?: UseMessagesOptions) {
 
       showToast('Encrypted message transmitted via 256-bit TLS pipeline.')
     },
-    [messageInput, currentUserId, selectedThreadId, selectedThread, userRole, showToast]
+    [messageInput, currentUserId, selectedThreadId, selectedThread, showToast]
   )
 
   const handleQuickReply = useCallback(

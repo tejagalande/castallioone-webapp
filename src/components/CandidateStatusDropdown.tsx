@@ -13,7 +13,7 @@ export interface StatusConfigItem {
   description?: string
 }
 
-export const STATUS_CONFIG: Record<ApplicationDBStatus, StatusConfigItem> = {
+const STATUS_CONFIG: Record<ApplicationDBStatus, StatusConfigItem> = {
   new: {
     value: 'new',
     label: 'New',
@@ -86,7 +86,7 @@ export const STATUS_CONFIG: Record<ApplicationDBStatus, StatusConfigItem> = {
   },
 }
 
-export const STATUS_OPTIONS: StatusConfigItem[] = [
+const STATUS_OPTIONS: StatusConfigItem[] = [
   STATUS_CONFIG.new,
   STATUS_CONFIG.in_review,
   STATUS_CONFIG.shortlisted,

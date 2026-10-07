@@ -124,12 +124,6 @@ function getCandidateInitials(name?: string | null): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
-const FALLBACK_CANDIDATE_MATCHES: CandidatePreview[] = [
-  { id: 'c-1', initials: 'AM', name: 'Alex Morgan', skills: 'Revit • Dynamo • IFC4', fitScore: 98 },
-  { id: 'c-2', initials: 'DK', name: 'David Kim', skills: 'AutoCAD • SAP2000 • Tekla', fitScore: 94 },
-  { id: 'c-3', initials: 'EV', name: 'Elena Rostova', skills: 'BIM 360 • Navisworks • BEP', fitScore: 91 },
-]
-
 export function usePostJob(onSuccess?: () => void) {
   const [currentStep, setCurrentStep] = useState<number>(1)
 
@@ -352,12 +346,12 @@ export function usePostJob(onSuccess?: () => void) {
         })
 
         if (isMounted) {
-          setCandidateMatches(previews.length > 0 ? previews : FALLBACK_CANDIDATE_MATCHES)
+          setCandidateMatches(previews)
         }
       } catch (err) {
         console.warn('Error loading real talent pool matches:', err)
         if (isMounted) {
-          setCandidateMatches(FALLBACK_CANDIDATE_MATCHES)
+          setCandidateMatches([])
         }
       } finally {
         if (isMounted) {

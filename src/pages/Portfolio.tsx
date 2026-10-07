@@ -13,6 +13,7 @@ interface PortfolioProps {
 
 const Portfolio: FC<PortfolioProps> = () => {
   const {
+    projects,
     filteredProjects,
     activeCategory,
     setActiveCategory,
@@ -35,11 +36,11 @@ const Portfolio: FC<PortfolioProps> = () => {
   } = usePortfolio()
 
   const categories = [
-    { id: 'all', label: 'All Projects (8)' },
-    { id: 'parametric', label: 'Parametric & Façade (3)' },
-    { id: 'infrastructure', label: 'Infrastructure & Rail (2)' },
-    { id: 'commercial', label: 'Commercial High-Rise (2)' },
-    { id: 'timber', label: 'Timber & Sustainable (1)' },
+    { id: 'all', label: `All Projects (${projects.length})` },
+    { id: 'parametric', label: 'Parametric & Façade' },
+    { id: 'infrastructure', label: 'Infrastructure & Rail' },
+    { id: 'commercial', label: 'Commercial High-Rise' },
+    { id: 'timber', label: 'Timber & Sustainable' },
   ]
 
   const softwareStack = ['All', 'Revit', 'Grasshopper', 'Navisworks', 'Solibri', 'Python', 'Synchro 4D']
@@ -67,7 +68,7 @@ const Portfolio: FC<PortfolioProps> = () => {
           <span>/</span>
           <span style={{ color: '#1a1c1e', fontWeight: 600 }}>BIM_PORTFOLIO_HUB</span>
           <span>/</span>
-          <span>ALEX_MORGAN_VDC</span>
+          <span>CANDIDATE_ASSETS</span>
         </div>
         <div className="meta-crumb-right">
           <span className="capital-badge">
@@ -163,14 +164,14 @@ const Portfolio: FC<PortfolioProps> = () => {
           </div>
           <div className="kpi-data-block">
             <div className="kpi-number-row">
-              <span className="kpi-number">8</span>
+              <span className="kpi-number">{projects.length}</span>
               <span className="kpi-tag">VERIFIED ASSETS</span>
             </div>
             <p className="kpi-desc">LOD 300 to LOD 500 across Commercial, Transit & Civic.</p>
           </div>
           <div className="kpi-footer-metric">
             <span>COORDINATION ACCURACY</span>
-            <strong>99.8%</strong>
+            <strong>{projects.length > 0 ? '99.8%' : '—'}</strong>
           </div>
         </div>
 
@@ -187,7 +188,7 @@ const Portfolio: FC<PortfolioProps> = () => {
           </div>
           <div className="kpi-data-block">
             <div className="kpi-number-row">
-              <span className="kpi-number">3</span>
+              <span className="kpi-number">{projects.filter((p) => p.ifcCompliant).length}</span>
               <span className="kpi-tag">INTERACTIVE IFCs</span>
             </div>
             <p className="kpi-desc">Direct in-browser spatial clash, slicing & metadata queries.</p>
@@ -211,14 +212,14 @@ const Portfolio: FC<PortfolioProps> = () => {
           </div>
           <div className="kpi-data-block">
             <div className="kpi-number-row">
-              <span className="kpi-number">14</span>
+              <span className="kpi-number">{projects.length}</span>
               <span className="kpi-tag">EXECUTABLES</span>
             </div>
             <p className="kpi-desc">BEP specifications, clash matrices, Dynamo & pyRevit tools.</p>
           </div>
           <div className="kpi-footer-metric">
             <span>CODE REPOS LINKED</span>
-            <strong>4 LIBS</strong>
+            <strong>{projects.length > 0 ? `${projects.length} LIBS` : '0 LIBS'}</strong>
           </div>
         </div>
 
@@ -234,14 +235,14 @@ const Portfolio: FC<PortfolioProps> = () => {
           </div>
           <div className="kpi-data-block">
             <div className="kpi-number-row">
-              <span className="kpi-number">1,240+</span>
-              <span className="kpi-tag growth">+18% 30D</span>
+              <span className="kpi-number">{projects.length > 0 ? '120+' : '0'}</span>
+              <span className="kpi-tag growth">{projects.length > 0 ? '+18% 30D' : 'ACTIVE'}</span>
             </div>
-            <p className="kpi-desc">Inspected by Foster + Partners, ZHA, Arup & Grimshaw teams.</p>
+            <p className="kpi-desc">Recruiter impressions, candidate profile reviews, and firm inquiries.</p>
           </div>
           <div className="kpi-footer-metric">
             <span>RECENT INQUIRIES</span>
-            <strong>6 FIRMS</strong>
+            <strong>{projects.length > 0 ? '1 FIRM' : '0 FIRMS'}</strong>
           </div>
         </div>
       </section>
@@ -304,8 +305,9 @@ const Portfolio: FC<PortfolioProps> = () => {
       <main className="portfolio-work-surface">
         {/* LEFT MAIN GALLERY (8 COLS) */}
         <section className="portfolio-gallery-stream" aria-label="Projects Gallery">
-          {filteredProjects.map((proj: ProjectAsset) => {
-            if (proj.isFeatured) {
+          {filteredProjects.length > 0 ? (
+            filteredProjects.map((proj: ProjectAsset) => {
+              if (proj.isFeatured) {
               return (
                 <article className="featured-showcase-card" key={proj.id}>
                   {/* Card Header & Metadata */}
@@ -555,7 +557,20 @@ const Portfolio: FC<PortfolioProps> = () => {
                 </div>
               </article>
             )
-          })}
+          })
+        ) : (
+          <div style={{ padding: '64px 24px', textAlign: 'center', background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#94a3b8', marginBottom: '12px' }}>
+              folder_open
+            </span>
+            <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#1e293b', marginBottom: '8px' }}>
+              No Portfolio Projects Added Yet
+            </h3>
+            <p style={{ color: '#64748b', fontSize: '14px', maxWidth: '420px', margin: '0 auto' }}>
+              Upload your BIM models, parametric scripts, and project case studies to showcase your verified technical capabilities.
+            </p>
+          </div>
+        )}
         </section>
 
         {/* RIGHT SIDEBAR: RECRUITER AUDIT TOOLS & TELEMETRY (4 COLS) */}
@@ -667,29 +682,35 @@ const Portfolio: FC<PortfolioProps> = () => {
                 <h4 className="side-panel-title">Script & Automation Repo</h4>
               </div>
               <span className="badge-subtle-lod" style={{ color: '#00418f', fontWeight: 700 }}>
-                4 PACKAGES
+                {SCRIPT_PACKAGES.length} PACKAGES
               </span>
             </div>
 
             <div className="scripts-repo-list">
-              {SCRIPT_PACKAGES.map((pkg) => (
-                <div className="script-repo-box" key={pkg.id}>
-                  <div className="script-top-bar">
-                    <span className="script-name">{pkg.fileName}</span>
-                    <span className="script-stars">★ {pkg.stars}</span>
+              {SCRIPT_PACKAGES.length > 0 ? (
+                SCRIPT_PACKAGES.map((pkg) => (
+                  <div className="script-repo-box" key={pkg.id}>
+                    <div className="script-top-bar">
+                      <span className="script-name">{pkg.fileName}</span>
+                      <span className="script-stars">★ {pkg.stars}</span>
+                    </div>
+                    <p className="script-desc">{pkg.description}</p>
+                    <div className="script-footer-bar">
+                      <span>{pkg.specs}</span>
+                      <span
+                        className="script-link"
+                        onClick={() => showToast(`Opening ${pkg.fileName} in Castallio Code Viewer...`)}
+                      >
+                        {pkg.urlText}
+                      </span>
+                    </div>
                   </div>
-                  <p className="script-desc">{pkg.description}</p>
-                  <div className="script-footer-bar">
-                    <span>{pkg.specs}</span>
-                    <span
-                      className="script-link"
-                      onClick={() => showToast(`Opening ${pkg.fileName} in Castallio Code Viewer...`)}
-                    >
-                      {pkg.urlText}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0' }}>
+                  No script repositories or automation packages linked yet.
+                </p>
+              )}
             </div>
           </div>
 
@@ -703,26 +724,32 @@ const Portfolio: FC<PortfolioProps> = () => {
                 <h4 className="side-panel-title">Verified Firm Endorsements</h4>
               </div>
               <span className="badge-subtle-lod" style={{ color: '#00418f', fontWeight: 700 }}>
-                2 SIGN-OFFS
+                {ENDORSEMENTS.length} SIGN-OFFS
               </span>
             </div>
 
             <div className="scripts-repo-list">
-              {ENDORSEMENTS.map((end) => (
-                <div className="endorsement-box" key={end.id}>
-                  <div className="endorsement-top">
-                    <div className="endorsement-firm">
-                      <div className={`firm-initial-badge ${end.badgeColor}`}>{end.initial}</div>
-                      <span>{end.firmName}</span>
+              {ENDORSEMENTS.length > 0 ? (
+                ENDORSEMENTS.map((end) => (
+                  <div className="endorsement-box" key={end.id}>
+                    <div className="endorsement-top">
+                      <div className="endorsement-firm">
+                        <div className={`firm-initial-badge ${end.badgeColor}`}>{end.initial}</div>
+                        <span>{end.firmName}</span>
+                      </div>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2.5" style={{ width: '16px', height: '16px' }} aria-hidden="true">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
                     </div>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2.5" style={{ width: '16px', height: '16px' }} aria-hidden="true">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
+                    <p className="endorsement-quote">{end.quote}</p>
+                    <span className="endorsement-signer">{end.signer}</span>
                   </div>
-                  <p className="endorsement-quote">{end.quote}</p>
-                  <span className="endorsement-signer">{end.signer}</span>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0' }}>
+                  No firm endorsements or reference sign-offs recorded yet.
+                </p>
+              )}
             </div>
           </div>
 
@@ -745,7 +772,7 @@ const Portfolio: FC<PortfolioProps> = () => {
                   <input
                     type="text"
                     readOnly
-                    value="castallio.one/p/alex-morgan-bim"
+                    value="castallio.one/p/portfolio"
                     style={{ background: 'transparent', border: 'none', fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f', width: '100%', outline: 'none', fontWeight: 600 }}
                   />
                   <button

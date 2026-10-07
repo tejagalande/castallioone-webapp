@@ -269,7 +269,8 @@ export function useCompanyProfile() {
   }, [showToast])
 
   useEffect(() => {
-    fetchCompanyProfile()
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchCompanyProfile()
   }, [fetchCompanyProfile])
 
   // Field updater with live runtime validation

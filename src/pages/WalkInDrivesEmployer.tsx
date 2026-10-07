@@ -216,7 +216,6 @@ export const WalkInDrivesEmployer: FC = () => {
           ) : (
             <span className="wid-metric-huge-num">{drives.length}</span>
           )}
-          <p className="wid-metric-subtext">All scheduled campaigns</p>
         </article>
 
         <article className="wid-metric-card">
@@ -236,7 +235,6 @@ export const WalkInDrivesEmployer: FC = () => {
               {upcomingDrives.length}
             </span>
           )}
-          <p className="wid-metric-subtext">Active on candidate feeds</p>
         </article>
 
         <article className="wid-metric-card">
@@ -256,7 +254,6 @@ export const WalkInDrivesEmployer: FC = () => {
               {pastDrives.length}
             </span>
           )}
-          <p className="wid-metric-subtext">Historical drive archives</p>
         </article>
 
         <article className="wid-metric-card">
@@ -278,7 +275,6 @@ export const WalkInDrivesEmployer: FC = () => {
               {totalOpenings}
             </span>
           )}
-          <p className="wid-metric-subtext">Vacancies across drives</p>
         </article>
       </section>
 

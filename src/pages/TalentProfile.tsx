@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, type FC } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import {
-  DEMO_TALENT,
   type CandidateTalentItem,
   type StudentExperienceItem,
   type TalentSearchQuota,
@@ -21,7 +20,7 @@ export const TalentProfile: FC = () => {
     } catch {
       // ignore
     }
-    return DEMO_TALENT.find((c) => c.id === id) || null
+    return null
   })
 
   const [loading, setLoading] = useState<boolean>(!candidate)
@@ -192,12 +191,6 @@ export const TalentProfile: FC = () => {
         } catch {
           // ignore
         }
-      } else if (!candidate) {
-        // Fallback to demo talent
-        const demo = DEMO_TALENT.find((c) => c.id === id)
-        if (demo) {
-          setCandidate(demo)
-        }
       }
     } catch (err) {
       console.error('Error loading candidate profile:', err)
@@ -354,7 +347,7 @@ export const TalentProfile: FC = () => {
           <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#dc2626' }} aria-hidden="true">
             error
           </span>
-          <h2>Candidate Dossier Not Found</h2>
+          <h2>Candidate Profile Not Found</h2>
           <p>The candidate profile you requested could not be located in our active database records.</p>
           <Link to="/employer" className="btn-tp-primary" style={{ marginTop: '16px' }}>
             Return to Employer Dashboard
@@ -393,7 +386,7 @@ export const TalentProfile: FC = () => {
           <div className="tp-header-divider" aria-hidden="true"></div>
           <div className="tp-brand-tag">
             <img src="/app_icon.png" alt="Castallio One" style={{ width: '22px', height: '22px', borderRadius: '5px', objectFit: 'cover' }} />
-            <span>CASTALLIO ONE // VERIFIED AEC TALENT DOSSIER</span>
+            <span>CASTALLIO ONE // VERIFIED AEC TALENT PROFILE</span>
           </div>
         </div>
 
@@ -418,12 +411,12 @@ export const TalentProfile: FC = () => {
             type="button"
             className="btn-tp-header-action"
             onClick={() => window.print()}
-            title="Print or export candidate dossier PDF"
+            title="Print or export candidate profile PDF"
           >
             <span className="material-symbols-outlined" aria-hidden="true">
               print
             </span>
-            <span>Print Dossier</span>
+            <span>Print Profile</span>
           </button>
 
           <button
@@ -561,7 +554,7 @@ export const TalentProfile: FC = () => {
                     key
                   </span>
                 </div>
-                <h3>Unlock Full Dossier</h3>
+                <h3>Unlock Full Profile</h3>
                 <p>Access direct phone, email, and high-resolution official CV PDF.</p>
                 <div className="quota-hint">Remaining Quota: {quota.remainingCvs} unlocks</div>
                 <button
@@ -922,7 +915,7 @@ export const TalentProfile: FC = () => {
                 key
               </span>
             </div>
-            <h2 id="unlock-title">Unlock Full Dossier &amp; Contact</h2>
+            <h2 id="unlock-title">Unlock Full Profile &amp; Contact</h2>
             <p className="modal-desc">
               Are you sure you want to use <strong>1 CV Unlock</strong> from your monthly plan quota to access{' '}
               <strong>{candidate.name}</strong>&apos;s direct contact details and downloadable high-res CV?

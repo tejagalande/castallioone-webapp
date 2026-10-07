@@ -313,7 +313,8 @@ const Certifications: FC<CertificationsProps> = () => {
       <main className="cert-work-surface">
         {/* LEFT / MAIN STREAM (8 Cols) */}
         <section className="cert-main-stream" aria-label="Credentials Vault List">
-          {filteredCertifications.map((cert: CertificationLicense) => {
+          {filteredCertifications.length > 0 ? (
+            filteredCertifications.map((cert: CertificationLicense) => {
             const isExpiring = cert.status === 'expiring'
 
             return (
@@ -464,7 +465,27 @@ const Certifications: FC<CertificationsProps> = () => {
                 </div>
               </article>
             )
-          })}
+          })
+        ) : (
+          <div style={{ padding: '64px 24px', textAlign: 'center', background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#94a3b8', marginBottom: '12px' }}>
+              verified
+            </span>
+            <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#1e293b', marginBottom: '8px' }}>
+              No Certifications or Licenses Added
+            </h3>
+            <p style={{ color: '#64748b', fontSize: '14px', maxWidth: '420px', margin: '0 auto 20px' }}>
+              Add your professional accreditations, software certifications, and institution licenses to build your verified credential ledger.
+            </p>
+            <button
+              type="button"
+              className="btn-ribbon-primary"
+              onClick={() => setIsAddModalOpen(true)}
+            >
+              + Add First Credential
+            </button>
+          </div>
+        )}
         </section>
 
         {/* RIGHT SIDEBAR (4 Cols) */}
@@ -516,7 +537,7 @@ const Certifications: FC<CertificationsProps> = () => {
                 <input
                   type="text"
                   readOnly
-                  value="castallio.one/verify/alex-morgan-vdc"
+                  value="castallio.one/verify/credentials"
                   style={{ background: 'transparent', border: 'none', fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f', width: '100%', outline: 'none', fontWeight: 600 }}
                 />
                 <button

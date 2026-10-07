@@ -557,7 +557,7 @@ export const CompanyProfile: FC<CompanyProfileProps> = () => {
             <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
               visibility
             </span>
-            <span>Candidate Live Dossier</span>
+            <span>Candidate Profile View</span>
           </button>
         </nav>
 
@@ -687,7 +687,7 @@ export const CompanyProfile: FC<CompanyProfileProps> = () => {
                       <h2 className="cp-panel-headline">About the Studio &amp; Culture</h2>
                     </div>
                     <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', background: 'rgba(0, 65, 143, 0.1)', color: '#00418f', padding: '4px 8px', borderRadius: '4px', fontWeight: 600 }}>
-                      PUBLIC DOSSIER
+                      PUBLIC PROFILE
                     </span>
                   </div>
 
@@ -1189,7 +1189,7 @@ export const CompanyProfile: FC<CompanyProfileProps> = () => {
                   onClick={() => setIsPreviewModalOpen(true)}
                   style={{ background: 'transparent', border: 'none', color: '#00418f', fontFamily: 'JetBrains Mono', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                 >
-                  <span>Open Full Public Dossier</span>
+                  <span>Open Full Public Profile</span>
                   <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>open_in_new</span>
                 </button>
               </div>

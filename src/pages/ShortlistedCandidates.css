@@ -260,7 +260,7 @@
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1300px) {
   .sl-metrics-grid {
     grid-template-columns: repeat(4, 1fr);
   }
@@ -277,7 +277,7 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 140px;
+  gap: 12px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -357,15 +357,13 @@
 
 /* ── 4. Main 2-Column Grid (8 cols / 4 cols) ── */
 .sl-workspace-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 24px;
-  align-items: flex-start;
+  display: block;
+  width: 100%;
 }
 
 @media (min-width: 1024px) {
   .sl-workspace-grid {
-    grid-template-columns: 8fr 4fr;
+    display: block;
   }
 }
 
@@ -1123,33 +1121,37 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 24px;
+  padding: 16px 20px;
   border-bottom: 1px solid #eeeef0;
   background: #f9f9fc;
+  flex-shrink: 0;
 }
 
 .sl-modal-title {
   font-family: 'Hanken Grotesk', sans-serif;
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 700;
   color: #1a1c1e;
   margin: 0;
 }
 
 .sl-modal-body {
-  padding: 20px 24px;
+  padding: 18px 20px;
   overflow-y: auto;
+  min-height: 0;
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
 .sl-modal-footer {
-  padding: 16px 24px;
+  padding: 14px 20px;
   border-top: 1px solid #eeeef0;
   background: #f9f9fc;
   display: flex;
   align-items: center;
+  flex-shrink: 0;
   justify-content: space-between;
 }
 
@@ -1317,4 +1319,42 @@
   flex-wrap: wrap;
   justify-content: center;
 }
+
+/* ── 720p & Laptop Screen Responsiveness Overhaul ── */
+@media (max-width: 1280px) {
+  .sl-container {
+    padding: 0 4px 40px;
+    gap: 16px;
+  }
+  .sl-header-title {
+    font-size: 24px;
+    line-height: 30px;
+  }
+  .sl-metrics-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px;
+  }
+  .sl-batch-bar {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .sl-candidate-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+@media (max-height: 740px) {
+  .sl-modal-window {
+    max-height: 92vh;
+  }
+  .sl-modal-body {
+    padding: 14px 18px;
+    gap: 12px;
+  }
+  .sl-modal-footer {
+    padding: 10px 18px;
+  }
+}
+
 

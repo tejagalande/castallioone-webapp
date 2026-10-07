@@ -66,7 +66,6 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
     selectedApplicant,
     setSelectedApplicant,
     toastMessage,
-    upcomingInterviews,
     updateApplicationStatus,
     toggleStarApplicant,
     scheduleInterview,
@@ -199,7 +198,7 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
           </div>
           <h1 className="app-header-title">Applicant Management &amp; Pipeline</h1>
           <p className="app-header-desc">
-            Manage candidates across your active requisitions. Review candidate dossiers, inspect uploaded resumes,
+            Manage candidates across your active requisitions. Review candidate profiles, inspect uploaded resumes,
             schedule technical interviews, and advance hiring stages.
           </p>
         </div>
@@ -214,7 +213,7 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
             <span className="material-symbols-outlined" aria-hidden="true">
               download
             </span>
-            <span>Export Dossier (CSV)</span>
+            <span>Export Candidates (CSV)</span>
           </button> */}
           {onBrowseJobs && (
             <button
@@ -239,38 +238,13 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
           <div className="metric-bg-orb" aria-hidden="true"></div>
           <div className="app-metric-top">
             <span className="app-metric-label">Total Applications</span>
-            <span className="app-metric-badge">All Time</span>
+            <span className="material-symbols-outlined text-primary" style={{ color: '#00418f' }} aria-hidden="true">
+              history
+            </span>
           </div>
           <div className="app-metric-value-row">
             <span className="app-metric-val">{String(metrics.totalCount).padStart(2, '0')}</span>
             <span className="app-metric-subtext">Received</span>
-          </div>
-          <div className="app-metric-progress-breakdown">
-            <div className="app-metric-stages-labels">
-              <span>{metrics.inReviewCount} In Review</span>
-              <span>{metrics.shortlistedCount} Shortlisted</span>
-              <span className="offer-highlight">{metrics.scheduledCount} Interviews</span>
-            </div>
-            <div className="app-metric-bar" aria-label="Pipeline distribution breakdown">
-              <div
-                className="bar-segment-1"
-                style={{
-                  width: `${metrics.totalCount ? (metrics.inReviewCount / metrics.totalCount) * 100 : 50}%`,
-                }}
-              ></div>
-              <div
-                className="bar-segment-2"
-                style={{
-                  width: `${metrics.totalCount ? (metrics.shortlistedCount / metrics.totalCount) * 100 : 25}%`,
-                }}
-              ></div>
-              <div
-                className="bar-segment-3"
-                style={{
-                  width: `${metrics.totalCount ? (metrics.scheduledCount / metrics.totalCount) * 100 : 25}%`,
-                }}
-              ></div>
-            </div>
           </div>
         </article>
 
@@ -286,10 +260,6 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
             <span className="app-metric-val highlight">{String(metrics.inReviewCount).padStart(2, '0')}</span>
             <span className="app-metric-subtext">Awaiting Action</span>
           </div>
-          <div className="app-metric-sparkline-row">
-            <span className="telemetry-pulse" style={{ background: '#0058bc' }} aria-hidden="true"></span>
-            <span className="app-metric-footer-note">Pending Initial Screening</span>
-          </div>
         </article>
 
         {/* Metric 3 */}
@@ -301,14 +271,8 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
             </span>
           </div>
           <div className="app-metric-value-row">
-            <span className="app-metric-val">{String(metrics.scheduledCount).padStart(2, '0')} Active</span>
+            <span className="app-metric-val">{String(metrics.scheduledCount).padStart(2, '0')}</span>
             <span className="app-metric-subtext">Rounds Planned</span>
-          </div>
-          <div className="app-metric-sparkline-row">
-            <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#0058bc' }} aria-hidden="true">
-              videocam
-            </span>
-            <span className="app-metric-footer-note">{upcomingInterviews.length} Upcoming in Calendar</span>
           </div>
         </article>
 
@@ -323,12 +287,6 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
           <div className="app-metric-value-row">
             <span className="app-metric-val">{String(metrics.starredCount).padStart(2, '0')}</span>
             <span className="app-metric-subtext">Saved Favorites</span>
-          </div>
-          <div className="app-metric-footer-velocity">
-            <span className="material-symbols-outlined" style={{ fontSize: '15px' }} aria-hidden="true">
-              check
-            </span>
-            <span>{metrics.shortlistedCount} Total Shortlisted for Evaluation</span>
           </div>
         </article>
       </section>
@@ -635,7 +593,7 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
                         <h2
                           className="app-card-role-title"
                           onClick={() => setSelectedApplicant(app)}
-                          title="Open Candidate Dossier"
+                          title="Open Candidate Profile"
                         >
                           {app.name}
                         </h2>
@@ -739,7 +697,7 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
                         type="button"
                         className="btn-card-secondary"
                         onClick={() => setSelectedApplicant(app)}
-                        title="View Profile Dossier"
+                        title="View Candidate Profile"
                       >
                         <span className="material-symbols-outlined" aria-hidden="true">
                           folder_open
@@ -779,17 +737,17 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
                       <span>Message</span>
                     </button>
 
-                    {/* View Full Dossier */}
+                    {/* View Full Details */}
                     <button
                       type="button"
                       className="btn-card-tertiary"
                       onClick={() => setSelectedApplicant(app)}
-                      title="View Complete Submission Dossier"
+                      title="View Complete Application Details"
                     >
                       <span className="material-symbols-outlined" aria-hidden="true">
                         assignment_ind
                       </span>
-                      <span>Full Dossier</span>
+                      <span>Full Details</span>
                     </button>
 
                     {/* Status Dropdown */}
@@ -879,102 +837,6 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
             </nav>
           )}
         </div>
-
-        {/* Right Column: Upcoming Interviews & Intelligence Sidebar (4 cols) */}
-        <aside className="app-sidebar-column">
-          {/* 1. Upcoming Scheduled Interviews Desk */}
-          <div className="app-sidebar-card">
-            <div className="sidebar-card-header">
-              <div className="sidebar-card-title-group">
-                <span className="material-symbols-outlined text-primary" style={{ color: '#00418f' }} aria-hidden="true">
-                  calendar_month
-                </span>
-                <h3 className="sidebar-card-title">Upcoming Interviews</h3>
-              </div>
-              <span className="sidebar-badge-count">
-                {String(upcomingInterviews.length).padStart(2, '0')} SCHEDULED
-              </span>
-            </div>
-
-            {upcomingInterviews.length === 0 ? (
-              <p className="sidebar-empty-text">
-                No active interviews scheduled yet. Select &ldquo;Schedule Interview&rdquo; on any shortlisted candidate
-                to arrange technical panels.
-              </p>
-            ) : (
-              <div className="upcoming-interviews-list">
-                {upcomingInterviews.map((iv) => (
-                  <div key={iv.id} className="upcoming-interview-item">
-                    <div className="interview-time-badge">
-                      <span className="iv-date">{iv.interviewDate.slice(5)}</span>
-                      <span className="iv-time">{iv.interviewTime}</span>
-                    </div>
-                    <div className="interview-meta-details">
-                      <strong className="iv-name">{iv.candidateName}</strong>
-                      <span className="iv-role">{iv.candidateRole}</span>
-                      <span className="iv-type">{iv.interviewType}</span>
-                      {iv.locationValue && (
-                        <a
-                          href={iv.locationValue}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="iv-meeting-btn"
-                        >
-                          <span className="material-symbols-outlined" aria-hidden="true">
-                            videocam
-                          </span>
-                          <span>Join Meeting</span>
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* 2. Pipeline Distribution Breakdown */}
-          <div className="app-sidebar-card">
-            <div className="sidebar-card-header">
-              <div className="sidebar-card-title-group">
-                <span className="material-symbols-outlined text-primary" style={{ color: '#00418f' }} aria-hidden="true">
-                  analytics
-                </span>
-                <h3 className="sidebar-card-title">Pipeline Health</h3>
-              </div>
-              <span className="sidebar-badge-mono">LIVE METRICS</span>
-            </div>
-
-            <div className="velocity-benchmark-box">
-              <div className="velocity-stat-row">
-                <span className="stat-muted">TOTAL SUBMISSIONS:</span>
-                <span className="stat-bold">{metrics.totalCount}</span>
-              </div>
-              <div className="velocity-stat-row">
-                <span className="stat-muted">ACTIVE IN PIPELINE:</span>
-                <span className="stat-primary">{metrics.activePipelineCount}</span>
-              </div>
-              <div className="velocity-stat-row">
-                <span className="stat-muted">SHORTLIST CONVERSION:</span>
-                <span className="stat-bold">
-                  {metrics.totalCount > 0
-                    ? `${Math.round((metrics.shortlistedCount / metrics.totalCount) * 100)}%`
-                    : '0%'}
-                </span>
-              </div>
-            </div>
-
-            <div className="velocity-market-insight-callout">
-              <span className="material-symbols-outlined" aria-hidden="true">
-                tips_and_updates
-              </span>
-              <p>
-                <strong>Hiring Tip:</strong> Candidates respond <strong>2.8x faster</strong> when feedback or interview
-                invitations are sent within 72 hours of application submission.
-              </p>
-            </div>
-          </div>
-        </aside>
       </section>
 
       {/* ── MODAL 1: Candidate Dossier Modal ── */}
@@ -992,7 +854,7 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
                   folder_shared
                 </span>
                 <div>
-                  <h3 className="modal-header-title">Candidate Profile &amp; Requisition Dossier</h3>
+                  <h3 className="modal-header-title">Candidate Profile &amp; Application Details</h3>
                   <span className="modal-header-sub">
                     {selectedApplicant.role} • {selectedApplicant.candidateLocation}
                   </span>
@@ -1002,7 +864,7 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
                 type="button"
                 className="btn-modal-close"
                 onClick={() => setSelectedApplicant(null)}
-                aria-label="Close Dossier"
+                aria-label="Close Profile"
               >
                 ✕
               </button>
@@ -1111,7 +973,7 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
 
               {/* External Portfolio / LinkedIn / Resume Links */}
               <div>
-                <h5 className="dossier-section-title">Verified Dossier Documents</h5>
+                <h5 className="dossier-section-title">Verified Documents &amp; Attachments</h5>
                 <div className="dossier-docs-row">
                   {selectedApplicant.resumeFileUrl && (
                     <button

@@ -351,15 +351,6 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs, onNaviga
             <span className="int-metric-num">{kpis.upcomingCount}</span>
             <span className="int-metric-subtext">{userRole === 'talent' ? 'Confirmed Rounds' : 'Active Scheduled'}</span>
           </div>
-          <p className="int-metric-desc">
-            {userRole === 'talent' ? 'Live AEC studio interviews scheduled' : 'Candidates awaiting technical evaluation'}
-          </p>
-          <div className="int-metric-footer-pill">
-            <span>STATUS:</span>
-            <span style={{ color: '#00418f', fontWeight: 700 }}>
-              {userRole === 'talent' ? 'READY TO DEFEND' : 'PIPELINE ACTIVE'}
-            </span>
-          </div>
         </article>
 
         {/* KPI 2 */}
@@ -377,15 +368,6 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs, onNaviga
               {kpis.todayCount}
             </span>
             <span className="int-metric-subtext">Scheduled Today</span>
-          </div>
-          <p className="int-metric-desc">
-            {userRole === 'talent' ? 'Active sessions on your calendar today' : 'Live rounds scheduled on current date'}
-          </p>
-          <div className="int-metric-footer-pill">
-            <span>AGENDA:</span>
-            <span style={{ color: '#1d4ed8', fontWeight: 700 }}>
-              {kpis.todayCount > 0 ? `${kpis.todayCount} SESSION${kpis.todayCount > 1 ? 'S' : ''} TODAY` : 'NO SESSIONS TODAY'}
-            </span>
           </div>
         </article>
 
@@ -405,15 +387,6 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs, onNaviga
             </span>
             <span className="int-metric-subtext">{userRole === 'talent' ? 'Under Studio Review' : 'Needs Review'}</span>
           </div>
-          <p className="int-metric-desc">
-            {userRole === 'talent' ? 'Completed rounds pending final firm verdict' : 'Completed sessions awaiting scorecard'}
-          </p>
-          <div className="int-metric-footer-pill">
-            <span>{userRole === 'talent' ? 'STATUS:' : 'SCORECARDS:'}</span>
-            <span style={{ color: '#b45309', fontWeight: 700 }}>
-              {userRole === 'talent' ? 'IN PROGRESS' : 'AWAITING INPUT'}
-            </span>
-          </div>
         </article>
 
         {/* KPI 4 */}
@@ -431,17 +404,6 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs, onNaviga
               {kpis.completedCount}
             </span>
             <span className="int-metric-subtext">{userRole === 'talent' ? 'Evaluated' : 'Evaluated'}</span>
-          </div>
-          <p className="int-metric-desc">
-            {userRole === 'talent'
-              ? 'Finished rounds with evaluation dossiers'
-              : 'Finished rounds with evaluation dossiers'}
-          </p>
-          <div className="int-metric-footer-pill">
-            <span>{userRole === 'talent' ? 'RECORD:' : 'DECISION ARCHIVE:'}</span>
-            <span style={{ color: '#15803d', fontWeight: 700 }}>
-              {userRole === 'talent' ? 'ARCHIVED' : 'LOGGED'}
-            </span>
           </div>
         </article>
       </section>
@@ -941,7 +903,7 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs, onNaviga
                             type="button"
                             className="btn-int-secondary"
                             onClick={() => openFeedbackModal(session)}
-                            title={userRole === 'talent' ? 'View Official Studio Feedback' : 'View / Edit Evaluation Dossier'}
+                            title={userRole === 'talent' ? 'View Official Studio Feedback' : 'View / Edit Evaluation Scorecard'}
                           >
                             <span className="material-symbols-outlined text-primary" aria-hidden="true">
                               {userRole === 'talent' ? 'verified' : 'assignment_turned_in'}
@@ -1043,116 +1005,6 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs, onNaviga
             </nav>
           )}
         </div>
-
-        {/* RIGHT COLUMN: INTERVIEW DESK SIDEBAR (4 Cols) */}
-        <aside className="int-sidebar-column">
-          {userRole === 'talent' ? (
-            <>
-              {/* Talent Widget 1: Technical Defense Checklist */}
-              <div className="int-sidebar-card">
-                <div className="int-sidebar-header">
-                  <div className="int-sidebar-title">
-                    <span className="material-symbols-outlined" aria-hidden="true">
-                      checklist
-                    </span>
-                    <span>Defense Checklist</span>
-                  </div>
-                  <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', background: '#d8e2ff', color: '#00418f', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                    PREP GUIDE
-                  </span>
-                </div>
-
-                <p style={{ margin: 0, fontSize: '13px', color: '#424753', lineHeight: 1.45 }}>
-                  Key items to prepare before joining your technical round with studio leadership:
-                </p>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div className="int-focus-item">
-                    <span style={{ fontWeight: 500 }}>Portfolio &amp; BIM sheets open</span>
-                    <span className="int-focus-priority High">Critical</span>
-                  </div>
-                  <div className="int-focus-item">
-                    <span style={{ fontWeight: 500 }}>Mic, camera &amp; screen share tested</span>
-                    <span className="int-focus-priority High">Required</span>
-                  </div>
-                  <div className="int-focus-item">
-                    <span style={{ fontWeight: 500 }}>2-3 questions for the studio team</span>
-                    <span className="int-focus-priority Medium">Recommended</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Talent Widget 2: Defense Tip */}
-              <div className="int-sidebar-card" style={{ background: '#f8faff', borderColor: 'rgba(0, 88, 188, 0.2)' }}>
-                <div className="int-sidebar-header">
-                  <div className="int-sidebar-title" style={{ color: '#00418f' }}>
-                    <span className="material-symbols-outlined" aria-hidden="true">
-                      lightbulb
-                    </span>
-                    <span>Studio Insight</span>
-                  </div>
-                </div>
-
-                <p style={{ margin: 0, fontSize: '12.5px', color: '#334155', lineHeight: 1.45 }}>
-                  AEC interview panels value <strong>narrative and structural reasoning</strong>. Walk through your design decisions, drawing detailing choices, and code compliance steps with clarity.
-                </p>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Widget 1: Candidate Evaluation Criteria */}
-              <div className="int-sidebar-card">
-                <div className="int-sidebar-header">
-                  <div className="int-sidebar-title">
-                    <span className="material-symbols-outlined" aria-hidden="true">
-                      checklist
-                    </span>
-                    <span>Candidate Evaluation Criteria</span>
-                  </div>
-                  <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', background: '#d8e2ff', color: '#00418f', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                    STANDARD
-                  </span>
-                </div>
-
-                <p style={{ margin: 0, fontSize: '13px', color: '#424753', lineHeight: 1.45 }}>
-                  Benchmark candidate competencies across standard architectural and engineering criteria:
-                </p>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div className="int-focus-item">
-                    <span style={{ fontWeight: 500 }}>Technical &amp; BIM Mastery</span>
-                    <span className="int-focus-priority High">Weight 40%</span>
-                  </div>
-                  <div className="int-focus-item">
-                    <span style={{ fontWeight: 500 }}>Project &amp; Code Execution</span>
-                    <span className="int-focus-priority High">Weight 30%</span>
-                  </div>
-                  <div className="int-focus-item">
-                    <span style={{ fontWeight: 500 }}>Communication &amp; Team Fit</span>
-                    <span className="int-focus-priority Medium">Weight 30%</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Widget 3: Interview Hiring Tip */}
-              <div className="int-sidebar-card" style={{ background: '#f8faff', borderColor: 'rgba(0, 88, 188, 0.2)' }}>
-                <div className="int-sidebar-header">
-                  <div className="int-sidebar-title" style={{ color: '#00418f' }}>
-                    <span className="material-symbols-outlined" aria-hidden="true">
-                      lightbulb
-                    </span>
-                    <span>Recruitment Velocity</span>
-                  </div>
-                </div>
-
-                <p style={{ margin: 0, fontSize: '12.5px', color: '#334155', lineHeight: 1.45 }}>
-                  Candidates respond <strong>2.8x faster</strong> when evaluation scorecards and next-stage decisions are logged
-                  within 24 hours of round completion.
-                </p>
-              </div>
-            </>
-          )}
-        </aside>
       </section>
 
       {/* ── MODAL 1: Reschedule Round ── */}
@@ -1423,7 +1275,7 @@ export const Interviews: FC<InterviewsProps> = ({ onNavigateToFindJobs, onNaviga
                     <span className="int-dossier-stat-label">Official Reviewer Feedback &amp; Notes</span>
                     <p style={{ margin: 0, fontSize: '13.5px', color: '#1a1c1e', lineHeight: 1.5 }}>
                       {selectedSessionForFeedback.interviewerNotes ||
-                        'The evaluation dossier has been logged. Specific feedback will be discussed in your follow-up stage or direct message.'}
+                        'The evaluation report has been logged. Specific feedback will be discussed in your follow-up stage or direct message.'}
                     </p>
                   </div>
                 </div>
