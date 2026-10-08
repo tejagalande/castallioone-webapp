@@ -56,7 +56,6 @@ const WalkInDriveSkeleton: FC = () => (
 
     {/* Footer Actions Skeleton */}
     <div className="wid-card-footer">
-      <div className="wid-shimmer" style={{ width: '180px', height: '14px', borderRadius: '4px' }} />
       <div className="wid-footer-actions" style={{ gap: '8px' }}>
         <div className="wid-shimmer" style={{ width: '90px', height: '32px', borderRadius: '6px' }} />
         <div className="wid-shimmer" style={{ width: '65px', height: '32px', borderRadius: '6px' }} />
@@ -464,10 +463,6 @@ export const WalkInDrivesEmployer: FC = () => {
 
                 {/* Footer Actions */}
                 <div className="wid-card-footer">
-                  <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11.5px', color: '#727784' }}>
-                    ID: {drive.id.slice(0, 8)}... • POSTED BY ENTERPRISE
-                  </span>
-
                   <div className="wid-footer-actions">
                     <button
                       type="button"

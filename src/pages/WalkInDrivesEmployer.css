@@ -536,7 +536,7 @@
 .wid-card-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   border-top: 1px solid rgba(194, 198, 213, 0.4);
   padding-top: 14px;
   flex-wrap: wrap;

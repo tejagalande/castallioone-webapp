@@ -104,7 +104,7 @@ function SignIn({ onNavigateToSignUp, onSignInSuccess }: SignInProps) {
               <img src="/app_icon.png" alt="Castallio One" className="signin-app-icon" />
               <h1 className="signin-logo">Castallio One</h1>
             </div>
-            <p className="signin-version">v1.2.8 | BIM-Standardized Auth</p>
+            {/* <p className="signin-version">v1.2.8 | BIM-Standardized Auth</p> */}
           </div>
 
           <div className="signin-tagline">

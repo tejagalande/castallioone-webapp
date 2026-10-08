@@ -214,9 +214,7 @@ export function useMyJobs(onPostNewJob?: () => void) {
 
       // 4. Map DB rows to RequisitionItem
       const mappedRequisitions: RequisitionItem[] = jobsList.map((job) => {
-        const prefix = cName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase() || 'AEC'
-        const shortId = job.id.slice(0, 4).toUpperCase()
-        const refCode = `REQ-${prefix}-${shortId}`
+        const refCode = ''
 
         const appStats = appCountsMap[job.id] || {
           total: 0,
@@ -471,11 +469,11 @@ export function useMyJobs(onPostNewJob?: () => void) {
       const exportContent = requisitions
         .map(
           (r) =>
-            `${r.refCode},"${r.title}","${r.location}","${r.salaryRange}",${r.status.toUpperCase()},${r.pipeline.applied} APPLICANTS,${r.pipeline.shortlisted} SHORTLISTED`
+            `"${r.title}","${r.location}","${r.salaryRange}",${r.status.toUpperCase()},${r.pipeline.applied} APPLICANTS,${r.pipeline.shortlisted} SHORTLISTED`
         )
         .join('\n')
 
-      const header = 'REQ_ID,TITLE,LOCATION,COMPENSATION,STATUS,APPLICANTS,SHORTLISTED\n'
+      const header = 'TITLE,LOCATION,COMPENSATION,STATUS,APPLICANTS,SHORTLISTED\n'
       const blob = new Blob([header + exportContent], { type: 'text/csv;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')

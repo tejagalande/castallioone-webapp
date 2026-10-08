@@ -75,6 +75,38 @@ function getInitials(name?: string | null): string {
   return (first + last).toUpperCase() || 'CA'
 }
 
+/**
+ * Formats candidate/talent name to show initial letter of first name and then last name, e.g. "C. Patil".
+ */
+export function formatTalentName(name?: string | null): string {
+  if (!name || typeof name !== 'string') return ''
+  const trimmed = name.trim()
+  if (!trimmed) return ''
+
+  const parts = trimmed.split(/\s+/).filter(Boolean)
+  if (parts.length === 1) {
+    return parts[0]
+  }
+
+  const salutations = new Set(['mr', 'ms', 'mrs', 'dr', 'prof'])
+  let cleanParts = parts
+  if (parts.length > 2 && salutations.has(parts[0].replace(/\./g, '').toLowerCase())) {
+    cleanParts = parts.slice(1)
+  }
+
+  const firstName = cleanParts[0]
+  const lastName = cleanParts[cleanParts.length - 1]
+
+  const firstLetter = firstName.replace(/[^a-zA-Z]/g, '').charAt(0) || firstName.charAt(0)
+  const firstInitial = firstLetter.toUpperCase()
+  const cleanLastName = lastName.replace(/^\.+|\.+$/g, '')
+  const formattedLastName = cleanLastName
+    ? cleanLastName.charAt(0).toUpperCase() + cleanLastName.slice(1)
+    : lastName
+
+  return `${firstInitial}. ${formattedLastName}`
+}
+
 export function useTalentSearch() {
   const [loading, setLoading] = useState<boolean>(false)
   const [semanticSearching, setSemanticSearching] = useState<boolean>(false)
@@ -447,7 +479,7 @@ export function useTalentSearch() {
         const res = data as UnlockResult | null
 
         if (res?.success) {
-          showNotification(`Success: Profile for ${cand.name} is now unlocked! Contact and CV available.`)
+          showNotification(`Success: Profile for ${formatTalentName(cand.name)} is now unlocked! Contact and CV available.`)
           setTalent((prev) =>
             prev.map((t) => (t.id === cand.id ? { ...t, isUnlocked: true } : t))
           )

@@ -690,7 +690,7 @@ export function useApplications() {
               matchScore: 94.8,
               reqId: job.id
                 ? `REQ-${job.id.slice(0, 8).toUpperCase()}`
-                : `REQ-${studioInitials}-${row.id.slice(0, 4).toUpperCase()}`,
+                : `APP-${row.id.slice(0, 8).toUpperCase()}`,
               location,
               compensation: salary,
               appliedDate: `Applied ${formatRelativeTime(row.applied_at)}`,

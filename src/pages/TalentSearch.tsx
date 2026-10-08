@@ -1,6 +1,7 @@
 import { useState, type FC, type ChangeEvent, type FormEvent } from 'react'
 import {
   useTalentSearch,
+  formatTalentName,
   type TalentSortOption,
   type TalentDisciplineFilter,
   type CandidateTalentItem,
@@ -542,7 +543,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
                     {cand.profileImageUrl ? (
                       <img
                         src={cand.profileImageUrl}
-                        alt={cand.name}
+                        alt={formatTalentName(cand.name)}
                         className="ts-avatar-img"
                       />
                     ) : (
@@ -593,7 +594,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
                       onClick={() => handleOpenCandidateProfile(cand)}
                       title="Open Candidate Profile in New Tab"
                     >
-                      {cand.name}
+                      {formatTalentName(cand.name)}
                     </h2>
 
                     <p className="ts-peer-title">
@@ -656,7 +657,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
                           className="btn-view-cv-inline"
                           onClick={() => {
                             setPreviewResumeUrl(cand.resumeFileUrl || null)
-                            setPreviewCandidateName(cand.name)
+                            setPreviewCandidateName(formatTalentName(cand.name))
                           }}
                         >
                           <span className="material-symbols-outlined" aria-hidden="true">
@@ -683,7 +684,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
                             className="btn-view-cv-inline"
                             onClick={() => {
                               setPreviewResumeUrl(cand.resumeFileUrl || null)
-                              setPreviewCandidateName(cand.name)
+                              setPreviewCandidateName(formatTalentName(cand.name))
                             }}
                           >
                             <span className="material-symbols-outlined" aria-hidden="true">
@@ -741,18 +742,18 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
                       </span>
                       <span>Unlock (1 Quota)</span>
                     </button>
-                  ) : null}
-
-                  <button
-                    type="button"
-                    className="btn-card-secondary"
-                    onClick={() => setChatCandidate(cand)}
-                  >
-                    <span className="material-symbols-outlined" aria-hidden="true">
-                      chat
-                    </span>
-                    <span>Message</span>
-                  </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn-card-secondary"
+                      onClick={() => setChatCandidate(cand)}
+                    >
+                      <span className="material-symbols-outlined" aria-hidden="true">
+                        chat
+                      </span>
+                      <span>Message</span>
+                    </button>
+                  )}
                 </div>
               </article>
             ))}
@@ -871,7 +872,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
                   {selectedCandidate.profileImageUrl ? (
                     <img
                       src={selectedCandidate.profileImageUrl}
-                      alt={selectedCandidate.name}
+                      alt={formatTalentName(selectedCandidate.name)}
                       className="dossier-avatar-img"
                     />
                   ) : (
@@ -879,7 +880,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
                   )}
                 </div>
                 <div>
-                  <h4 className="dossier-name">{selectedCandidate.name}</h4>
+                  <h4 className="dossier-name">{formatTalentName(selectedCandidate.name)}</h4>
                   <p className="dossier-role">
                     {selectedCandidate.discipline} • {selectedCandidate.institution} ({selectedCandidate.graduationYear})
                   </p>
@@ -983,7 +984,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
                       className="btn-card-primary"
                       onClick={() => {
                         setPreviewResumeUrl(selectedCandidate.resumeFileUrl || null)
-                        setPreviewCandidateName(selectedCandidate.name)
+                        setPreviewCandidateName(formatTalentName(selectedCandidate.name))
                       }}
                     >
                       <span className="material-symbols-outlined" aria-hidden="true">
@@ -1114,7 +1115,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
 
             <div className="ts-modal-body">
               <div className="unlock-confirm-card">
-                <strong>{candidateToUnlock.name}</strong>
+                <strong>{formatTalentName(candidateToUnlock.name)}</strong>
                 <p>{candidateToUnlock.discipline} • {candidateToUnlock.institution}</p>
                 <div className="unlock-benefits-list">
                   <div className="benefit-item">
@@ -1178,7 +1179,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
                   forum
                 </span>
                 <div>
-                  <h3 className="modal-header-title">Message: {chatCandidate.name}</h3>
+                  <h3 className="modal-header-title">Message: {formatTalentName(chatCandidate.name)}</h3>
                   <span className="modal-header-sub">{chatCandidate.discipline}</span>
                 </div>
               </div>
@@ -1195,7 +1196,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
             <div className="ts-modal-body">
               <textarea
                 className="ts-chat-textarea"
-                placeholder={`Type message or job inquiry to ${chatCandidate.name}...`}
+                placeholder={`Type message or job inquiry to ${formatTalentName(chatCandidate.name)}...`}
                 value={chatMessageText}
                 onChange={(e) => setChatMessageText(e.target.value)}
               />
@@ -1210,7 +1211,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
                     className="quick-prompt-chip"
                     onClick={() =>
                       setChatMessageText(
-                        `Hi ${chatCandidate.name}, we reviewed your profile on Castallio One and have an opening matching your ${chatCandidate.discipline} background.`
+                        `Hi ${formatTalentName(chatCandidate.name)}, we reviewed your profile on Castallio One and have an opening matching your ${chatCandidate.discipline} background.`
                       )
                     }
                   >
@@ -1221,7 +1222,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
                     className="quick-prompt-chip"
                     onClick={() =>
                       setChatMessageText(
-                        `Hello ${chatCandidate.name}, are you open for an introductory technical discussion regarding our current projects?`
+                        `Hello ${formatTalentName(chatCandidate.name)}, are you open for an introductory technical discussion regarding our current projects?`
                       )
                     }
                   >
@@ -1269,7 +1270,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
                   picture_as_pdf
                 </span>
                 <div>
-                  <h3 className="modal-header-title">{previewCandidateName} &mdash; Official Resume</h3>
+                  <h3 className="modal-header-title">{formatTalentName(previewCandidateName)} &mdash; Official Resume</h3>
                   <span className="modal-header-sub">PDF Document Viewer</span>
                 </div>
               </div>
@@ -1300,7 +1301,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
             <div className="ts-modal-body resume-iframe-body">
               <iframe
                 src={previewResumeUrl}
-                title={`${previewCandidateName} Resume`}
+                title={`${formatTalentName(previewCandidateName)} Resume`}
                 className="resume-pdf-iframe"
               />
             </div>

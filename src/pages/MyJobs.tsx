@@ -473,9 +473,6 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highli
                           {b}
                         </span>
                       ))}
-                      <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>
-                        {req.refCode}
-                      </span>
                     </div>
 
                     <h2 className="req-title-text" id={`req-title-${req.id}`}>
@@ -700,7 +697,7 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highli
                         <button
                           type="button"
                           className="btn-mj-light"
-                          onClick={() => showToast('Viewing ledger archive for ' + req.refCode)}
+                          onClick={() => showToast('Viewing ledger archive for ' + req.title)}
                         >
                           View Ledger Archive
                         </button>
@@ -774,7 +771,7 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highli
               <div>
                 <h2 id="cand-modal-title">{selectedReqForCandidates.title}</h2>
                 <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f' }}>
-                  {selectedReqForCandidates.refCode} • {selectedReqForCandidates.pipeline.applied} Inbound Profiles ({selectedReqForCandidates.pipeline.shortlisted} Shortlisted)
+                  {selectedReqForCandidates.pipeline.applied} Inbound Profiles ({selectedReqForCandidates.pipeline.shortlisted} Shortlisted)
                 </span>
               </div>
               <button
