@@ -461,12 +461,6 @@ export const TalentProfile: FC = () => {
                 Pre-Verified Candidate
               </span>
               <span className="tp-badge-discipline">{candidate.discipline}</span>
-              <span className="tp-badge-match">
-                <span className="material-symbols-outlined" aria-hidden="true">
-                  auto_awesome
-                </span>
-                {candidate.matchScore}% Match Score
-              </span>
               {candidate.isUnlocked ? (
                 <span className="tp-badge-unlocked">
                   <span className="material-symbols-outlined" aria-hidden="true">
@@ -838,17 +832,13 @@ export const TalentProfile: FC = () => {
                   auto_awesome
                 </span>
                 <div>
-                  <h2 className="card-title">AI Match Diagnostics</h2>
-                  <p className="card-sub">Gemini 1536-dimensional vector similarity</p>
+                  <h2 className="card-title">Profile Diagnostics</h2>
+                  <p className="card-sub">Pre-verified credentials &amp; platform telemetry</p>
                 </div>
               </div>
             </div>
 
             <div className="tp-telemetry-stats">
-              <div className="telemetry-stat-row">
-                <span className="telemetry-label">Vector Match Confidence</span>
-                <span className="telemetry-value-green">{candidate.matchScore}%</span>
-              </div>
               <div className="telemetry-stat-row">
                 <span className="telemetry-label">Embedding Dimensions</span>
                 <span className="telemetry-value">1536 Float32</span>

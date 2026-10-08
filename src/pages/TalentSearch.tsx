@@ -564,12 +564,14 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
 
                   <div className="ts-card-meta-main">
                     <div className="ts-badge-line">
-                      <span className="badge-match-score">
-                        <span className="material-symbols-outlined" style={{ fontSize: '14px' }} aria-hidden="true">
-                          {cand.hasEmbedding ? 'bolt' : 'verified'}
+                      {searchQuery.trim() ? (
+                        <span className="badge-match-score">
+                          <span className="material-symbols-outlined" style={{ fontSize: '14px' }} aria-hidden="true">
+                            {cand.hasEmbedding ? 'bolt' : 'verified'}
+                          </span>
+                          {cand.matchScore}% MATCH FIT
                         </span>
-                        {cand.matchScore}% MATCH FIT
-                      </span>
+                      ) : null}
                       <span className="badge-discipline">{cand.discipline}</span>
                       <span className="badge-workmode">{cand.workMode}</span>
                       {cand.isUnlocked ? (
@@ -915,12 +917,14 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
               </div>
 
               <div className="dossier-info-grid">
-                <div className="dossier-info-cell">
-                  <span className="cell-label">Match Fit Score</span>
-                  <span className="cell-value" style={{ color: '#00418f' }}>
-                    {selectedCandidate.matchScore}% Precision
-                  </span>
-                </div>
+                {searchQuery.trim() ? (
+                  <div className="dossier-info-cell">
+                    <span className="cell-label">Match Fit Score</span>
+                    <span className="cell-value" style={{ color: '#00418f' }}>
+                      {selectedCandidate.matchScore}% Precision
+                    </span>
+                  </div>
+                ) : null}
                 <div className="dossier-info-cell">
                   <span className="cell-label">Expected CTC</span>
                   <span className="cell-value">{selectedCandidate.expectedCtc}</span>

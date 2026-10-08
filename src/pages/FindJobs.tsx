@@ -338,17 +338,6 @@ export const FindJobs: FC<FindJobsProps> = (props) => {
                               {reason}
                             </span>
                           ))}
-
-                          <div className="fit-pill">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="fit-icon" aria-hidden="true">
-                              <circle cx="12" cy="12" r="10" />
-                              <circle cx="12" cy="12" r="6" />
-                              <circle cx="12" cy="12" r="2" fill="currentColor" />
-                            </svg>
-                            <span className={`fit-val ${getScoreColor(job.fitScore)}`}>
-                              {job.fitScore}% FIT
-                            </span>
-                          </div>
                         </div>
 
                         <h3 className="card-job-title">{job.title}</h3>
@@ -631,9 +620,6 @@ export const FindJobs: FC<FindJobsProps> = (props) => {
                       </svg>
                       <span>AI Recommendation Overlap</span>
                     </div>
-                    <span className={`fit-score-badge ${getScoreColor(activeJob.fitScore)}`}>
-                      {activeJob.fitScore}% Match
-                    </span>
                   </div>
 
                   <div className="fit-reasons-list">

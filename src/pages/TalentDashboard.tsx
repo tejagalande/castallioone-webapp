@@ -498,16 +498,7 @@ export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
                               </span>
                             ))}
 
-                            <div className="job-fit">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="fit-icon" aria-hidden="true">
-                                <circle cx="12" cy="12" r="10" />
-                                <circle cx="12" cy="12" r="6" />
-                                <circle cx="12" cy="12" r="2" fill="currentColor" />
-                              </svg>
-                              <span className={`fit-score ${getScoreColor(job.fitScore)}`}>
-                                {job.fitScore}% FIT
-                              </span>
-                            </div>
+
                           </div>
 
                           <h3 className="job-title-text">{job.title}</h3>

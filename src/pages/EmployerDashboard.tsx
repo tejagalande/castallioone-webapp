@@ -382,12 +382,7 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
                               <p>{applicant.role}</p>
                             </div>
                           </div>
-                          <div className="fit-score">
-                            <span className="fit-label">FIT SCORE</span>
-                            <div className={`score-circle ${getScoreColor(applicant.fitScore)}`}>
-                              {applicant.fitScore}
-                            </div>
-                          </div>
+
                         </div>
 
                         <div className="applicant-position">

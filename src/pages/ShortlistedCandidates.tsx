@@ -531,7 +531,6 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = ({
                       <div className="sl-cand-text">
                         <div className="sl-name-badge-row">
                           <h2 className="sl-cand-name">{cand.name}</h2>
-                          <span className="sl-badge-alex-fit">{cand.matchScore}% MATCH</span>
                           {cand.isStarred && (
                             <span
                               className="material-symbols-outlined"
@@ -565,33 +564,10 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = ({
                       </div>
                     </div>
 
-                    {/* Circular Match Ring */}
+                    {/* Experience Box */}
                     <div className="sl-match-ring-box">
-                      <div className="sl-svg-ring">
-                        <svg viewBox="0 0 36 36">
-                          <circle
-                            cx="18"
-                            cy="18"
-                            r="15.9155"
-                            fill="none"
-                            stroke="#eeeef0"
-                            strokeWidth="3.5"
-                          />
-                          <circle
-                            cx="18"
-                            cy="18"
-                            r="15.9155"
-                            fill="none"
-                            stroke="#00418f"
-                            strokeWidth="3.5"
-                            strokeDasharray={`${cand.matchScore}, 100`}
-                            strokeDashoffset="0"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                        <span className="sl-ring-pct">{Math.round(cand.matchScore)}%</span>
-                      </div>
-                      <span className="sl-clash-label">{cand.experienceYears} YRS EXP</span>
+                      <span className="sl-ring-pct" style={{ position: 'static', fontSize: '18px', fontWeight: 700, color: '#00418f' }}>{cand.experienceYears} Yrs</span>
+                      <span className="sl-clash-label">Experience</span>
                     </div>
                   </div>
 
@@ -799,7 +775,6 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = ({
                       <th>Candidate</th>
                       <th>Applied Job</th>
                       <th>Discipline</th>
-                      <th>Match Fit</th>
                       <th>Experience</th>
                       <th>Notice Period</th>
                       <th>Expected CTC</th>
@@ -812,9 +787,6 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = ({
                         <td style={{ fontWeight: 600 }}>{c.name}</td>
                         <td>{c.jobTitle}</td>
                         <td>{c.discipline}</td>
-                        <td>
-                          <span style={{ color: '#00418f', fontWeight: 700 }}>{c.matchScore}%</span>
-                        </td>
                         <td>{c.experienceYears} yrs</td>
                         <td>
                           <span className={`avail-tag ${c.isAvailableImmediately ? 'immediate' : ''}`}>

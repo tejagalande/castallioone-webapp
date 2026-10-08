@@ -91,11 +91,6 @@ export const RecommendationJobs: FC<RecommendationJobsProps> = ({
     return result
   }, [jobs, searchQuery, workModeFilter, fitFilter, sortBy])
 
-  const maxFitScore = useMemo(() => {
-    if (jobs.length === 0) return 96
-    return Math.max(...jobs.map((j) => j.fitScore))
-  }, [jobs])
-
   return (
     <div className="rec-page">
       {/* Page Header */}
@@ -119,10 +114,7 @@ export const RecommendationJobs: FC<RecommendationJobsProps> = ({
             <span className="rec-stat-chip-label">Total Matches</span>
             <span className="rec-stat-chip-val">{jobs.length}</span>
           </div>
-          <div className="rec-stat-chip">
-            <span className="rec-stat-chip-label">Highest Fit</span>
-            <span className="rec-stat-chip-val">{maxFitScore}%</span>
-          </div>
+
           <div className="rec-stat-chip">
             <span className="rec-stat-chip-label">Discipline</span>
             <span className="rec-stat-chip-val" style={{ fontSize: '14px', whiteSpace: 'nowrap' }}>
@@ -255,16 +247,7 @@ export const RecommendationJobs: FC<RecommendationJobsProps> = ({
                       </span>
                     ))}
 
-                    <div className="rec-fit-badge">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15" aria-hidden="true">
-                        <circle cx="12" cy="12" r="10" />
-                        <circle cx="12" cy="12" r="6" />
-                        <circle cx="12" cy="12" r="2" fill="currentColor" />
-                      </svg>
-                      <span className={`rec-fit-score ${getScoreColor(job.fitScore)}`}>
-                        {job.fitScore}% FIT
-                      </span>
-                    </div>
+
                   </div>
 
                   <h2 className="rec-job-title">{job.title}</h2>

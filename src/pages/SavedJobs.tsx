@@ -245,7 +245,7 @@ const SavedJobs: FC<SavedJobsProps> = (props) => {
                       {urgentClosingJob.title} at {urgentClosingJob.company}
                     </h2>
                     <p className="closing-job-desc">
-                      Technical alignment evaluated at <span className="score-highlight">{urgentClosingJob.matchScore}%</span> against your AEC verified credentials.
+                      Verified opportunity aligned with your AEC profile and credentials.
                     </p>
                   </div>
                 </div>
@@ -352,16 +352,6 @@ const SavedJobs: FC<SavedJobsProps> = (props) => {
                               </span>
                             ))}
 
-                            <div className="fit-pill">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="fit-icon" aria-hidden="true">
-                                <circle cx="12" cy="12" r="10" />
-                                <circle cx="12" cy="6" />
-                                <circle cx="12" cy="2" fill="currentColor" />
-                              </svg>
-                              <span className="fit-val high">
-                                {job.matchScore}% FIT
-                              </span>
-                            </div>
                           </div>
 
                           <div className="job-title-row">
@@ -399,37 +389,8 @@ const SavedJobs: FC<SavedJobsProps> = (props) => {
                         </div>
                       </div>
 
-                      {/* Saved Time Tag & Circular Fit Visual */}
+                      {/* Saved Time Tag */}
                       <div className="fit-score-box">
-                        <div className="score-visual-pill" title={`${job.matchScore}% Match`}>
-                          <svg className="circle-progress-svg" viewBox="0 0 36 36" aria-hidden="true">
-                            <circle
-                              className="circle-bg"
-                              cx="18"
-                              cy="18"
-                              r="15.9155"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="3.5"
-                            />
-                            <circle
-                              className="circle-fill"
-                              cx="18"
-                              cy="18"
-                              r="15.9155"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="3.5"
-                              strokeDasharray={`${job.matchScore}, 100`}
-                              strokeDashoffset="0"
-                              strokeLinecap="round"
-                            />
-                          </svg>
-                          <div className="score-text-block">
-                            <span className="score-percent">{job.matchScore}%</span>
-                            <span className="score-label">{job.matchLabel}</span>
-                          </div>
-                        </div>
                         <span className="saved-time-tag">{job.savedDate}</span>
                       </div>
                     </div>

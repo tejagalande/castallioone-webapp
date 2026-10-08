@@ -580,20 +580,8 @@ export const Applications: FC<ApplicationsProps> = ({
                         </div>
                       </div>
 
-                      {/* Precision Match Score Badge */}
+                      {/* Job Requisition ID */}
                       <div className="app-card-match-wrap">
-                        <div
-                          className={`app-match-badge ${
-                            app.matchScore >= 95
-                              ? 'high'
-                              : app.matchScore >= 90
-                              ? 'medium'
-                              : 'neutral'
-                          }`}
-                        >
-                          {app.matchScore >= 95 && <span className="app-match-dot" />}
-                          <span className="app-match-text">{app.matchScore}% Match</span>
-                        </div>
                         <span className="app-card-req">{app.reqId}</span>
                       </div>
                     </div>
