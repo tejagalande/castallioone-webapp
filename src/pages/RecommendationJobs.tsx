@@ -32,11 +32,6 @@ export const RecommendationJobs: FC<RecommendationJobsProps> = ({
   const [fitFilter, setFitFilter] = useState<FitFilter>('all')
   const [sortBy, setSortBy] = useState<SortOption>('fit')
 
-  const getScoreColor = (score: number) => {
-    if (score >= 90) return 'high'
-    if (score >= 80) return 'medium'
-    return 'low'
-  }
 
   const getCompanyInitials = (name: string): string => {
     if (!name) return 'AEC'

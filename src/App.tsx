@@ -11,6 +11,7 @@ import TermsConditions from './pages/TermsConditions'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import AppPrivacyPolicy from './pages/AppPrivacyPolicy'
 import { JobAppFallback } from './pages/JobAppFallback'
+import { BlogList, BlogPostPage } from './pages/Blog'
 import { WalkInDriveAppFallback } from './pages/WalkInDriveAppFallback'
 import { ToastContainer } from './components/Toast'
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -125,6 +126,10 @@ function App() {
           }
         />
         <Route path="/reset-password" element={<ResetPassword />} />
+
+        {/* Public Blog (no authentication required) */}
+        <Route path="/blog" element={<BlogList />} />
+        <Route path="/blog/:slug" element={<BlogPostPage />} />
 
         {/* Public Legal Pages (supports all manual URL entry variations) */}
         <Route path="/terms" element={<TermsConditions />} />

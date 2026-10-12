@@ -650,6 +650,7 @@ export const Billing: FC<BillingProps> = ({
                   />
                 </div>
 
+                {/* Temporary commented out: Company PAN is derived from GSTIN
                 <div className="billing-form-group">
                   <label className="billing-form-label">Company PAN:</label>
                   <input
@@ -661,6 +662,7 @@ export const Billing: FC<BillingProps> = ({
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setTaxForm({ ...taxForm, pan: e.target.value.toUpperCase() })}
                   />
                 </div>
+                */}
 
                 <div className="billing-form-group">
                   <label className="billing-form-label">Invoicing &amp; Finance Email:</label>

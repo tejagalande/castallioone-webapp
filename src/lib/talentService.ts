@@ -42,8 +42,9 @@ export async function checkTalentProfile(userId?: string): Promise<CheckTalentPr
     // 2. Check student_profile
     const { data: studentProfile, error: spError } = await supabase
       .from('student_profile')
-      .select('id, user_id, full_name, email, discipline, is_profile_complete, completeness_percentage')
+      .select('*')
       .or(`user_id.eq.${userId},id.eq.${userId}`)
+      .limit(1)
       .maybeSingle()
 
     if (spError) {
@@ -51,19 +52,17 @@ export async function checkTalentProfile(userId?: string): Promise<CheckTalentPr
     }
 
     const isProfessional = userProfile?.role === 'professional'
-    const hasCompletedFlag = 
-      (isProfessional && userProfile?.onboarding_complete === true) || 
-      studentProfile?.is_profile_complete === true ||
+    const hasCompletedFlag =
+      (isProfessional && userProfile?.onboarding_complete === true) ||
       localCompleted
 
     const hasBasicProfile = Boolean(studentProfile?.full_name && studentProfile?.discipline)
 
     const needsOnboarding = !hasCompletedFlag && !hasBasicProfile
 
-    const completeness = 
-      typeof studentProfile?.completeness_percentage === 'number'
-        ? studentProfile.completeness_percentage
-        : localCompleteness || (hasCompletedFlag ? 100 : 25)
+    const completeness = studentProfile
+      ? computeStudentRowCompleteness(studentProfile as Record<string, unknown>)
+      : localCompleteness || (hasCompletedFlag ? 100 : 25)
 
     return {
       exists: Boolean((isProfessional && userProfile) || studentProfile || localCompleted),
@@ -82,6 +81,142 @@ export async function checkTalentProfile(userId?: string): Promise<CheckTalentPr
       error: msg,
     }
   }
+}
+
+/**
+ * Computes profile completeness (0-100) from a raw student_profile row.
+ * Used as a fallback when completeness_percentage is null/0 in the DB.
+ */
+export function computeStudentRowCompleteness(row: Record<string, unknown> | null | undefined): number {
+  if (!row) return 0
+  const pl = row.preferred_location
+  const fields: unknown[] = [
+    row.profile_image_url,
+    row.full_name,
+    row.email,
+    row.phone,
+    row.location,
+    row.institution,
+    row.discipline,
+    row.graduation_year,
+    row.bio,
+    row.work_mode,
+    Array.isArray(pl) ? pl.length > 0 : pl,
+    row.availability,
+    row.employment_type,
+    row.notice_period,
+    row.resume_file_url,
+    row.expected_ctc,
+    row.linkedin_url || row.portfolio_url,
+  ]
+  const filled = fields.filter((v) => (typeof v === 'string' ? v.trim().length > 0 : Boolean(v))).length
+  return Math.round((filled / fields.length) * 100)
+}
+
+/**
+ * Fetches a previously saved talent profile from Supabase and maps it to
+ * the onboarding form shape. Returns null when no row exists.
+ */
+export async function fetchSavedTalentProfile(
+  userId: string
+): Promise<Partial<TalentProfileData> | null> {
+  const { data: sp, error } = await supabase
+    .from('student_profile')
+    .select('*')
+    .or(`user_id.eq.${userId},id.eq.${userId}`)
+    .limit(1)
+    .maybeSingle()
+
+  if (error || !sp) {
+    if (error) console.warn('fetchSavedTalentProfile notice:', error.message)
+    return null
+  }
+
+  const str = (v: unknown) => (v === null || v === undefined ? '' : String(v))
+
+  const locRaw = sp.preferred_location
+  const preferredLocations: string[] = Array.isArray(locRaw)
+    ? locRaw.map(String)
+    : typeof locRaw === 'string'
+    ? locRaw.split(',').map((s: string) => s.trim()).filter(Boolean)
+    : []
+
+  const reloc = String(sp.relocation_preference ?? '').toLowerCase()
+  const relocValue: TalentProfileData['willingToRelocate'] =
+    reloc.startsWith('yes') ? 'yes' : reloc.startsWith('open') ? 'open' : reloc.startsWith('no') ? 'no' : ''
+
+  const partial: Partial<TalentProfileData> = {
+    profileImagePreview: str(sp.profile_image_url),
+    fullName: str(sp.full_name),
+    bio: str(sp.bio),
+    email: str(sp.email),
+    contactNumber: str(sp.phone),
+    city: str(sp.location),
+    instituteName: str(sp.institution),
+    discipline: str(sp.discipline),
+    graduationYear: str(sp.graduation_year),
+    workMode: str(sp.work_mode),
+    preferredLocations,
+    willingToRelocate: relocValue,
+    availability: str(sp.availability),
+    employmentType: str(sp.employment_type),
+    noticePeriod: str(sp.notice_period),
+    expectedCtc: str(sp.expected_ctc).replace(/^₹/, ''),
+    resumeFileName: sp.resume_file_url ? decodeURIComponent(String(sp.resume_file_url).split('/').pop() || 'resume.pdf') : '',
+    portfolioLink: str(sp.portfolio_url),
+    linkedinLink: str(sp.linkedin_url),
+  }
+
+  // Skills
+  const studentId: string = sp.id
+  const { data: skillsRow } = await supabase
+    .from('student_skills')
+    .select('skills')
+    .eq('student_id', studentId)
+    .maybeSingle()
+
+  if (skillsRow && Array.isArray(skillsRow.skills)) {
+    const core: string[] = []
+    const tech: string[] = []
+    const soft: string[] = []
+    let specific = ''
+    for (const item of skillsRow.skills as Array<string | { skill_name?: string; category?: string }>) {
+      const name = typeof item === 'string' ? item : item.skill_name || ''
+      const cat = typeof item === 'string' ? '' : item.category || ''
+      if (!name) continue
+      if (cat === 'primary_specialization') specific = name
+      else if (cat === 'core_software') core.push(name)
+      else if (cat === 'technical') tech.push(name)
+      else if (cat === 'soft_skill') soft.push(name)
+    }
+    partial.specificSkill = specific
+    partial.coreSoftware = core
+    partial.technicalSkills = tech
+    partial.softSkills = soft
+  }
+
+  // Experience
+  const { data: expRows } = await supabase
+    .from('student_experience')
+    .select('*')
+    .eq('student_id', studentId)
+
+  if (expRows && expRows.length > 0) {
+    partial.isFresher = false
+    partial.experiences = expRows.map((r, i) => ({
+      id: `exp-db-${r.id ?? i}`,
+      role: str(r.role_title),
+      organisation: str(r.organization_name),
+      startDate: str(r.start_date),
+      endDate: str(r.end_date),
+      currentlyWorking: !r.end_date,
+      contribution: str(r.contributions),
+    }))
+  } else if (skillsRow) {
+    partial.isFresher = true
+  }
+
+  return partial
 }
 
 /**
@@ -211,22 +346,24 @@ export async function saveTalentProfile(
     }
   }
 
-  // 2. Prepare payload for student_profile
-  const preferredLocationsStr = data.preferredLocations.join(', ')
+  // 2. Prepare payload for student_profile (must match real table columns)
+  const relocationLabel =
+    data.willingToRelocate === 'yes' ? 'Yes' : data.willingToRelocate === 'open' ? 'Open to Discuss' : data.willingToRelocate === 'no' ? 'No' : null
+  const phoneDigits = data.contactNumber.replace(/\D/g, '')
 
   const studentProfilePayload = {
     user_id: userId,
     full_name: data.fullName.trim(),
     bio: data.bio.trim(),
     email: data.email.trim(),
-    phone: data.contactNumber.trim(),
+    phone: phoneDigits ? Number(phoneDigits) : null,
     location: data.city.trim(),
     institution: data.instituteName.trim(),
     discipline: data.discipline.trim(),
     graduation_year: data.graduationYear.trim(),
     work_mode: data.workMode.trim(),
-    preferred_location: preferredLocationsStr,
-    willing_to_relocate: data.willingToRelocate === 'yes',
+    preferred_location: data.preferredLocations,
+    relocation_preference: relocationLabel,
     availability: data.availability.trim(),
     employment_type: data.employmentType.trim(),
     notice_period: data.noticePeriod.trim(),
@@ -235,21 +372,33 @@ export async function saveTalentProfile(
     portfolio_url: data.portfolioLink.trim() || null,
     linkedin_url: data.linkedinLink.trim() || null,
     profile_image_url: avatarUrl || null,
-    is_profile_complete: true,
-    completeness_percentage: completenessScore,
     updated_at: new Date().toISOString(),
   }
 
-  // Upsert student_profile
+  // Update existing student_profile or insert a new one
   try {
-    const { data: upsertedStudent, error: studentError } = await supabase
+    const { data: existing } = await supabase
       .from('student_profile')
-      .upsert(studentProfilePayload, { onConflict: 'user_id' })
       .select('id')
+      .eq('user_id', userId)
+      .limit(1)
       .maybeSingle()
 
+    const { data: upsertedStudent, error: studentError } = existing?.id
+      ? await supabase
+          .from('student_profile')
+          .update(studentProfilePayload)
+          .eq('id', existing.id)
+          .select('id')
+          .maybeSingle()
+      : await supabase
+          .from('student_profile')
+          .insert(studentProfilePayload)
+          .select('id')
+          .maybeSingle()
+
     if (studentError) {
-      console.warn('Upsert student_profile notice:', studentError.message)
+      console.warn('Save student_profile notice:', studentError.message)
     }
 
     const studentId = upsertedStudent?.id || userId
@@ -293,6 +442,7 @@ export async function saveTalentProfile(
         }))
 
       if (expRows.length > 0) {
+        await supabase.from('student_experience').delete().eq('student_id', studentId)
         const { error: expErr } = await supabase
           .from('student_experience')
           .insert(expRows)

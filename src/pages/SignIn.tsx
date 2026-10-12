@@ -118,6 +118,16 @@ function SignIn({ onNavigateToSignUp, onSignInSuccess }: SignInProps) {
           <div className="signin-building">
             <img src="/building.svg" alt="Modern building" />
           </div>
+
+          <a
+            id="signin-blog-link"
+            className="signin-blog-link"
+            href="/blog"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Read our Blog <span aria-hidden="true">→</span>
+          </a>
         </div>
 
         <div className="signin-right">

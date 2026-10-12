@@ -49,11 +49,6 @@ export const FindJobs: FC<FindJobsProps> = (props) => {
     return name.slice(0, 2).toUpperCase()
   }
 
-  const getScoreColor = (score: number) => {
-    if (score >= 90) return 'high'
-    if (score >= 80) return 'medium'
-    return 'low'
-  }
 
   // Filtered & Sorted Jobs from real database
   const filteredJobs = useMemo(() => {

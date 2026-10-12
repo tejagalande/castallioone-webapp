@@ -143,11 +143,6 @@ export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
   const talentRole = profile.specificSkill || profile.discipline || 'AEC Candidate'
   const profileStrength = metrics.profileStrength || 0
 
-  const getScoreColor = (score: number) => {
-    if (score >= 90) return 'high'
-    if (score >= 80) return 'medium'
-    return 'low'
-  }
 
   const getCompanyInitials = (name: string): string => {
     if (!name) return 'AEC'

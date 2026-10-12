@@ -1,5 +1,5 @@
-import { useState, useCallback, useMemo } from 'react'
-import { saveTalentProfile } from '../lib/talentService'
+import { useState, useCallback, useMemo, useEffect } from 'react'
+import { saveTalentProfile, fetchSavedTalentProfile } from '../lib/talentService'
 
 export interface ExperienceItem {
   id: string
@@ -526,6 +526,30 @@ export function useTalentProfileSetup({
       }))
     }
   }
+
+  // Hydrate form with the profile already saved in Supabase (source of truth)
+  useEffect(() => {
+    if (!userId) return
+    let cancelled = false
+    fetchSavedTalentProfile(userId)
+      .then((saved) => {
+        if (cancelled || !saved) return
+        setFormData((prev) => {
+          const next = { ...prev }
+          ;(Object.keys(saved) as Array<keyof TalentProfileData>).forEach((key) => {
+            const val = saved[key]
+            const isEmptyArr = Array.isArray(val) && val.length === 0
+            if (val === undefined || val === '' || isEmptyArr) return
+            ;(next as Record<string, unknown>)[key] = val
+          })
+          return next
+        })
+      })
+      .catch((e) => console.warn('Failed to hydrate talent profile:', e))
+    return () => {
+      cancelled = true
+    }
+  }, [userId])
 
   // Profile Completeness Calculation
   const completeness = useMemo((): CompletenessBreakdown => {

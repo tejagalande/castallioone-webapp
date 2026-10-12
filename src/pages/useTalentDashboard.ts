@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { notifyEvent } from '../lib/webPush'
+import { computeStudentRowCompleteness } from '../lib/talentService'
 
 export interface RecommendedJob {
   id: string
@@ -370,6 +371,7 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
           .from('student_profile')
           .select('*')
           .or(`user_id.eq.${resolvedUserId},id.eq.${resolvedUserId}`)
+          .limit(1)
           .maybeSingle()
 
         if (studentData) {
@@ -378,20 +380,32 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
           if (studentData.discipline) currentDiscipline = studentData.discipline
           if (studentData.work_mode) currentWorkMode = studentData.work_mode
           if (studentData.profile_image_url) profileAvatar = studentData.profile_image_url
-          if (typeof studentData.completeness_percentage === 'number') {
+          if (typeof studentData.completeness_percentage === 'number' && studentData.completeness_percentage > 0) {
             completeness = studentData.completeness_percentage
+          } else {
+            completeness = computeStudentRowCompleteness(studentData)
           }
 
-          // Query skills from student_skills
-          const { data: skillsRows } = await supabase
+          // Query skills from student_skills (jsonb `skills` array keyed by student_id)
+          const { data: skillsRow } = await supabase
             .from('student_skills')
-            .select('skill_name, category')
+            .select('skills')
             .or(`student_id.eq.${studentData.id},student_id.eq.${resolvedUserId}`)
+            .limit(1)
+            .maybeSingle()
 
-          if (skillsRows && skillsRows.length > 0) {
-            currentSkillsList = skillsRows.map((s) => s.skill_name)
-            const specific = skillsRows.find((s) => s.category === 'specific')
-            if (specific) currentSkill = specific.skill_name
+          if (skillsRow && Array.isArray(skillsRow.skills) && skillsRow.skills.length > 0) {
+            const items = skillsRow.skills as Array<string | { skill_name?: string; category?: string }>
+            const names = items
+              .map((s) => (typeof s === 'string' ? s : s.skill_name || ''))
+              .filter(Boolean)
+            if (names.length > 0) currentSkillsList = names
+            const specific = items.find(
+              (s) => typeof s !== 'string' && s.category === 'primary_specialization'
+            )
+            if (specific && typeof specific !== 'string' && specific.skill_name) {
+              currentSkill = specific.skill_name
+            }
           }
         } else if (user?.user_metadata?.full_name || user?.user_metadata?.name) {
           fullName = user.user_metadata.full_name || user.user_metadata.name

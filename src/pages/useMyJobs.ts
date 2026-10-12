@@ -363,6 +363,27 @@ export function useMyJobs(onPostNewJob?: () => void) {
     [requisitions, showToast]
   )
 
+  const handleCloseRequisition = useCallback(
+    async (id: string) => {
+      try {
+        const { error } = await supabase.from('create_job_post').update({ status: 'closed' }).eq('id', id)
+        if (error) throw error
+
+        setRequisitions((prev) =>
+          prev.map((r) => (r.id === id ? { ...r, status: 'closed' } : r))
+        )
+        if (companyId) {
+          void getCompanyJobQuota(companyId).then((q) => setJobQuota(q))
+        }
+        showToast('Requisition marked as closed and moved to archive.')
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Error closing requisition'
+        showToast(msg)
+      }
+    },
+    [companyId, showToast]
+  )
+
   const handleDuplicateRequisition = useCallback(
     async (req: RequisitionItem) => {
       try {
@@ -524,6 +545,7 @@ export function useMyJobs(onPostNewJob?: () => void) {
     showToast,
     refreshJobs,
     handlePauseRequisition,
+    handleCloseRequisition,
     handleDuplicateRequisition,
     handleDiscardDraft,
     handleReopenRequisition,

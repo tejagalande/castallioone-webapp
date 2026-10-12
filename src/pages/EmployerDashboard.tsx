@@ -80,11 +80,6 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
     setActiveMenu('my-jobs')
   }
 
-  const getScoreColor = (score: number) => {
-    if (score >= 90) return 'high'
-    if (score >= 80) return 'medium'
-    return 'low'
-  }
 
   return (
     <div className="dashboard-layout">

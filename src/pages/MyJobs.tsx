@@ -37,6 +37,7 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highli
     showToast,
     refreshJobs,
     handlePauseRequisition,
+    handleCloseRequisition,
     handleDuplicateRequisition,
     handleDiscardDraft,
     handleReopenRequisition,
@@ -738,6 +739,19 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highli
                           <circle cx="12" cy="12" r="10" />
                           <line x1="10" y1="15" x2="10" y2="9" />
                           <line x1="14" y1="15" x2="14" y2="9" />
+                        </svg>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn-icon-req btn-close-req"
+                        title="Close Requisition"
+                        onClick={() => handleCloseRequisition(req.id)}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10" />
+                          <line x1="15" y1="9" x2="9" y2="15" />
+                          <line x1="9" y1="9" x2="15" y2="15" />
                         </svg>
                       </button>
 

@@ -600,6 +600,11 @@
   color: #00418f;
 }
 
+.btn-icon-req.btn-close-req:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 .btn-icon-req svg {
   width: 18px;
   height: 18px;
