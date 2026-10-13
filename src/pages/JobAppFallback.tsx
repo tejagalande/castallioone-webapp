@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import type { FC } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useSchema } from '../hooks/useSchema'
 import './AppFallback.css'
 
 interface JobPostDetails {
@@ -126,6 +127,106 @@ export const JobAppFallback: FC = () => {
         .map((t) => t.trim())
         .filter(Boolean)
     : []
+
+  // Dynamic Schema.org structured data (JobPosting & BreadcrumbList) for SEO
+  const schemaData = useMemo(() => {
+    if (!job) return null
+
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://castallioone.com'
+    const pageUrl = `${origin}/jobs/${job.id}`
+    const isRemote =
+      job.work_type?.toLowerCase().includes('remote') ||
+      job.location?.toLowerCase().includes('remote')
+
+    const fullDescription =
+      [
+        job.job_description,
+        job.responsibilities ? `Responsibilities:\n${job.responsibilities}` : '',
+        job.technical_requirements ? `Requirements:\n${job.technical_requirements}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n') || job.title
+
+    let employmentType = 'FULL_TIME'
+    const wt = (job.work_type || '').toLowerCase()
+    if (wt.includes('part')) employmentType = 'PART_TIME'
+    else if (wt.includes('contract') || wt.includes('freelance')) employmentType = 'CONTRACTOR'
+    else if (wt.includes('intern')) employmentType = 'INTERN'
+
+    const datePosted = job.created_at || new Date().toISOString()
+    const validThroughDate = new Date(new Date(datePosted).getTime() + 90 * 24 * 60 * 60 * 1000).toISOString()
+
+    const graph: Record<string, unknown>[] = [
+      {
+        '@type': 'JobPosting',
+        title: job.title,
+        description: fullDescription.replace(/\n/g, '<br/>'),
+        datePosted,
+        validThrough: validThroughDate,
+        employmentType,
+        hiringOrganization: {
+          '@type': 'Organization',
+          name: job.company_name || 'Castallio Enterprise Partner',
+          logo: job.company_logo || `${origin}/favicon-512x512.png`,
+        },
+        jobLocation: isRemote
+          ? {
+              '@type': 'Place',
+              applicantLocationRequirements: {
+                '@type': 'Country',
+                name: 'Worldwide',
+              },
+            }
+          : {
+              '@type': 'Place',
+              address: {
+                '@type': 'PostalAddress',
+                addressLocality: job.location || 'India',
+              },
+            },
+        jobLocationType: isRemote ? 'TELECOMMUTE' : undefined,
+        baseSalary: job.salary_min
+          ? {
+              '@type': 'MonetaryAmount',
+              currency: job.currency || 'INR',
+              value: {
+                '@type': 'QuantitativeValue',
+                minValue: Number(job.salary_min) || undefined,
+                maxValue: job.salary_max ? Number(job.salary_max) : undefined,
+                unitText: 'MONTH',
+              },
+            }
+          : undefined,
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: origin },
+          { '@type': 'ListItem', position: 2, name: 'Jobs', item: `${origin}/find-jobs` },
+          { '@type': 'ListItem', position: 3, name: job.title, item: pageUrl },
+        ],
+      },
+    ]
+
+    return graph
+  }, [job])
+
+  useSchema(
+    schemaData,
+    'job-posting-schema',
+    job
+      ? {
+          title: `${job.title} at ${job.company_name || 'Castallio One'} | BIM & AEC Opportunities`,
+          description: (
+            job.job_description ||
+            `Explore ${job.title} job opening in ${job.location || 'AEC industry'}. Apply via Castallio One.`
+          ).slice(0, 160),
+          canonicalUrl: `${typeof window !== 'undefined' ? window.location.origin : 'https://castallioone.com'}/jobs/${job.id}`,
+          ogImage: job.company_logo || 'https://castallioone.com/favicon-512x512.png',
+          ogType: 'website',
+        }
+      : undefined
+  )
 
   return (
     <div className="af-page-container">

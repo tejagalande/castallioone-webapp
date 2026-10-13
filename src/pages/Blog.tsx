@@ -6,87 +6,60 @@ import {
   formatBlogDate,
   type BlogPost,
 } from '../lib/blogService'
+import { useSchema } from '../hooks/useSchema'
 import './Blog.css'
 
 const SITE_NAME = 'Castallio One'
 
-/** Sets (or creates) a <meta> tag in <head>. Returns a cleanup that removes it if we created it. */
-function setMeta(attr: 'name' | 'property', key: string, value: string): () => void {
-  let el = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`)
-  const created = !el
-  const previous = el?.getAttribute('content') ?? null
-  if (!el) {
-    el = document.createElement('meta')
-    el.setAttribute(attr, key)
-    document.head.appendChild(el)
-  }
-  el.setAttribute('content', value)
-  return () => {
-    if (!el) return
-    if (created) el.remove()
-    else if (previous !== null) el.setAttribute('content', previous)
-  }
-}
-
 /** Applies per-post SEO: title, description, robots, canonical, Open Graph, Twitter and JSON-LD. */
 function useBlogSeo(post: BlogPost | null) {
-  useEffect(() => {
-    if (!post) return
-    const origin = window.location.origin
-    const url = post.canonical_url || `${origin}/blog/${post.slug}`
-    const title = post.seo_title || post.title
-    const description = post.meta_description || post.excerpt
-    const image = post.featured_image_url || ''
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://castallioone.com'
+  const url = post?.canonical_url || (post ? `${origin}/blog/${post.slug}` : `${origin}/blog`)
+  const title = post ? post.seo_title || post.title : ''
+  const description = post ? post.meta_description || post.excerpt : ''
+  const image = post?.featured_image_url || `${origin}/favicon-512x512.png`
 
-    const previousTitle = document.title
-    document.title = title
-
-    const cleanups: Array<() => void> = [
-      setMeta('name', 'description', description),
-      setMeta('name', 'robots', post.robots || 'index, follow'),
-      setMeta('name', 'keywords', [post.primary_keyword, ...post.secondary_keywords].filter(Boolean).join(', ')),
-      setMeta('property', 'og:type', 'article'),
-      setMeta('property', 'og:site_name', SITE_NAME),
-      setMeta('property', 'og:title', title),
-      setMeta('property', 'og:description', description),
-      setMeta('property', 'og:url', url),
-      setMeta('name', 'twitter:card', 'summary_large_image'),
-      setMeta('name', 'twitter:title', title),
-      setMeta('name', 'twitter:description', description),
-    ]
-    if (image) {
-      cleanups.push(setMeta('property', 'og:image', image), setMeta('name', 'twitter:image', image))
-    }
-
-    const canonical = document.createElement('link')
-    canonical.rel = 'canonical'
-    canonical.href = url
-    document.head.appendChild(canonical)
-
-    const graph: Array<Record<string, unknown>> = [
+  const graph = useMemo(() => {
+    if (!post) return null
+    const g: Array<Record<string, unknown>> = [
       {
-        '@type': 'Article',
+        '@type': 'BlogPosting',
         headline: post.title,
         description,
         image: image || undefined,
-        author: { '@type': 'Organization', name: post.author_name },
-        publisher: { '@type': 'Organization', name: SITE_NAME },
+        author: {
+          '@type': 'Person',
+          name: post.author_name || SITE_NAME,
+        },
+        publisher: {
+          '@type': 'Organization',
+          name: SITE_NAME,
+          logo: {
+            '@type': 'ImageObject',
+            url: `${origin}/favicon-512x512.png`,
+          },
+        },
         datePublished: post.published_at,
-        dateModified: post.updated_at,
-        mainEntityOfPage: url,
-        keywords: post.secondary_keywords.join(', '),
+        dateModified: post.updated_at || post.published_at,
+        mainEntityOfPage: {
+          '@type': 'WebPage',
+          '@id': url,
+        },
+        keywords: [post.primary_keyword, ...post.secondary_keywords].filter(Boolean).join(', '),
         wordCount: post.word_count,
       },
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Blog', item: `${origin}/blog` },
-          { '@type': 'ListItem', position: 2, name: post.title, item: url },
+          { '@type': 'ListItem', position: 1, name: 'Home', item: origin },
+          { '@type': 'ListItem', position: 2, name: 'Blog', item: `${origin}/blog` },
+          { '@type': 'ListItem', position: 3, name: post.title, item: url },
         ],
       },
     ]
-    if (post.faq.length > 0) {
-      graph.push({
+
+    if (post.faq && post.faq.length > 0) {
+      g.push({
         '@type': 'FAQPage',
         mainEntity: post.faq.map((f) => ({
           '@type': 'Question',
@@ -95,18 +68,25 @@ function useBlogSeo(post: BlogPost | null) {
         })),
       })
     }
-    const script = document.createElement('script')
-    script.type = 'application/ld+json'
-    script.text = JSON.stringify({ '@context': 'https://schema.org', '@graph': graph })
-    document.head.appendChild(script)
 
-    return () => {
-      document.title = previousTitle
-      cleanups.forEach((c) => c())
-      canonical.remove()
-      script.remove()
-    }
-  }, [post])
+    return g
+  }, [post, url, description, image, origin])
+
+  useSchema(
+    graph,
+    'blog-article-schema',
+    post
+      ? {
+          title: `${title} | ${SITE_NAME}`,
+          description,
+          canonicalUrl: url,
+          ogImage: image,
+          ogType: 'article',
+          robots: post.robots || 'index, follow',
+          keywords: [post.primary_keyword, ...post.secondary_keywords].filter(Boolean).join(', '),
+        }
+      : undefined
+  )
 }
 
 const BlogHeader: React.FC = () => (
@@ -188,7 +168,6 @@ export const BlogList: React.FC = () => {
   const [category, setCategory] = useState('All')
 
   useEffect(() => {
-    document.title = 'Blog | Castallio One'
     fetchBlogPosts()
       .then(setPosts)
       .catch((e: Error) => setError(e.message))
@@ -197,6 +176,56 @@ export const BlogList: React.FC = () => {
 
   const categories = useMemo(() => ['All', ...Array.from(new Set(posts.map((p) => p.category)))], [posts])
   const visible = category === 'All' ? posts : posts.filter((p) => p.category === category)
+
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://castallioone.com'
+  const blogUrl = `${origin}/blog`
+
+  const blogListSchema = useMemo(() => {
+    const graph: Array<Record<string, unknown>> = [
+      {
+        '@type': 'Blog',
+        '@id': `${blogUrl}#blog`,
+        name: 'The Castallio One Blog',
+        description: 'Hiring trends, career advice and BIM know-how for the AEC community.',
+        url: blogUrl,
+        publisher: {
+          '@type': 'Organization',
+          name: SITE_NAME,
+          logo: {
+            '@type': 'ImageObject',
+            url: `${origin}/favicon-512x512.png`,
+          },
+        },
+        blogPost: posts.slice(0, 10).map((p) => ({
+          '@type': 'BlogPosting',
+          headline: p.title,
+          url: `${origin}/blog/${p.slug}`,
+          datePublished: p.published_at,
+          description: p.excerpt,
+        })),
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: origin },
+          { '@type': 'ListItem', position: 2, name: 'Blog', item: blogUrl },
+        ],
+      },
+    ]
+    return graph
+  }, [posts, blogUrl, origin])
+
+  useSchema(
+    blogListSchema,
+    'blog-list-schema',
+    {
+      title: 'The Castallio One Blog | AEC & BIM Insights, Guides & Trends',
+      description: 'Hiring trends, career advice and BIM know-how for the AEC community. Read expert insights, career guides, and industry news.',
+      canonicalUrl: blogUrl,
+      ogImage: `${origin}/favicon-512x512.png`,
+      ogType: 'website',
+    }
+  )
 
   return (
     <div className="blog-page">
