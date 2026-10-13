@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "seo:export": "node scripts/seo-generator/export-jobs.mjs",
+    "seo:pages": "node scripts/seo-generator/generate-seo-pages.mjs",
+    "seo:generate": "node scripts/seo-generator/run-seo-pipeline.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
