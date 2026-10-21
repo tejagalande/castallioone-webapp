@@ -141,9 +141,11 @@ export async function saveCompanyProfile(ownerId: string, data: CompanyProfileDa
   const certificateUrl = await uploadCompanyDocument(ownerId, data.certificateFile, 'certificate')
 
   // 3. Upload PAN doc if provided, or use PAN string as fallback
-  let panCardLink: string = data.companyPan
+  let panCardLink: string | null = null
   if (data.panFile) {
     panCardLink = await uploadCompanyDocument(ownerId, data.panFile, 'pan_card')
+  } else if (data.companyPan?.trim()) {
+    panCardLink = data.companyPan.trim()
   }
 
   // 4. Upsert into companies table

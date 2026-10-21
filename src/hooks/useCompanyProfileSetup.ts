@@ -125,10 +125,10 @@ export const validateSingleField = (
       return ''
 
     case 'companyPan': {
+      if (!strVal) return ''
       const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i
-      if (!strVal) return 'Company PAN number is required.'
       if (!panRegex.test(strVal)) {
-        return 'Enter a valid 10-digit PAN (e.g. ABCDE1234F).'
+        return 'Enter a valid 10-digit PAN (e.g. ABCDE1234F) or leave blank.'
       }
       return ''
     }

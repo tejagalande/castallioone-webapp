@@ -395,7 +395,7 @@ export const CompanyProfileSetup: React.FC<CompanyProfileSetupProps> = ({
               <div className="setup-section-title">
                 <span className="section-num">3</span>
                 <h2>Legal Verification & Compliance</h2>
-                <span>GST, Registration Certificate, and PAN</span>
+                <span>Registration Certificate, GST (Optional), and PAN (Optional)</span>
               </div>
 
               {/* 11. GST Number (Optional) */}
@@ -547,7 +547,8 @@ export const CompanyProfileSetup: React.FC<CompanyProfileSetupProps> = ({
               <div className="form-row-2">
                 <div className="form-group">
                   <label className="form-label" htmlFor="companyPan">
-                    Company PAN *
+                    Company PAN
+                    <span className="form-label-optional">(Optional)</span>
                   </label>
                   <input
                     id="companyPan"
