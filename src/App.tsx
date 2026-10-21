@@ -29,34 +29,46 @@ function App() {
 
   const handleSignInSuccess = async (type: 'talent' | 'employers') => {
     setUserRole(type)
+    const returnTo = sessionStorage.getItem('castallio_return_to')
+
     if (type === 'employers') {
       if (user) {
         const { exists, needsOnboarding } = await checkUserProfile(user.id)
         if (!exists || needsOnboarding) {
           showInfo('Please complete your company profile to access enterprise tools.', 'Profile Required')
-          navigate('/company-setup')
+          navigate('/company-setup', { replace: true })
           return
         }
       }
       showSuccess('Signed in successfully!', 'Welcome Back')
-      navigate('/employer')
+      if (returnTo) {
+        sessionStorage.removeItem('castallio_return_to')
+        navigate(returnTo, { replace: true })
+      } else {
+        navigate('/employer/dashboard', { replace: true })
+      }
     } else {
       if (user) {
         const { exists, needsOnboarding } = await checkTalentProfile(user.id)
         if (!exists || needsOnboarding) {
           showInfo('Please complete your talent profile onboarding to explore opportunities.', 'Profile Required')
-          navigate('/talent-setup')
+          navigate('/talent-setup', { replace: true })
           return
         }
       } else {
         const isCompleted = localStorage.getItem('castallio_talent_profile_completed') === 'true'
         if (!isCompleted) {
-          navigate('/talent-setup')
+          navigate('/talent-setup', { replace: true })
           return
         }
       }
       showSuccess('Signed in successfully!', 'Welcome Back')
-      navigate('/talent')
+      if (returnTo) {
+        sessionStorage.removeItem('castallio_return_to')
+        navigate(returnTo, { replace: true })
+      } else {
+        navigate('/talent/dashboard', { replace: true })
+      }
     }
   }
 
@@ -77,7 +89,7 @@ function App() {
     localStorage.removeItem('castallio_oauth_intent')
     localStorage.removeItem('castallio_signup_provider')
     localStorage.removeItem('castallio_signup_role')
-    navigate('/employer')
+    navigate('/employer/dashboard', { replace: true })
   }
 
   const handleTalentSetupSuccess = () => {
@@ -86,7 +98,7 @@ function App() {
     localStorage.removeItem('castallio_oauth_intent')
     localStorage.removeItem('castallio_signup_provider')
     localStorage.removeItem('castallio_signup_role')
-    navigate('/talent')
+    navigate('/talent/dashboard', { replace: true })
   }
 
   const handleLogout = async () => {
@@ -211,16 +223,18 @@ function App() {
         <Route path="/talent-onboarding" element={<Navigate to="/talent-setup" replace />} />
 
         {/* Protected Dashboard Routes */}
+        <Route path="/employer" element={<Navigate to="/employer/dashboard" replace />} />
         <Route
-          path="/employer"
+          path="/employer/*"
           element={
             <ProtectedRoute requiredRole="employers" requireCompletedProfile={true}>
               <EmployerDashboard onLogout={handleLogout} />
             </ProtectedRoute>
           }
         />
+        <Route path="/talent" element={<Navigate to="/talent/dashboard" replace />} />
         <Route
-          path="/talent"
+          path="/talent/*"
           element={
             <ProtectedRoute requiredRole="talent" requireCompletedProfile={true}>
               <TalentDashboard onLogout={handleLogout} />

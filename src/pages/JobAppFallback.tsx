@@ -3,6 +3,7 @@ import type { FC } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useSchema } from '../hooks/useSchema'
+import { useAuth } from '../hooks/useAuth'
 import './AppFallback.css'
 
 interface JobPostDetails {
@@ -36,6 +37,8 @@ export const JobAppFallback: FC = () => {
   const [job, setJob] = useState<JobPostDetails | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const autoRedirectRef = useRef<boolean>(false)
+  const { user } = useAuth()
+  const userRole = localStorage.getItem('castallio_user_role') || user?.user_metadata?.role || 'talent'
 
   // 1. Fetch real job post from Supabase
   useEffect(() => {
@@ -386,12 +389,36 @@ export const JobAppFallback: FC = () => {
                   <span>Get it on Google Play</span>
                 </a>
 
-                <Link to="/signin" className="btn-af-secondary">
-                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
-                    language
-                  </span>
-                  <span>Continue on Web Browser</span>
-                </Link>
+                {user ? (
+                  userRole === 'employers' ? (
+                    <Link to="/employer/dashboard" className="btn-af-secondary">
+                      <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                        dashboard
+                      </span>
+                      <span>Go to Employer Dashboard</span>
+                    </Link>
+                  ) : (
+                    <Link to={`/talent/find-jobs?job=${job.id}`} className="btn-af-secondary">
+                      <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                        badge
+                      </span>
+                      <span>View in Talent Portal</span>
+                    </Link>
+                  )
+                ) : (
+                  <Link
+                    to={`/signin?returnTo=/jobs/${resolvedJobId || job.id}`}
+                    className="btn-af-secondary"
+                    onClick={() => {
+                      sessionStorage.setItem('castallio_return_to', `/jobs/${resolvedJobId || job.id}`)
+                    }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                      login
+                    </span>
+                    <span>Sign in to Apply on Web</span>
+                  </Link>
+                )}
               </div>
             </>
           ) : (

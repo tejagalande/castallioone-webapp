@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import PostJob from './PostJob'
 import MyJobs from './MyJobs'
 import {
@@ -58,7 +59,73 @@ const menuItems: { id: MenuItem; label: string; icon: string }[] = [
 ]
 
 function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
-  const [activeMenu, setActiveMenu] = useState<MenuItem>('dashboard')
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  const activeMenu = useMemo<MenuItem>(() => {
+    const segments = location.pathname.split('/').filter(Boolean)
+    if (segments.length >= 2 && segments[0] === 'employer') {
+      const tab = segments[1] as MenuItem
+      if (menuItems.some((m) => m.id === tab)) {
+        return tab
+      }
+    }
+    return 'dashboard'
+  }, [location.pathname])
+
+  const currentStackDepth = (location.state as { stackDepth?: number } | null)?.stackDepth ?? 0
+
+  const setActiveMenu = useCallback(
+    (tab: MenuItem, options?: { replace?: boolean }) => {
+      const targetPath = tab === 'dashboard' ? '/employer/dashboard' : `/employer/${tab}`
+
+      // If already on the requested tab, no-op
+      if (tab === activeMenu) return
+
+      // Navigating back to the dashboard hub resets depth
+      if (tab === 'dashboard') {
+        navigate(targetPath, {
+          state: { stackDepth: 0 },
+          replace: options?.replace ?? false,
+        })
+        return
+      }
+
+      // If replace was explicitly requested, honor it
+      if (options?.replace) {
+        navigate(targetPath, {
+          state: { stackDepth: currentStackDepth || 1 },
+          replace: true,
+        })
+        return
+      }
+
+      // Cap stack depth at 2:
+      // Depth 0 -> 1: Push
+      // Depth 1 -> 2: Push
+      // Depth 2+: Replace in-place so Back button is never more than 2 steps from Dashboard
+      if (currentStackDepth >= 2) {
+        navigate(targetPath, {
+          state: { stackDepth: 2 },
+          replace: true,
+        })
+      } else {
+        const nextDepth = currentStackDepth + 1
+        navigate(targetPath, {
+          state: { stackDepth: nextDepth },
+          replace: false,
+        })
+      }
+    },
+    [activeMenu, currentStackDepth, navigate]
+  )
+
+  useEffect(() => {
+    if (location.pathname === '/employer' || location.pathname === '/employer/') {
+      navigate('/employer/dashboard', { replace: true })
+    }
+  }, [location.pathname, navigate])
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return window.innerWidth <= 1280

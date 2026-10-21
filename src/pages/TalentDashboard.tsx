@@ -1,5 +1,5 @@
-import { useState, useEffect, type FC } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useState, useEffect, useMemo, useCallback, type FC } from 'react'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import './TalentDashboard.css'
 import FindJobs from './FindJobs'
 import Applications from './Applications'
@@ -52,10 +52,19 @@ const menuItems: { id: MenuItem; label: string; icon: string }[] = [
 
 export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const tabParam = searchParams.get('tab') as string | null
 
-  const [activeMenu, setActiveMenu] = useState<MenuItem>(() => {
+  const activeMenu = useMemo<MenuItem>(() => {
+    const segments = location.pathname.split('/').filter(Boolean)
+    if (segments.length >= 2 && segments[0] === 'talent') {
+      const tab = segments[1] as MenuItem
+      if (menuItems.some((m) => m.id === tab)) {
+        return tab
+      }
+    }
+    // Also support search param ?tab=...
     if (tabParam === 'resume' || tabParam === 'portfolio' || tabParam === 'certifications') {
       return 'my-profile'
     }
@@ -66,19 +75,60 @@ export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
       return tabParam as MenuItem
     }
     return 'dashboard'
-  })
-  const [prevTabParam, setPrevTabParam] = useState<string | null>(tabParam)
+  }, [location.pathname, tabParam])
 
-  if (tabParam !== prevTabParam) {
-    setPrevTabParam(tabParam)
-    if (tabParam === 'resume' || tabParam === 'portfolio' || tabParam === 'certifications') {
-      setActiveMenu('my-profile')
-    } else if (tabParam === 'job-alerts' || tabParam === 'notifications') {
-      setActiveMenu('notifications')
-    } else if (tabParam && menuItems.some((m) => m.id === tabParam)) {
-      setActiveMenu(tabParam as MenuItem)
+  const currentStackDepth = (location.state as { stackDepth?: number } | null)?.stackDepth ?? 0
+
+  const setActiveMenu = useCallback(
+    (tab: MenuItem, options?: { replace?: boolean }) => {
+      const targetPath = tab === 'dashboard' ? '/talent/dashboard' : `/talent/${tab}`
+
+      // If already on the requested tab, no-op
+      if (tab === activeMenu) return
+
+      // Navigating back to the dashboard hub resets depth
+      if (tab === 'dashboard') {
+        navigate(targetPath, {
+          state: { stackDepth: 0 },
+          replace: options?.replace ?? false,
+        })
+        return
+      }
+
+      // If replace was explicitly requested, honor it
+      if (options?.replace) {
+        navigate(targetPath, {
+          state: { stackDepth: currentStackDepth || 1 },
+          replace: true,
+        })
+        return
+      }
+
+      // Cap stack depth at 2:
+      // Depth 0 -> 1: Push
+      // Depth 1 -> 2: Push
+      // Depth 2+: Replace in-place so Back button is never more than 2 steps from Dashboard
+      if (currentStackDepth >= 2) {
+        navigate(targetPath, {
+          state: { stackDepth: 2 },
+          replace: true,
+        })
+      } else {
+        const nextDepth = currentStackDepth + 1
+        navigate(targetPath, {
+          state: { stackDepth: nextDepth },
+          replace: false,
+        })
+      }
+    },
+    [activeMenu, currentStackDepth, navigate]
+  )
+
+  useEffect(() => {
+    if (location.pathname === '/talent' || location.pathname === '/talent/') {
+      navigate('/talent/dashboard', { replace: true })
     }
-  }
+  }, [location.pathname, navigate])
 
   // Live Unread Notification Badge Counter
   const [unreadNotifCount, setUnreadNotifCount] = useState<number>(() => {

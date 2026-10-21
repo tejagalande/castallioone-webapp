@@ -43,6 +43,8 @@ export const RootRedirect: React.FC<RootRedirectProps> = ({ showToast }) => {
         return
       }
 
+      const returnTo = sessionStorage.getItem('castallio_return_to')
+
       if (role === 'employers') {
         const { exists, needsOnboarding } = await checkUserProfile(user.id)
         if (!isMounted) return
@@ -50,8 +52,11 @@ export const RootRedirect: React.FC<RootRedirectProps> = ({ showToast }) => {
         if (!exists || needsOnboarding) {
           showToast?.('Please complete your enterprise company profile.', 'info', 'Verification Required')
           navigate('/company-setup', { replace: true })
+        } else if (returnTo) {
+          sessionStorage.removeItem('castallio_return_to')
+          navigate(returnTo, { replace: true })
         } else {
-          navigate('/employer', { replace: true })
+          navigate('/employer/dashboard', { replace: true })
         }
       } else {
         const { exists, needsOnboarding } = await checkTalentProfile(user.id)
@@ -60,8 +65,11 @@ export const RootRedirect: React.FC<RootRedirectProps> = ({ showToast }) => {
         if (!exists || needsOnboarding) {
           showToast?.('Please complete your talent profile onboarding to access opportunities.', 'info', 'Profile Setup Required')
           navigate('/talent-setup', { replace: true })
+        } else if (returnTo) {
+          sessionStorage.removeItem('castallio_return_to')
+          navigate(returnTo, { replace: true })
         } else {
-          navigate('/talent', { replace: true })
+          navigate('/talent/dashboard', { replace: true })
         }
       }
     }

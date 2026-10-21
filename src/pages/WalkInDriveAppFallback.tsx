@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import type { FC } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../hooks/useAuth'
 import './AppFallback.css'
 
 interface WalkInDriveDetails {
@@ -33,6 +34,8 @@ export const WalkInDriveAppFallback: FC = () => {
   const [drive, setDrive] = useState<WalkInDriveDetails | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const autoRedirectRef = useRef<boolean>(false)
+  const { user } = useAuth()
+  const userRole = localStorage.getItem('castallio_user_role') || user?.user_metadata?.role || 'talent'
 
   // 1. Fetch real walk-in drive from Supabase
   useEffect(() => {
@@ -313,12 +316,36 @@ export const WalkInDriveAppFallback: FC = () => {
                   <span>Get it on Google Play</span>
                 </a>
 
-                <Link to="/signin" className="btn-af-secondary">
-                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
-                    language
-                  </span>
-                  <span>Continue on Web Browser</span>
-                </Link>
+                {user ? (
+                  userRole === 'employers' ? (
+                    <Link to="/employer/dashboard" className="btn-af-secondary">
+                      <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                        dashboard
+                      </span>
+                      <span>Go to Employer Dashboard</span>
+                    </Link>
+                  ) : (
+                    <Link to="/talent/walk-in-drives" className="btn-af-secondary">
+                      <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                        badge
+                      </span>
+                      <span>View in Talent Portal</span>
+                    </Link>
+                  )
+                ) : (
+                  <Link
+                    to={`/signin?returnTo=/walk-in-drives/${resolvedDriveId}`}
+                    className="btn-af-secondary"
+                    onClick={() => {
+                      sessionStorage.setItem('castallio_return_to', `/walk-in-drives/${resolvedDriveId}`)
+                    }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                      login
+                    </span>
+                    <span>Sign in to Register on Web</span>
+                  </Link>
+                )}
               </div>
             </>
           ) : (

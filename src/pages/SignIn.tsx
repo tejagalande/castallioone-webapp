@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import './SignIn.css'
 
@@ -12,6 +12,16 @@ interface SignInProps {
 
 function SignIn({ onNavigateToSignUp, onSignInSuccess }: SignInProps) {
   const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
+
+  useEffect(() => {
+    const returnToParam = searchParams.get('returnTo') || (location.state as { from?: { pathname?: string } } | null)?.from?.pathname
+    if (returnToParam) {
+      sessionStorage.setItem('castallio_return_to', returnToParam)
+    }
+  }, [searchParams, location.state])
+
   const [activeTab, setActiveTab] = useState<AuthTab>('talent')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -64,7 +74,13 @@ function SignIn({ onNavigateToSignUp, onSignInSuccess }: SignInProps) {
         if (onSignInSuccess) {
           onSignInSuccess(activeTab)
         } else {
-          navigate(activeTab === 'employers' ? '/employer' : '/talent')
+          const returnTo = sessionStorage.getItem('castallio_return_to')
+          if (returnTo) {
+            sessionStorage.removeItem('castallio_return_to')
+            navigate(returnTo, { replace: true })
+          } else {
+            navigate(activeTab === 'employers' ? '/employer/dashboard' : '/talent/dashboard', { replace: true })
+          }
         }
       }
     } finally {
