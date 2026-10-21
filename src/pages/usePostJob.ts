@@ -437,12 +437,12 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
           }
 
           if (Array.isArray(data.project_types) && data.project_types.length > 0) {
-            const pts = data.project_types.map((p: string) => String(p).trim()).filter(Boolean)
+            const pts: string[] = data.project_types.map((p: unknown) => String(p).trim()).filter(Boolean)
             setSelectedProjectTypes(pts)
             setProjectType(pts.join(', '))
             setProjectTypes((prev) => {
               const updated = [...prev]
-              pts.forEach((p) => {
+              pts.forEach((p: string) => {
                 if (!updated.some((u) => u.toLowerCase() === p.toLowerCase())) {
                   updated.push(p)
                 }
@@ -451,13 +451,13 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
             })
           } else if (data.project_type) {
             const rawPt = String(data.project_type).trim()
-            const pts = rawPt.split(/[,;/]+/).map((p) => p.trim()).filter(Boolean)
-            const loaded = pts.length > 0 ? pts : [rawPt]
+            const pts: string[] = rawPt.split(/[,;/]+/).map((p) => p.trim()).filter(Boolean)
+            const loaded: string[] = pts.length > 0 ? pts : [rawPt]
             setSelectedProjectTypes(loaded)
             setProjectType(rawPt)
             setProjectTypes((prev) => {
               const updated = [...prev]
-              loaded.forEach((p) => {
+              loaded.forEach((p: string) => {
                 if (!updated.some((u) => u.toLowerCase() === p.toLowerCase())) {
                   updated.push(p)
                 }
