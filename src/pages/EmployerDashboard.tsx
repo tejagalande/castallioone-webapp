@@ -12,7 +12,7 @@ import { TalentSearch as TalentSearchPage } from './TalentSearch'
 import { Subscription } from './Subscription'
 import { Billing } from './Billing'
 import { LogoutModal } from '../components/LogoutModal'
-import { useEmployerStats } from '../hooks/useEmployerStats'
+import { useEmployerStats, type RecentApplicantItem } from '../hooks/useEmployerStats'
 import './EmployerDashboard.css'
 import { WalkInDrivesEmployer } from './WalkInDrivesEmployer'
 
@@ -79,6 +79,15 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
   const handleViewJobPost = (jobId?: string, jobTitle?: string) => {
     setHighlightedJobId(jobId || jobTitle || null)
     setActiveMenu('my-jobs')
+  }
+
+  const handleApplicantCardClick = (applicant: RecentApplicantItem) => {
+    if (applicant.appliedFor && applicant.appliedFor !== 'General Position' && applicant.appliedFor !== 'Job Requisition') {
+      setSelectedJobFilter({ title: applicant.appliedFor })
+    } else {
+      setSelectedJobFilter(null)
+    }
+    setActiveMenu('applicants')
   }
 
 
@@ -247,7 +256,19 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
               </header>
 
               <div className="metrics-grid">
-                <div className="metric-card">
+                <div
+                  className="metric-card clickable"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setActiveMenu('my-jobs')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setActiveMenu('my-jobs')
+                    }
+                  }}
+                  title="View job posts"
+                >
                   <div className="metric-glow blue" />
                   <div className="metric-header">
                     <span className="metric-label">Active Job Posts</span>
@@ -278,7 +299,23 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
                   </div>
                 </div>
 
-                <div className="metric-card">
+                <div
+                  className="metric-card clickable"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    setSelectedJobFilter(null)
+                    setActiveMenu('applicants')
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setSelectedJobFilter(null)
+                      setActiveMenu('applicants')
+                    }
+                  }}
+                  title="View all applicants"
+                >
                   <div className="metric-glow pink" />
                   <div className="metric-header">
                     <span className="metric-label">Total Applicants</span>
@@ -382,7 +419,20 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
                 ) : (
                   <div className="applicants-grid">
                     {recentApplicants.map((applicant, index) => (
-                      <div className="applicant-card" key={index}>
+                      <div
+                        className="applicant-card"
+                        key={applicant.id || index}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleApplicantCardClick(applicant)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            handleApplicantCardClick(applicant)
+                          }
+                        }}
+                        title={`View applicant profile for ${applicant.name}`}
+                      >
                         <div className="applicant-top">
                           <div className="applicant-info">
                             {applicant.avatar ? (
