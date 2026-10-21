@@ -1,9 +1,7 @@
-import type { FC } from 'react'
+import { useState, type FC } from 'react'
 import './PostJob.css'
 import {
   usePostJob,
-  CATEGORIES,
-  PROJECT_TYPES,
   EXPERIENCE_LEVELS,
   WORK_TYPES,
   EMPLOYMENT_TYPES,
@@ -14,33 +12,39 @@ import {
 } from './usePostJob'
 
 interface PostJobProps {
+  jobIdToEdit?: string | null
   onCancel?: () => void
   onSuccess?: () => void
   onNavigateToSubscription?: () => void
 }
 
-export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess, onNavigateToSubscription }) => {
+export const PostJob: FC<PostJobProps> = ({ jobIdToEdit, onCancel, onSuccess, onNavigateToSubscription }) => {
   const {
+    isEditMode,
+    isLoadingJob,
     title,
     setTitle,
     category,
     setCategory,
     projectType,
-    setProjectType,
+    selectedProjectTypes,
+    handleToggleProjectType,
     experience,
     setExperience,
     workType,
     setWorkType,
     location,
-    setLocation,
+    locations,
+    handleAddLocation,
+    handleRemoveLocation,
+    handleToggleLocation,
     employmentTypes,
     handleToggleEmploymentType,
+    salaryPeriod,
+    handleSalaryPeriodChange,
+    handleSalaryChange,
     salaryMin,
-    setSalaryMin,
     salaryMax,
-    setSalaryMax,
-    currency,
-    setCurrency,
     numberOfOpenings,
     setNumberOfOpenings,
     jobDescription,
@@ -65,7 +69,31 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess, onNavigateToSub
     toastMessage,
     handleSaveDraft,
     handlePublishRequisition,
-  } = usePostJob(onSuccess)
+    // Custom Category Dialog
+    categories,
+    isCustomCategoryModalOpen,
+    openCustomCategoryModal,
+    closeCustomCategoryModal,
+    customCategoryInput,
+    setCustomCategoryInput,
+    customCategoryError,
+    setCustomCategoryError,
+    isAddingCustomCategory,
+    handleAddCustomCategory,
+    // Custom Project Type Dialog
+    projectTypes,
+    isCustomProjectTypeModalOpen,
+    openCustomProjectTypeModal,
+    closeCustomProjectTypeModal,
+    customProjectTypeInput,
+    setCustomProjectTypeInput,
+    customProjectTypeError,
+    setCustomProjectTypeError,
+    isAddingCustomProjectType,
+    handleAddCustomProjectType,
+  } = usePostJob(onSuccess, jobIdToEdit)
+
+  const [locationInput, setLocationInput] = useState<string>('')
 
   const quickTechTags = [
     'Revit & BIM Standards',
@@ -83,20 +111,6 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess, onNavigateToSub
       const updated = technicalRequirements ? `${technicalRequirements}, ${tag}` : tag
       setTechnicalRequirements(updated)
     }
-  }
-
-  const handleSalaryChange = (field: 'min' | 'max', inputVal: string) => {
-    // Retain only digits
-    const cleanDigits = inputVal.replace(/[^0-9]/g, '')
-    if (!cleanDigits) {
-      if (field === 'min') setSalaryMin('')
-      else setSalaryMax('')
-      return
-    }
-    // Format to Indian numbering format (e.g. 12,00,000)
-    const formatted = Number(cleanDigits).toLocaleString('en-IN')
-    if (field === 'min') setSalaryMin(formatted)
-    else setSalaryMax(formatted)
   }
 
   return (
@@ -185,19 +199,21 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess, onNavigateToSub
       <header className="pj-header-section">
         <div className="pj-title-wrapper">
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span className="pj-stage-tag">AEC Talent Deployment</span>
+            <span className="pj-stage-tag">{isEditMode ? 'Edit Existing Requisition' : 'AEC Talent Deployment'}</span>
             <span style={{ color: '#727784' }}>/</span>
             <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>
-              REQUISITION BUILDER
+              {isEditMode ? 'REQUISITION MODIFIER' : 'REQUISITION BUILDER'}
             </span>
           </div>
-          <h1 className="pj-main-heading">Post a New Job Opportunity</h1>
+          <h1 className="pj-main-heading">{isEditMode ? 'Edit Job Requisition' : 'Post a New Job Opportunity'}</h1>
           <p className="pj-lead-description">
-            Complete the job specifications below to publish your opening directly to verified AEC professionals and talent pools.
+            {isEditMode
+              ? 'Update the job specifications below to reflect changes across the verified AEC talent network.'
+              : 'Complete the job specifications below to publish your opening directly to verified AEC professionals and talent pools.'}
           </p>
 
-          {/* Quota Limit Alert Banner if Reached */}
-          {quota && quota.isLimitReached && (
+          {/* Quota Limit Alert Banner if Reached (Only for new job posts) */}
+          {!isEditMode && quota && quota.isLimitReached && (
             <div
               style={{
                 marginTop: '12px',
@@ -281,8 +297,16 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess, onNavigateToSub
         </div>
       </header>
 
-      {/* 3. Main Grid: Form (8 Cols) & Live Sidebar (4 Cols) */}
-      <main className="pj-main-grid">
+      {/* Loading state when fetching existing job data */}
+      {isLoadingJob ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '360px', gap: '14px', padding: '60px 20px' }}>
+          <div style={{ width: '38px', height: '38px', border: '3px solid #e2e8f0', borderTopColor: '#00418f', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <p style={{ color: '#64748b', fontSize: '14px', fontWeight: 600 }}>Loading requisition details...</p>
+        </div>
+      ) : (
+        <>
+          {/* 3. Main Grid: Form (8 Cols) & Live Sidebar (4 Cols) */}
+          <main className="pj-main-grid">
         {/* Form Column */}
         <div className="pj-form-col">
           {/* Section 1: Role Overview & Classification */}
@@ -356,23 +380,52 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess, onNavigateToSub
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
               {/* Category */}
               <div className="pj-field-group">
-                <label className="pj-field-label" htmlFor="job-category-select">
-                  <span>Category *</span>
-                </label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label className="pj-field-label" htmlFor="job-category-select">
+                    <span>Category *</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={openCustomCategoryModal}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#00418f',
+                      fontSize: '11.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      padding: '0 4px',
+                      textDecoration: 'underline',
+                      fontFamily: 'Manrope, sans-serif',
+                    }}
+                  >
+                    + Add Custom Category
+                  </button>
+                </div>
                 <select
                   id="job-category-select"
                   className={`pj-select-input ${touched.category && errors.category ? 'error' : ''}`}
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    if (val === '__ADD_CUSTOM__') {
+                      openCustomCategoryModal()
+                      return
+                    }
+                    setCategory(val)
+                  }}
                   onBlur={() => handleBlur('category')}
                   aria-invalid={touched.category && !!errors.category}
                 >
                   <option value="">Select Domain Category...</option>
-                  {CATEGORIES.map((cat) => (
+                  {categories.map((cat) => (
                     <option key={cat} value={cat}>
                       {cat}
                     </option>
                   ))}
+                  <option value="__ADD_CUSTOM__" style={{ fontWeight: 700, color: '#00418f' }}>
+                    + Add Custom Category...
+                  </option>
                 </select>
                 {touched.category && errors.category && (
                   <span className="pj-field-error">
@@ -386,24 +439,59 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess, onNavigateToSub
                 )}
               </div>
 
-              {/* Project Type */}
+              {/* Project Type (Multi-select) */}
               <div className="pj-field-group">
-                <label className="pj-field-label">
-                  <span>Project Type *</span>
-                </label>
-                <select
-                  className={`pj-select-input ${touched.projectType && errors.projectType ? 'error' : ''}`}
-                  value={projectType}
-                  onChange={(e) => setProjectType(e.target.value)}
-                  onBlur={() => handleBlur('projectType')}
-                  aria-invalid={touched.projectType && !!errors.projectType}
-                >
-                  {PROJECT_TYPES.map((pt) => (
-                    <option key={pt} value={pt}>
-                      {pt}
-                    </option>
-                  ))}
-                </select>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                  <label className="pj-field-label" style={{ marginBottom: 0 }}>
+                    <span>Project Type *</span>
+                    <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>Select one or more</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={openCustomProjectTypeModal}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#00418f',
+                      fontSize: '11.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      padding: '0 4px',
+                      textDecoration: 'underline',
+                      fontFamily: 'Manrope, sans-serif',
+                    }}
+                  >
+                    + Add Custom Project Type
+                  </button>
+                </div>
+
+                <div className="pills-cloud-selector" style={{ marginTop: '8px' }}>
+                  {projectTypes.map((pt) => {
+                    const isSelected = selectedProjectTypes.some((s) => s.toLowerCase() === pt.toLowerCase())
+                    return (
+                      <button
+                        key={pt}
+                        type="button"
+                        className={`pill-option-btn ${isSelected ? 'selected' : ''}`}
+                        onClick={() => handleToggleProjectType(pt)}
+                        aria-pressed={isSelected}
+                      >
+                        <span>{pt}</span>
+                        {isSelected ? (
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width: '14px', height: '14px' }}>
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        ) : (
+                          <svg viewBox="0 0 24 24" fill="none" stroke="#727784" strokeWidth="2" style={{ width: '14px', height: '14px' }}>
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                          </svg>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+
                 {touched.projectType && errors.projectType && (
                   <span className="pj-field-error">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -501,13 +589,87 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess, onNavigateToSub
                 </div>
               </div>
 
-              {/* Location */}
+              {/* Location(s) */}
               <div className="pj-field-group">
-                <label className="pj-field-label" htmlFor="location-input">
-                  <span>Location *</span>
-                  <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>Studio / City Base</span>
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', background: '#f3f3f6', borderRadius: '8px', padding: '0 10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+                  <label className="pj-field-label" htmlFor="location-input" style={{ marginBottom: 0 }}>
+                    <span>Location(s) *</span>
+                    <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>Studio / City Base(s)</span>
+                  </label>
+                  {locations.length > 1 && (
+                    <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f', fontWeight: 600 }}>
+                      {locations.length} locations selected
+                    </span>
+                  )}
+                </div>
+
+                {/* Selected Location Chips */}
+                {locations.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                    {locations.map((loc) => (
+                      <span
+                        key={loc}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          background: '#00418f',
+                          color: '#ffffff',
+                          padding: '4px 10px',
+                          borderRadius: '16px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          boxShadow: '0 1px 3px rgba(0, 65, 143, 0.2)',
+                        }}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '13px', height: '13px' }} aria-hidden="true">
+                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                          <circle cx="12" cy="10" r="3" />
+                        </svg>
+                        {loc}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveLocation(loc)}
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.2)',
+                            border: 'none',
+                            borderRadius: '50%',
+                            color: '#ffffff',
+                            cursor: 'pointer',
+                            padding: '2px',
+                            width: '16px',
+                            height: '16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '10px',
+                            lineHeight: 1,
+                            transition: 'background 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.4)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)')}
+                          title={`Remove ${loc}`}
+                          aria-label={`Remove ${loc}`}
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Input box with Add button */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    background: '#f3f3f6',
+                    borderRadius: '8px',
+                    padding: '2px 8px 2px 10px',
+                    gap: '6px',
+                    border: touched.location && errors.location ? '1px solid #dc2626' : '1px solid transparent',
+                  }}
+                >
                   <svg viewBox="0 0 24 24" fill="none" stroke="#727784" strokeWidth="2" style={{ width: '18px', height: '18px', flexShrink: 0 }} aria-hidden="true">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                     <circle cx="12" cy="10" r="3" />
@@ -515,15 +677,53 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess, onNavigateToSub
                   <input
                     id="location-input"
                     type="text"
-                    placeholder="e.g. Pune, Maharashtra, India or London"
-                    className={`pj-text-input ${touched.location && errors.location ? 'error' : ''}`}
-                    style={{ background: 'transparent', border: 'none' }}
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    onBlur={() => handleBlur('location')}
+                    placeholder="Type a city (e.g. Pune, Bangaluru) and press Enter..."
+                    className="pj-text-input"
+                    style={{ background: 'transparent', border: 'none', flex: 1, padding: '10px 4px' }}
+                    value={locationInput}
+                    onChange={(e) => setLocationInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ',') {
+                        e.preventDefault()
+                        if (locationInput.trim()) {
+                          handleAddLocation(locationInput)
+                          setLocationInput('')
+                        }
+                      }
+                    }}
+                    onBlur={() => {
+                      if (locationInput.trim()) {
+                        handleAddLocation(locationInput)
+                        setLocationInput('')
+                      }
+                      handleBlur('location')
+                    }}
                     aria-invalid={touched.location && !!errors.location}
                   />
+                  {locationInput.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleAddLocation(locationInput)
+                        setLocationInput('')
+                      }}
+                      style={{
+                        background: '#00418f',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      + Add
+                    </button>
+                  )}
                 </div>
+
                 {touched.location && errors.location && (
                   <span className="pj-field-error">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -535,19 +735,28 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess, onNavigateToSub
                   </span>
                 )}
 
-                {/* Popular Cities */}
+                {/* Popular Cities Quick Select */}
                 <div className="pj-chips-cloud">
                   <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>Quick Select:</span>
-                  {POPULAR_CITIES.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      className="pj-quick-chip"
-                      onClick={() => setLocation(c)}
-                    >
-                      {c}
-                    </button>
-                  ))}
+                  {POPULAR_CITIES.map((c) => {
+                    const isSelected = locations.some((l) => l.toLowerCase() === c.toLowerCase())
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        className={`pj-quick-chip ${isSelected ? 'active' : ''}`}
+                        onClick={() => handleToggleLocation(c)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        {isSelected ? '✓ ' : '+ '}
+                        {c}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             </div>
@@ -640,77 +849,114 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess, onNavigateToSub
                   </svg>
                 </div>
                 <div>
-                  <h2 className="pj-section-title" id="sec-compensation-title">3. Salary Range &amp; Compensation</h2>
-                  <span className="pj-section-subline">TRANSPARENCY BENCHMARK</span>
+                  <h2 className="pj-section-title" id="sec-compensation-title">3. Salary Range (Optional)</h2>
+                  <span className="pj-section-subline">COMPENSATION &amp; TRANSPARENCY</span>
                 </div>
               </div>
               <span className="optional-badge">OPTIONAL</span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px' }}>
-              <div className="pj-field-group">
-                <label className="pj-field-label">Currency</label>
-                <select
-                  className="pj-select-input"
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
+            {/* Salary Period Selector */}
+            <div className="pj-field-group pj-salary-period-wrap">
+              <label className="pj-field-label">
+                <span>Salary Period</span>
+                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>
+                  {salaryPeriod === 'yearly_lpa' ? 'Annualized LPA Scale' : 'Monthly INR Remuneration'}
+                </span>
+              </label>
+              <div className="segmented-pill-selector" style={{ gridTemplateColumns: 'repeat(2, 1fr)', maxWidth: '280px' }}>
+                <button
+                  type="button"
+                  className={`segmented-pill-btn ${salaryPeriod === 'monthly' ? 'active' : ''}`}
+                  onClick={() => handleSalaryPeriodChange('monthly')}
                 >
-                  <option value="₹ (INR)">₹ (INR) - Indian Rupee</option>
-                  <option value="$ (USD)">$ (USD) - US Dollar</option>
-                  <option value="£ (GBP)">£ (GBP) - British Pound</option>
-                  <option value="€ (EUR)">€ (EUR) - Euro</option>
-                </select>
+                  Monthly
+                </button>
+                <button
+                  type="button"
+                  className={`segmented-pill-btn ${salaryPeriod === 'yearly_lpa' ? 'active' : ''}`}
+                  onClick={() => handleSalaryPeriodChange('yearly_lpa')}
+                >
+                  Yearly (LPA)
+                </button>
               </div>
+            </div>
 
+            {/* Responsive Salary Inputs: Side by side on desktop, stacked on mobile */}
+            <div className="pj-salary-grid">
+              {/* Minimum Salary */}
               <div className="pj-field-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label className="pj-field-label" htmlFor="min-salary-input">
                     <span>Minimum Salary</span>
                   </label>
-                  {salaryMin && formatIndianWords(salaryMin) && (
+                  {salaryPeriod === 'monthly' && salaryMin && formatIndianWords(salaryMin) && (
                     <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f', fontWeight: 600 }}>
-                      ≈ {formatIndianWords(salaryMin)}
+                      ≈ {formatIndianWords(salaryMin)} / mo
+                    </span>
+                  )}
+                  {salaryPeriod === 'yearly_lpa' && salaryMin && (
+                    <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f', fontWeight: 600 }}>
+                      ≈ ₹{salaryMin} Lakhs / yr
                     </span>
                   )}
                 </div>
-                <input
-                  id="min-salary-input"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="e.g. 50,000 or 5,00,000"
-                  className={`pj-text-input ${touched.salaryMin && errors.salaryMin ? 'error' : ''}`}
-                  value={salaryMin}
-                  onChange={(e) => handleSalaryChange('min', e.target.value)}
-                  onBlur={() => handleBlur('salaryMin')}
-                />
+                <div className="pj-input-with-affixes">
+                  <span className="pj-input-prefix">₹</span>
+                  <input
+                    id="min-salary-input"
+                    type="text"
+                    inputMode={salaryPeriod === 'monthly' ? 'numeric' : 'decimal'}
+                    placeholder={salaryPeriod === 'monthly' ? 'e.g. 30,000' : 'e.g. 3.6'}
+                    className={`pj-text-input has-prefix ${salaryPeriod === 'monthly' ? 'has-suffix-monthly' : 'has-suffix-lpa'} ${touched.salaryMin && errors.salaryMin ? 'error' : ''}`}
+                    value={salaryMin}
+                    onChange={(e) => handleSalaryChange('min', e.target.value)}
+                    onBlur={() => handleBlur('salaryMin')}
+                  />
+                  <span className="pj-input-suffix">
+                    {salaryPeriod === 'monthly' ? '/ month' : 'LPA'}
+                  </span>
+                </div>
               </div>
 
+              {/* Maximum Salary */}
               <div className="pj-field-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label className="pj-field-label" htmlFor="max-salary-input">
                     <span>Maximum Salary</span>
                   </label>
-                  {salaryMax && formatIndianWords(salaryMax) && (
+                  {salaryPeriod === 'monthly' && salaryMax && formatIndianWords(salaryMax) && (
                     <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f', fontWeight: 600 }}>
-                      ≈ {formatIndianWords(salaryMax)}
+                      ≈ {formatIndianWords(salaryMax)} / mo
+                    </span>
+                  )}
+                  {salaryPeriod === 'yearly_lpa' && salaryMax && (
+                    <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#00418f', fontWeight: 600 }}>
+                      ≈ ₹{salaryMax} Lakhs / yr
                     </span>
                   )}
                 </div>
-                <input
-                  id="max-salary-input"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="e.g. 80,000 or 12,00,000"
-                  className={`pj-text-input ${touched.salaryMax && errors.salaryMax ? 'error' : ''}`}
-                  value={salaryMax}
-                  onChange={(e) => handleSalaryChange('max', e.target.value)}
-                  onBlur={() => handleBlur('salaryMax')}
-                />
+                <div className="pj-input-with-affixes">
+                  <span className="pj-input-prefix">₹</span>
+                  <input
+                    id="max-salary-input"
+                    type="text"
+                    inputMode={salaryPeriod === 'monthly' ? 'numeric' : 'decimal'}
+                    placeholder={salaryPeriod === 'monthly' ? 'e.g. 50,000' : 'e.g. 6.0'}
+                    className={`pj-text-input has-prefix ${salaryPeriod === 'monthly' ? 'has-suffix-monthly' : 'has-suffix-lpa'} ${touched.salaryMax && errors.salaryMax ? 'error' : ''}`}
+                    value={salaryMax}
+                    onChange={(e) => handleSalaryChange('max', e.target.value)}
+                    onBlur={() => handleBlur('salaryMax')}
+                  />
+                  <span className="pj-input-suffix">
+                    {salaryPeriod === 'monthly' ? '/ month' : 'LPA'}
+                  </span>
+                </div>
               </div>
             </div>
 
             {(errors.salaryMin || errors.salaryMax) && (
-              <span className="pj-field-error">
+              <span className="pj-field-error" style={{ marginTop: '8px' }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                   <circle cx="12" cy="12" r="10" />
                   <line x1="12" y1="8" x2="12" y2="12" />
@@ -870,10 +1116,12 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess, onNavigateToSub
           </div>
           <div>
             <strong style={{ fontSize: '14px', color: '#1a1c1e', display: 'block' }}>
-              Ready to Launch Job Requisition
+              {isEditMode ? 'Ready to Save Requisition Changes' : 'Ready to Launch Job Requisition'}
             </strong>
             <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>
-              Instant publication to Castallio network &amp; matching talent alerts
+              {isEditMode
+                ? 'Instant sync across Castallio network & candidate radar'
+                : 'Instant publication to Castallio network & matching talent alerts'}
             </span>
           </div>
         </div>
@@ -895,19 +1143,21 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess, onNavigateToSub
             disabled={isSubmitting}
           >
             {isSubmitting ? (
-              <span>Publishing...</span>
+              <span>{isEditMode ? 'Saving Changes...' : 'Publishing...'}</span>
             ) : (
               <>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
                   <path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
                 </svg>
-                <span>Publish Job Post</span>
+                <span>{isEditMode ? 'Save & Update Job' : 'Publish Job Post'}</span>
               </>
             )}
           </button>
         </div>
       </footer>
+        </>
+      )}
 
       {/* ── MODAL: Live Preview (All 13 Fields) ── */}
       {isPreviewModalOpen && (
@@ -933,7 +1183,13 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess, onNavigateToSub
             <div className="pj-modal-body preview-modal-body">
               {/* Badges row */}
               <div className="preview-chip-row">
-                <span className="preview-badge">{projectType} Project</span>
+                {selectedProjectTypes.length > 0 ? (
+                  selectedProjectTypes.map((pt) => (
+                    <span key={pt} className="preview-badge">{pt} Project</span>
+                  ))
+                ) : (
+                  <span className="preview-badge">{projectType || 'Standard'} Project</span>
+                )}
                 <span className="preview-badge">{experience || 'Any Experience'}</span>
                 {employmentTypes.map((et) => (
                   <span key={et} className="preview-badge">{et}</span>
@@ -941,7 +1197,9 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess, onNavigateToSub
                 <span className="preview-badge">{numberOfOpenings} {numberOfOpenings > 1 ? 'Openings' : 'Opening'}</span>
                 {(salaryMin || salaryMax) && (
                   <span className="preview-badge" style={{ background: '#e0f2fe', color: '#0369a1' }}>
-                    {currency} {salaryMin ? formatIndianNumber(salaryMin) : '0'} - {salaryMax ? formatIndianNumber(salaryMax) : 'Negotiable'}
+                    {salaryPeriod === 'yearly_lpa'
+                      ? `₹ ${salaryMin || '0'} - ${salaryMax || 'Negotiable'} LPA`
+                      : `₹ ${salaryMin ? formatIndianNumber(salaryMin) : '0'} - ${salaryMax ? formatIndianNumber(salaryMax) : 'Negotiable'} / month`}
                   </span>
                 )}
               </div>
@@ -1007,10 +1265,18 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess, onNavigateToSub
               </svg>
             </div>
             <h2 id="success-modal-title" style={{ fontFamily: 'Hanken Grotesk', fontSize: '22px', color: '#1a1c1e', margin: '0 0 8px' }}>
-              Job Successfully Published!
+              {isEditMode ? 'Job Successfully Updated!' : 'Job Successfully Published!'}
             </h2>
             <p style={{ fontSize: '14px', color: '#424753', margin: '0 0 20px' }}>
-              Your job post <strong>"{title}"</strong> is now live on Castallio One with a 15-day active validity window.
+              {isEditMode ? (
+                <>
+                  Your job post <strong>"{title}"</strong> has been successfully updated across Castallio One.
+                </>
+              ) : (
+                <>
+                  Your job post <strong>"{title}"</strong> is now live on Castallio One with a 15-day active validity window.
+                </>
+              )}
             </p>
             <button
               type="button"
@@ -1091,6 +1357,183 @@ export const PostJob: FC<PostJobProps> = ({ onCancel, onSuccess, onNavigateToSub
                 Cancel &amp; Continue Editing
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: Add Custom Category ── */}
+      {isCustomCategoryModalOpen && (
+        <div
+          className="pj-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="add-custom-category-title"
+        >
+          <div className="pj-modal-dialog" style={{ maxWidth: '460px' }}>
+            <div className="pj-modal-header">
+              <div>
+                <h2 id="add-custom-category-title">Add Custom Category</h2>
+                <span style={{ fontSize: '11.5px', color: '#727784' }}>
+                  Define a specialized AEC discipline or role classification
+                </span>
+              </div>
+              <button
+                type="button"
+                className="pj-modal-close"
+                onClick={closeCustomCategoryModal}
+                aria-label="Close modal"
+                disabled={isAddingCustomCategory}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                void handleAddCustomCategory()
+              }}
+            >
+              <div className="pj-modal-body" style={{ gap: '12px' }}>
+                <div className="pj-field-group">
+                  <label className="pj-field-label" htmlFor="custom-category-name-input">
+                    <span>Category Name *</span>
+                  </label>
+                  <input
+                    id="custom-category-name-input"
+                    type="text"
+                    autoFocus
+                    placeholder="Enter category name (e.g. Geotechnical Engineering)"
+                    className={`pj-text-input ${customCategoryError ? 'error' : ''}`}
+                    value={customCategoryInput}
+                    onChange={(e) => {
+                      setCustomCategoryInput(e.target.value)
+                      if (customCategoryError) setCustomCategoryError(null)
+                    }}
+                    disabled={isAddingCustomCategory}
+                  />
+                  {customCategoryError && (
+                    <span className="pj-field-error" role="alert" style={{ marginTop: '4px' }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                      {customCategoryError}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="pj-modal-footer">
+                <button
+                  type="button"
+                  className="btn-pj-light"
+                  onClick={closeCustomCategoryModal}
+                  disabled={isAddingCustomCategory}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-pj-primary"
+                  disabled={isAddingCustomCategory || !customCategoryInput.trim()}
+                >
+                  {isAddingCustomCategory ? 'Adding...' : 'Add'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 8. Add Custom Project Type Modal */}
+      {isCustomProjectTypeModalOpen && (
+        <div
+          className="pj-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="custom-project-type-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isAddingCustomProjectType) {
+              closeCustomProjectTypeModal()
+            }
+          }}
+        >
+          <div className="pj-modal-dialog" style={{ maxWidth: '460px' }}>
+            <div className="pj-modal-header">
+              <div>
+                <h2 id="custom-project-type-modal-title">Add Custom Project Type</h2>
+                <span style={{ fontSize: '11.5px', color: '#727784' }}>
+                  Define a specialized project scope or sector classification
+                </span>
+              </div>
+              <button
+                type="button"
+                className="pj-modal-close"
+                onClick={closeCustomProjectTypeModal}
+                aria-label="Close modal"
+                disabled={isAddingCustomProjectType}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                void handleAddCustomProjectType()
+              }}
+            >
+              <div className="pj-modal-body" style={{ gap: '12px' }}>
+                <div className="pj-field-group">
+                  <label className="pj-field-label" htmlFor="custom-project-type-name-input">
+                    <span>Project Type *</span>
+                  </label>
+                  <input
+                    id="custom-project-type-name-input"
+                    type="text"
+                    autoFocus
+                    placeholder="Enter project type"
+                    className={`pj-text-input ${customProjectTypeError ? 'error' : ''}`}
+                    value={customProjectTypeInput}
+                    onChange={(e) => {
+                      setCustomProjectTypeInput(e.target.value)
+                      if (customProjectTypeError) setCustomProjectTypeError(null)
+                    }}
+                    disabled={isAddingCustomProjectType}
+                  />
+                  {customProjectTypeError && (
+                    <span className="pj-field-error" role="alert" style={{ marginTop: '4px' }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                      {customProjectTypeError}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="pj-modal-footer">
+                <button
+                  type="button"
+                  className="btn-pj-light"
+                  onClick={closeCustomProjectTypeModal}
+                  disabled={isAddingCustomProjectType}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-pj-primary"
+                  disabled={isAddingCustomProjectType || !customProjectTypeInput.trim()}
+                >
+                  {isAddingCustomProjectType ? 'Adding...' : 'Add'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

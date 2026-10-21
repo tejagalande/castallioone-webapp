@@ -7,12 +7,13 @@ import {
 
 export interface MyJobsProps {
   onPostNewJob?: () => void
+  onEditJob?: (jobId: string) => void
   onViewCandidates?: (jobId: string, jobTitle: string) => void
   highlightedJobId?: string | null
   onNavigateToSubscription?: () => void
 }
 
-export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highlightedJobId, onNavigateToSubscription }) => {
+export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onEditJob, onViewCandidates, highlightedJobId, onNavigateToSubscription }) => {
   const {
     filteredRequisitions,
     loading,
@@ -481,12 +482,28 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highli
                     </h2>
 
                     <div className="req-meta-subline">
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '15px', height: '15px' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#00418f" strokeWidth="2" style={{ width: '15px', height: '15px', flexShrink: 0 }}>
                           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                           <circle cx="12" cy="10" r="3" />
                         </svg>
-                        {req.location}
+                        <span>{req.location}</span>
+                        {req.locations && req.locations.length > 1 && (
+                          <span
+                            style={{
+                              marginLeft: '3px',
+                              padding: '1px 6px',
+                              fontSize: '10.5px',
+                              fontWeight: 700,
+                              background: '#e0f2fe',
+                              color: '#0369a1',
+                              borderRadius: '4px',
+                              fontFamily: 'JetBrains Mono, monospace',
+                            }}
+                          >
+                            {req.locations.length} Locations
+                          </span>
+                        )}
                       </span>
                       <span>•</span>
                       <span style={{ fontWeight: 700, color: '#1a1c1e', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -686,7 +703,13 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highli
                           type="button"
                           className="btn-mj-primary"
                           style={{ fontSize: '12.5px', padding: '7px 14px' }}
-                          onClick={onPostNewJob}
+                          onClick={() => {
+                            if (onEditJob) {
+                              onEditJob(req.id)
+                            } else if (onPostNewJob) {
+                              onPostNewJob()
+                            }
+                          }}
                         >
                           Continue Configuration →
                         </button>
@@ -759,7 +782,14 @@ export const MyJobs: FC<MyJobsProps> = ({ onPostNewJob, onViewCandidates, highli
                         type="button"
                         className="btn-icon-req"
                         title="Edit Requisition Details"
-                        onClick={onPostNewJob}
+                        aria-label={`Edit ${req.title}`}
+                        onClick={() => {
+                          if (onEditJob) {
+                            onEditJob(req.id)
+                          } else if (onPostNewJob) {
+                            onPostNewJob()
+                          }
+                        }}
                       >
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />

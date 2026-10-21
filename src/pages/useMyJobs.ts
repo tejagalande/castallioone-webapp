@@ -18,9 +18,14 @@ export interface RequisitionItem {
   title: string
   category?: string
   projectType?: string
+  projectTypes?: string[]
   location: string
+  locations?: string[]
   workType?: string
   salaryRange: string
+  salaryMin?: number | string | null
+  salaryMax?: number | string | null
+  salaryPeriod?: 'monthly' | 'yearly_lpa' | null
   employmentType: string
   openings?: number
   status: 'active' | 'draft' | 'interviewing' | 'closed'
@@ -49,12 +54,15 @@ interface DBJobRow {
   title: string
   category: string | null
   project_type: string | null
+  project_types?: string[] | null
   experience: string | null
   work_type: string | null
   location: string | null
+  locations?: string[] | null
   employment_type: string[] | string | null
   salary_min: number | string | null
   salary_max: number | string | null
+  salary_period: string | null
   number_of_openings: number | null
   job_description: string | null
   technical_requirements: string | null
@@ -77,13 +85,39 @@ function formatRelativeDate(isoDate: string | null | undefined): string {
   return date.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function formatSalaryRange(min: number | string | null, max: number | string | null): string {
-  if (!min && !max) return 'Competitive / Negotiable'
-  const minFmt = min ? Number(min).toLocaleString('en-IN') : null
-  const maxFmt = max ? Number(max).toLocaleString('en-IN') : null
-  if (minFmt && maxFmt) return `₹ ${minFmt} - ₹ ${maxFmt}`
-  if (minFmt) return `From ₹ ${minFmt}`
-  if (maxFmt) return `Up to ₹ ${maxFmt}`
+function formatSalaryRange(
+  min: number | string | null,
+  max: number | string | null,
+  period?: string | null
+): string {
+  const hasMin = min != null && String(min).trim() !== ''
+  const hasMax = max != null && String(max).trim() !== ''
+
+  if (!hasMin && !hasMax) return 'Competitive / Negotiable'
+
+  const numMin = hasMin ? Number(min) : null
+  const numMax = hasMax ? Number(max) : null
+
+  // Check if LPA (either period is yearly_lpa or inferred from small values <= 100 for legacy records)
+  const isLpa =
+    period === 'yearly_lpa' ||
+    (!period && ((numMin != null && numMin <= 100) || (numMax != null && numMax <= 100)))
+
+  if (isLpa) {
+    if (hasMin && hasMax) return `₹ ${min} - ${max} LPA`
+    if (hasMin) return `From ₹ ${min} LPA`
+    if (hasMax) return `Up to ₹ ${max} LPA`
+    return 'Competitive / Negotiable'
+  }
+
+  // Monthly or standard currency
+  const minFmt = numMin != null ? numMin.toLocaleString('en-IN') : null
+  const maxFmt = numMax != null ? numMax.toLocaleString('en-IN') : null
+  const suffix = period === 'monthly' ? ' / month' : ''
+
+  if (minFmt && maxFmt) return `₹ ${minFmt} - ₹ ${maxFmt}${suffix}`
+  if (minFmt) return `From ₹ ${minFmt}${suffix}`
+  if (maxFmt) return `Up to ₹ ${maxFmt}${suffix}`
   return 'Competitive'
 }
 
@@ -239,8 +273,22 @@ export function useMyJobs(onPostNewJob?: () => void) {
             ? 'CLOSED'
             : 'INTERVIEWING'
 
+        const ptArray: string[] = Array.isArray(job.project_types) && job.project_types.length > 0
+          ? job.project_types.map((p: string) => p.trim()).filter(Boolean)
+          : job.project_type
+          ? job.project_type.split(/[,;/]+/).map((p) => p.trim()).filter(Boolean)
+          : []
+
         const badges: string[] = [statusBadge]
-        if (job.project_type) badges.push(`${job.project_type.toUpperCase()} PROJECT`)
+        if (ptArray.length > 0) {
+          if (ptArray.length <= 2) {
+            ptArray.forEach((pt) => badges.push(`${pt.toUpperCase()} PROJECT`))
+          } else {
+            badges.push(`${ptArray[0].toUpperCase()} +${ptArray.length - 1} PROJECTS`)
+          }
+        } else if (job.project_type) {
+          badges.push(`${job.project_type.toUpperCase()} PROJECT`)
+        }
         if (job.experience) badges.push(job.experience.toUpperCase())
         if (job.work_type) badges.push(job.work_type.toUpperCase())
 
@@ -257,15 +305,32 @@ export function useMyJobs(onPostNewJob?: () => void) {
         if (job.salary_min || job.salary_max) score += 10
         score = Math.min(98, score)
 
+        const locArray: string[] = Array.isArray(job.locations) && job.locations.length > 0
+          ? job.locations.map((l: string) => l.trim()).filter(Boolean)
+          : job.location
+          ? job.location.split(/[,;/]+/).map((s) => s.trim()).filter(Boolean)
+          : []
+
+        const displayLocation = locArray.length > 0
+          ? locArray.join(', ')
+          : (job.location || 'Remote / Hybrid')
+
         return {
           id: job.id,
           refCode,
           title: job.title,
           category: job.category || undefined,
-          projectType: job.project_type || undefined,
-          location: job.location ? `${job.location} (${job.work_type || 'Hybrid'})` : 'Remote / Hybrid',
+          projectType: ptArray.length > 0 ? ptArray.join(', ') : (job.project_type || undefined),
+          projectTypes: ptArray,
+          location: (job.location || locArray.length > 0)
+            ? `${displayLocation} (${job.work_type || 'Hybrid'})`
+            : 'Remote / Hybrid',
+          locations: locArray,
           workType: job.work_type || undefined,
-          salaryRange: formatSalaryRange(job.salary_min, job.salary_max),
+          salaryRange: formatSalaryRange(job.salary_min, job.salary_max, job.salary_period),
+          salaryMin: job.salary_min,
+          salaryMax: job.salary_max,
+          salaryPeriod: (job.salary_period as 'monthly' | 'yearly_lpa') || null,
           employmentType: empType,
           openings: job.number_of_openings || 1,
           status,
@@ -399,9 +464,14 @@ export function useMyJobs(onPostNewJob?: () => void) {
           title: `${req.title} (Copy)`,
           category: req.category || null,
           project_type: req.projectType || null,
+          project_types: req.projectTypes || null,
           work_type: req.workType || 'Hybrid',
           location: req.location,
+          locations: req.locations || null,
           employment_type: [req.employmentType],
+          salary_min: req.salaryMin != null ? req.salaryMin : null,
+          salary_max: req.salaryMax != null ? req.salaryMax : null,
+          salary_period: req.salaryPeriod || null,
           number_of_openings: req.openings || 1,
           job_description: req.jobDescription || null,
           technical_requirements: req.technicalRequirements || null,

@@ -68,6 +68,7 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
   const [selectedJobFilter, setSelectedJobFilter] = useState<{ id?: string; title?: string } | null>(null)
   const [highlightedJobId, setHighlightedJobId] = useState<string | null>(null)
+  const [editingJobId, setEditingJobId] = useState<string | null>(null)
   const { stats, recentApplicants, loading: statsLoading, refreshStats } = useEmployerStats()
 
   const handleViewCandidates = (jobId: string, jobTitle: string) => {
@@ -108,7 +109,12 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
             <button
               key={item.id}
               className={`nav-item ${activeMenu === item.id ? 'active' : ''}`}
-              onClick={() => setActiveMenu(item.id)}
+              onClick={() => {
+                if (item.id === 'post-job') {
+                  setEditingJobId(null)
+                }
+                setActiveMenu(item.id)
+              }}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="nav-icon">
                 <path d={item.icon} />
@@ -132,8 +138,14 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
         <div className="dashboard-content">
           {activeMenu === 'post-job' && (
             <PostJob 
-              onCancel={() => setActiveMenu('dashboard')} 
+              key={editingJobId || 'new-job'}
+              jobIdToEdit={editingJobId}
+              onCancel={() => {
+                setEditingJobId(null)
+                setActiveMenu('my-jobs')
+              }} 
               onSuccess={() => {
+                setEditingJobId(null)
                 refreshStats()
                 setActiveMenu('my-jobs')
               }}
@@ -143,7 +155,14 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
 
           {activeMenu === 'my-jobs' && (
             <MyJobs
-              onPostNewJob={() => setActiveMenu('post-job')}
+              onPostNewJob={() => {
+                setEditingJobId(null)
+                setActiveMenu('post-job')
+              }}
+              onEditJob={(jobId: string) => {
+                setEditingJobId(jobId)
+                setActiveMenu('post-job')
+              }}
               onViewCandidates={handleViewCandidates}
               highlightedJobId={highlightedJobId}
               onNavigateToSubscription={() => setActiveMenu('subscription')}
@@ -214,7 +233,10 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
                   <button
                     type="button"
                     className="btn-emp-primary"
-                    onClick={() => setActiveMenu('post-job')}
+                    onClick={() => {
+                      setEditingJobId(null)
+                      setActiveMenu('post-job')
+                    }}
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
                       <path d="M12 5v14M5 12h14" />

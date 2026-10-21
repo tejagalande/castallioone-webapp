@@ -1,7 +1,10 @@
 /* ── Dashboard Layout ── */
 .dashboard-layout {
   display: flex;
-  min-height: 100vh;
+  width: 100%;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
   background: #f9f9fc;
   font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background-image:
@@ -19,10 +22,11 @@
   flex-direction: column;
   flex-shrink: 0;
   transition: width 0.3s ease;
-  position: sticky;
-  top: 0;
-  height: 100vh;
+  height: 100%;
+  max-height: 100vh;
   overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
 }
 
 .dashboard-sidebar.collapsed {
@@ -195,6 +199,32 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  height: 100%;
+  max-height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+}
+
+.dashboard-main::-webkit-scrollbar,
+.dashboard-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dashboard-main::-webkit-scrollbar-track,
+.dashboard-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dashboard-main::-webkit-scrollbar-thumb,
+.dashboard-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(194, 198, 213, 0.6);
+  border-radius: 4px;
+}
+
+.dashboard-main::-webkit-scrollbar-thumb:hover,
+.dashboard-sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 65, 143, 0.4);
 }
 
 /* ── Employer Dashboard Page Header ── */

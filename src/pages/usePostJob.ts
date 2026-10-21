@@ -15,10 +15,13 @@ export interface PostJobFormData {
   title: string
   category: string
   projectType: string
+  projectTypes?: string[]
   experience: string
   workType: 'On-site' | 'Hybrid' | 'Remote'
   location: string
+  locations?: string[]
   employmentTypes: string[]
+  salaryPeriod: 'monthly' | 'yearly_lpa'
   salaryMin: string
   salaryMax: string
   currency: string
@@ -32,25 +35,35 @@ export interface PostJobFormData {
 export type FormErrors = Partial<Record<keyof PostJobFormData, string>>
 export type FormTouched = Partial<Record<keyof PostJobFormData, boolean>>
 
-export const CATEGORIES = [
-  'Structural Engineering',
-  'Construction Management',
+export const DEFAULT_CATEGORIES: string[] = [
   'Architecture',
-  'BIM / VDC',
-  'MEP Engineering',
-  'Project Management',
+  'Structural Engineering',
   'Civil Engineering',
+  'Mechanical Engineering',
+  'Electrical Engineering',
+  'MEP Engineering',
+  'BIM / VDC',
   'Interior Design',
-] as const
+  'Project Management',
+  'Quantity Surveying',
+  'Construction Management',
+  'Other',
+]
 
-export const PROJECT_TYPES = [
+export const CATEGORIES = DEFAULT_CATEGORIES
+
+export const DEFAULT_PROJECT_TYPES: string[] = [
   'Commercial',
   'Residential',
   'Infrastructure',
   'Industrial',
   'Mixed-Use',
+  'Healthcare',
+  'Education',
   'Institutional',
-] as const
+]
+
+export const PROJECT_TYPES = DEFAULT_PROJECT_TYPES
 
 export const EXPERIENCE_LEVELS = [
   'Fresher (0-1 years)',
@@ -73,11 +86,16 @@ export const EMPLOYMENT_TYPES = [
 export const POPULAR_CITIES = [
   'Mumbai',
   'Pune',
+  'Bengaluru',
+  'Hyderabad',
+  'Delhi NCR',
+  'Noida',
+  'Gurgaon',
+  'Chennai',
+  'Ahmedabad',
+  'Kolkata',
   'Nagpur',
   'Nashik',
-  'Bengaluru',
-  'Delhi',
-  'Hyderabad',
   'Remote',
 ] as const
 
@@ -124,17 +142,92 @@ function getCandidateInitials(name?: string | null): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
-export function usePostJob(onSuccess?: () => void) {
+export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) {
   const [currentStep, setCurrentStep] = useState<number>(1)
+  const isEditMode = Boolean(jobIdToEdit)
+  const [isLoadingJob, setIsLoadingJob] = useState<boolean>(Boolean(jobIdToEdit))
+  const [existingStatus, setExistingStatus] = useState<string | null>(null)
+
+  // Categories with predefined + custom categories
+  const [categories, setCategories] = useState<string[]>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('castallio_custom_categories')
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          if (Array.isArray(parsed)) {
+            const merged = [...DEFAULT_CATEGORIES]
+            parsed.forEach((c) => {
+              if (typeof c === 'string' && c.trim()) {
+                const trimmed = c.trim()
+                if (!merged.some((m) => m.toLowerCase() === trimmed.toLowerCase())) {
+                  merged.push(trimmed)
+                }
+              }
+            })
+            return merged
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return [...DEFAULT_CATEGORIES]
+  })
+
+  // Custom Category Modal State
+  const [isCustomCategoryModalOpen, setIsCustomCategoryModalOpen] = useState<boolean>(false)
+  const [customCategoryInput, setCustomCategoryInput] = useState<string>('')
+  const [customCategoryError, setCustomCategoryError] = useState<string | null>(null)
+  const [isAddingCustomCategory, setIsAddingCustomCategory] = useState<boolean>(false)
+
+  // Current company id
+  const [currentCompanyId, setCurrentCompanyId] = useState<string | null>(null)
+
+  // Project Types with predefined + custom project types
+  const [projectTypes, setProjectTypes] = useState<string[]>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('castallio_custom_project_types')
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          if (Array.isArray(parsed)) {
+            const merged = [...DEFAULT_PROJECT_TYPES]
+            parsed.forEach((p) => {
+              if (typeof p === 'string' && p.trim()) {
+                const trimmed = p.trim()
+                if (!merged.some((m) => m.toLowerCase() === trimmed.toLowerCase())) {
+                  merged.push(trimmed)
+                }
+              }
+            })
+            return merged
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return [...DEFAULT_PROJECT_TYPES]
+  })
+
+  // Custom Project Type Modal State
+  const [isCustomProjectTypeModalOpen, setIsCustomProjectTypeModalOpen] = useState<boolean>(false)
+  const [customProjectTypeInput, setCustomProjectTypeInput] = useState<string>('')
+  const [customProjectTypeError, setCustomProjectTypeError] = useState<string | null>(null)
+  const [isAddingCustomProjectType, setIsAddingCustomProjectType] = useState<boolean>(false)
 
   // 13 Form Fields
   const [title, setTitle] = useState<string>('')
   const [category, setCategory] = useState<string>('')
   const [projectType, setProjectType] = useState<string>('Commercial')
+  const [selectedProjectTypes, setSelectedProjectTypes] = useState<string[]>(['Commercial'])
   const [experience, setExperience] = useState<string>('')
   const [workType, setWorkType] = useState<'On-site' | 'Hybrid' | 'Remote'>('Hybrid')
   const [location, setLocation] = useState<string>('')
+  const [locations, setLocations] = useState<string[]>([])
   const [employmentTypes, setEmploymentTypes] = useState<string[]>(['Full-time'])
+  const [salaryPeriod, setSalaryPeriod] = useState<'monthly' | 'yearly_lpa'>('yearly_lpa')
   const [salaryMin, setSalaryMin] = useState<string>('')
   const [salaryMax, setSalaryMax] = useState<string>('')
   const [currency, setCurrency] = useState<string>('₹ (INR)')
@@ -215,9 +308,82 @@ export function usePostJob(onSuccess?: () => void) {
           .maybeSingle()
 
         if (comp?.id && isMounted) {
+          setCurrentCompanyId(comp.id)
           const q = await getCompanyJobQuota(comp.id)
           if (isMounted) {
             setQuota(q)
+          }
+
+          // Fetch previously saved taxonomies from company_job_taxonomies
+          try {
+            const { data: taxData } = await supabase
+              .from('company_job_taxonomies')
+              .select('type, name')
+              .eq('company_id', comp.id)
+
+            if (taxData && isMounted) {
+              setCategories((prev) => {
+                const updated = [...prev]
+                taxData
+                  .filter((t) => t.type === 'category')
+                  .forEach((t) => {
+                    const c = (t.name || '').trim()
+                    if (c && !updated.some((u) => u.toLowerCase() === c.toLowerCase())) {
+                      updated.push(c)
+                    }
+                  })
+                return updated
+              })
+
+              setProjectTypes((prev) => {
+                const updated = [...prev]
+                taxData
+                  .filter((t) => t.type === 'project_type')
+                  .forEach((t) => {
+                    const p = (t.name || '').trim()
+                    if (p && !updated.some((u) => u.toLowerCase() === p.toLowerCase())) {
+                      updated.push(p)
+                    }
+                  })
+                return updated
+              })
+            }
+          } catch (taxErr) {
+            console.warn('Error fetching company taxonomies:', taxErr)
+          }
+
+          // Fetch previously used categories and project types from create_job_post for this company
+          try {
+            const { data: jobPosts } = await supabase
+              .from('create_job_post')
+              .select('category, project_type')
+              .eq('company_id', comp.id)
+
+            if (jobPosts && isMounted) {
+              setCategories((prev) => {
+                const updated = [...prev]
+                jobPosts.forEach((j) => {
+                  const c = (j.category || '').trim()
+                  if (c && !updated.some((u) => u.toLowerCase() === c.toLowerCase())) {
+                    updated.push(c)
+                  }
+                })
+                return updated
+              })
+
+              setProjectTypes((prev) => {
+                const updated = [...prev]
+                jobPosts.forEach((j) => {
+                  const p = (j.project_type || '').trim()
+                  if (p && !updated.some((u) => u.toLowerCase() === p.toLowerCase())) {
+                    updated.push(p)
+                  }
+                })
+                return updated
+              })
+            }
+          } catch (jobErr) {
+            console.warn('Error fetching company previous jobs taxonomies:', jobErr)
           }
         }
       } catch (err) {
@@ -235,6 +401,172 @@ export function usePostJob(onSuccess?: () => void) {
       isMounted = false
     }
   }, [])
+
+  // Load existing job details when in edit mode
+  useEffect(() => {
+    if (!jobIdToEdit) return
+
+    let isMounted = true
+
+    async function loadJobToEdit() {
+      setIsLoadingJob(true)
+      try {
+        const { data, error } = await supabase
+          .from('create_job_post')
+          .select('*')
+          .eq('id', jobIdToEdit)
+          .single()
+
+        if (error) throw error
+
+        if (data && isMounted) {
+          setTitle(data.title || '')
+
+          const rawCat = (data.category || '').trim()
+          if (rawCat) {
+            setCategories((prev) => {
+              const exists = prev.some((c) => c.toLowerCase() === rawCat.toLowerCase())
+              if (!exists) {
+                return [...prev, rawCat]
+              }
+              return prev
+            })
+            setCategory(rawCat)
+          } else {
+            setCategory('')
+          }
+
+          if (Array.isArray(data.project_types) && data.project_types.length > 0) {
+            const pts = data.project_types.map((p: string) => String(p).trim()).filter(Boolean)
+            setSelectedProjectTypes(pts)
+            setProjectType(pts.join(', '))
+            setProjectTypes((prev) => {
+              const updated = [...prev]
+              pts.forEach((p) => {
+                if (!updated.some((u) => u.toLowerCase() === p.toLowerCase())) {
+                  updated.push(p)
+                }
+              })
+              return updated
+            })
+          } else if (data.project_type) {
+            const rawPt = String(data.project_type).trim()
+            const pts = rawPt.split(/[,;/]+/).map((p) => p.trim()).filter(Boolean)
+            const loaded = pts.length > 0 ? pts : [rawPt]
+            setSelectedProjectTypes(loaded)
+            setProjectType(rawPt)
+            setProjectTypes((prev) => {
+              const updated = [...prev]
+              loaded.forEach((p) => {
+                if (!updated.some((u) => u.toLowerCase() === p.toLowerCase())) {
+                  updated.push(p)
+                }
+              })
+              return updated
+            })
+          } else {
+            setSelectedProjectTypes(['Commercial'])
+            setProjectType('Commercial')
+          }
+
+          const matchedExp = EXPERIENCE_LEVELS.find(
+            (e) => e.toLowerCase() === (data.experience || '').trim().toLowerCase()
+          ) || data.experience || ''
+          setExperience(matchedExp)
+
+          const matchedWt = WORK_TYPES.find(
+            (w) => w.toLowerCase() === (data.work_type || '').trim().toLowerCase()
+          ) || 'Hybrid'
+          setWorkType(matchedWt)
+
+          if (Array.isArray(data.locations) && data.locations.length > 0) {
+            const locs = data.locations.map((l: string) => String(l).trim()).filter(Boolean)
+            setLocations(locs)
+            setLocation(locs.join(', '))
+          } else if (data.location) {
+            const locs = String(data.location)
+              .split(/[,;/]+/)
+              .map((s) => s.trim())
+              .filter(Boolean)
+            setLocations(locs.length > 0 ? locs : [String(data.location).trim()])
+            setLocation(String(data.location).trim())
+          } else {
+            setLocations([])
+            setLocation('')
+          }
+
+          if (Array.isArray(data.employment_type)) {
+            setEmploymentTypes(data.employment_type)
+          } else if (typeof data.employment_type === 'string' && data.employment_type) {
+            setEmploymentTypes([data.employment_type])
+          } else {
+            setEmploymentTypes(['Full-time'])
+          }
+
+          const hasDbSalary =
+            (data.salary_min != null && data.salary_min !== '') ||
+            (data.salary_max != null && data.salary_max !== '')
+
+          if (data.salary_period === 'monthly' || data.salary_period === 'yearly_lpa') {
+            setSalaryPeriod(data.salary_period)
+          } else if (hasDbSalary) {
+            // Infer for legacy records
+            const num = Number(data.salary_min || data.salary_max || 0)
+            setSalaryPeriod(num <= 100 ? 'yearly_lpa' : 'monthly')
+          } else {
+            setSalaryPeriod('yearly_lpa')
+          }
+
+          const isLpa =
+            data.salary_period === 'yearly_lpa' ||
+            (!data.salary_period &&
+              hasDbSalary &&
+              Number(data.salary_min || data.salary_max || 0) <= 100)
+
+          if (isLpa) {
+            setSalaryMin(
+              data.salary_min != null && data.salary_min !== '' ? String(data.salary_min) : ''
+            )
+            setSalaryMax(
+              data.salary_max != null && data.salary_max !== '' ? String(data.salary_max) : ''
+            )
+          } else {
+            setSalaryMin(
+              data.salary_min != null && data.salary_min !== ''
+                ? Number(data.salary_min).toLocaleString('en-IN')
+                : ''
+            )
+            setSalaryMax(
+              data.salary_max != null && data.salary_max !== ''
+                ? Number(data.salary_max).toLocaleString('en-IN')
+                : ''
+            )
+          }
+
+          setNumberOfOpenings(data.number_of_openings || 1)
+          setJobDescription(data.job_description || '')
+          setTechnicalRequirements(data.technical_requirements || '')
+          setResponsibilities(data.responsibilities || '')
+          setWhatWeOffer(data.about_us || '')
+          setExistingStatus(data.status || 'active')
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Failed to load existing job details'
+        console.error('loadJobToEdit error:', msg)
+        showToast(msg)
+      } finally {
+        if (isMounted) {
+          setIsLoadingJob(false)
+        }
+      }
+    }
+
+    void loadJobToEdit()
+
+    return () => {
+      isMounted = false
+    }
+  }, [jobIdToEdit, showToast])
 
   // Real Database Query for Matching Candidates
   useEffect(() => {
@@ -383,7 +715,7 @@ export function usePostJob(onSuccess?: () => void) {
       }
       case 'projectType': {
         const str = typeof val === 'string' ? val.trim() : projectType.trim()
-        if (!str) return 'Please select a project type.'
+        if (!str && selectedProjectTypes.length === 0) return 'Please select at least one project type.'
         return ''
       }
       case 'experience': {
@@ -398,7 +730,7 @@ export function usePostJob(onSuccess?: () => void) {
       }
       case 'location': {
         const str = typeof val === 'string' ? val.trim() : location.trim()
-        if (!str) return 'Location / city is required.'
+        if (!str && locations.length === 0) return 'At least one location is required.'
         return ''
       }
       case 'employmentTypes': {
@@ -414,11 +746,29 @@ export function usePostJob(onSuccess?: () => void) {
         const minClean = rawMin ? String(rawMin).replace(/,/g, '').trim() : ''
         const maxClean = rawMax ? String(rawMax).replace(/,/g, '').trim() : ''
 
-        if (minClean && isNaN(Number(minClean))) return 'Minimum salary must be a valid number.'
-        if (maxClean && isNaN(Number(maxClean))) return 'Maximum salary must be a valid number.'
+        // Salary is optional: if both are empty, valid
+        if (!minClean && !maxClean) return ''
 
-        if (minClean && maxClean && Number(minClean) > Number(maxClean)) {
-          return 'Minimum salary cannot exceed maximum salary.'
+        if (minClean) {
+          const numMin = Number(minClean)
+          if (isNaN(numMin) || numMin < 0) {
+            return 'Minimum salary must be a valid positive number.'
+          }
+        }
+
+        if (maxClean) {
+          const numMax = Number(maxClean)
+          if (isNaN(numMax) || numMax < 0) {
+            return 'Maximum salary must be a valid positive number.'
+          }
+        }
+
+        if (minClean && maxClean) {
+          const numMin = Number(minClean)
+          const numMax = Number(maxClean)
+          if (numMin > numMax) {
+            return 'Minimum salary cannot exceed maximum salary.'
+          }
         }
         return ''
       }
@@ -452,9 +802,11 @@ export function usePostJob(onSuccess?: () => void) {
     title,
     category,
     projectType,
+    selectedProjectTypes.length,
     experience,
     workType,
     location,
+    locations.length,
     employmentTypes,
     salaryMin,
     salaryMax,
@@ -473,6 +825,218 @@ export function usePostJob(onSuccess?: () => void) {
     }))
   }, [validateSingleField])
 
+  // Custom Category Modal Handlers
+  const openCustomCategoryModal = useCallback(() => {
+    setCustomCategoryInput('')
+    setCustomCategoryError(null)
+    setIsCustomCategoryModalOpen(true)
+  }, [])
+
+  const closeCustomCategoryModal = useCallback(() => {
+    if (isAddingCustomCategory) return
+    setIsCustomCategoryModalOpen(false)
+    setCustomCategoryInput('')
+    setCustomCategoryError(null)
+  }, [isAddingCustomCategory])
+
+  const handleAddCustomCategory = useCallback(async (): Promise<boolean> => {
+    const trimmed = customCategoryInput.trim()
+
+    // 1. Validation: Reject empty names
+    if (!trimmed) {
+      setCustomCategoryError('Please enter a category name.')
+      return false
+    }
+
+    // 2. Validation: Prevent case-insensitive duplicates
+    const isDuplicate = categories.some(
+      (c) => c.toLowerCase() === trimmed.toLowerCase()
+    )
+    if (isDuplicate) {
+      setCustomCategoryError(`Category "${trimmed}" already exists.`)
+      return false
+    }
+
+    try {
+      setIsAddingCustomCategory(true)
+      setCustomCategoryError(null)
+
+      // Persist to Supabase shared company_job_taxonomies table
+      try {
+        let cid = currentCompanyId
+        if (!cid) {
+          const { data: userData } = await supabase.auth.getUser()
+          if (userData?.user) {
+            const { data: comp } = await supabase
+              .from('companies')
+              .select('id')
+              .eq('owner_id', userData.user.id)
+              .maybeSingle()
+            if (comp?.id) {
+              cid = comp.id
+              setCurrentCompanyId(comp.id)
+            }
+          }
+        }
+
+        if (cid) {
+          const { error: taxInsertErr } = await supabase
+            .from('company_job_taxonomies')
+            .insert({
+              company_id: cid,
+              type: 'category',
+              name: trimmed,
+            })
+          if (taxInsertErr) {
+            console.warn('Note saving category to company_job_taxonomies:', taxInsertErr)
+          }
+        }
+      } catch (dbErr) {
+        console.warn('Database persistence notice for custom category:', dbErr)
+      }
+
+      // Add to categories state
+      setCategories((prev) => {
+        const next = [...prev, trimmed]
+        try {
+          if (typeof window !== 'undefined') {
+            const customOnly = next.filter(
+              (c) => !DEFAULT_CATEGORIES.some((d) => d.toLowerCase() === c.toLowerCase())
+            )
+            localStorage.setItem('castallio_custom_categories', JSON.stringify(customOnly))
+          }
+        } catch {
+          // ignore
+        }
+        return next
+      })
+
+      // 3. Automatically select newly added category after successful creation
+      setCategory(trimmed)
+      handleFieldChange('category', trimmed)
+
+      showToast(`Category "${trimmed}" created and selected.`)
+      setIsCustomCategoryModalOpen(false)
+      setCustomCategoryInput('')
+      return true
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to add custom category.'
+      setCustomCategoryError(msg)
+      return false
+    } finally {
+      setIsAddingCustomCategory(false)
+    }
+  }, [customCategoryInput, categories, currentCompanyId, handleFieldChange, showToast])
+
+  // Custom Project Type Modal Handlers
+  const openCustomProjectTypeModal = useCallback(() => {
+    setCustomProjectTypeInput('')
+    setCustomProjectTypeError(null)
+    setIsCustomProjectTypeModalOpen(true)
+  }, [])
+
+  const closeCustomProjectTypeModal = useCallback(() => {
+    if (isAddingCustomProjectType) return
+    setIsCustomProjectTypeModalOpen(false)
+    setCustomProjectTypeInput('')
+    setCustomProjectTypeError(null)
+  }, [isAddingCustomProjectType])
+
+  const handleAddCustomProjectType = useCallback(async (): Promise<boolean> => {
+    const trimmed = customProjectTypeInput.trim()
+
+    // 1. Validation: Reject empty names
+    if (!trimmed) {
+      setCustomProjectTypeError('Please enter a project type.')
+      return false
+    }
+
+    // 2. Validation: Prevent case-insensitive duplicates
+    const isDuplicate = projectTypes.some(
+      (p) => p.toLowerCase() === trimmed.toLowerCase()
+    )
+    if (isDuplicate) {
+      setCustomProjectTypeError(`Project type "${trimmed}" already exists.`)
+      return false
+    }
+
+    try {
+      setIsAddingCustomProjectType(true)
+      setCustomProjectTypeError(null)
+
+      // Persist to Supabase shared company_job_taxonomies table
+      try {
+        let cid = currentCompanyId
+        if (!cid) {
+          const { data: userData } = await supabase.auth.getUser()
+          if (userData?.user) {
+            const { data: comp } = await supabase
+              .from('companies')
+              .select('id')
+              .eq('owner_id', userData.user.id)
+              .maybeSingle()
+            if (comp?.id) {
+              cid = comp.id
+              setCurrentCompanyId(comp.id)
+            }
+          }
+        }
+
+        if (cid) {
+          const { error: taxInsertErr } = await supabase
+            .from('company_job_taxonomies')
+            .insert({
+              company_id: cid,
+              type: 'project_type',
+              name: trimmed,
+            })
+          if (taxInsertErr) {
+            console.warn('Note saving project type to company_job_taxonomies:', taxInsertErr)
+          }
+        }
+      } catch (dbErr) {
+        console.warn('Database persistence notice for custom project type:', dbErr)
+      }
+
+      // Add to projectTypes state & localStorage
+      setProjectTypes((prev) => {
+        const next = [...prev, trimmed]
+        try {
+          if (typeof window !== 'undefined') {
+            const customOnly = next.filter(
+              (p) => !DEFAULT_PROJECT_TYPES.some((d) => d.toLowerCase() === p.toLowerCase())
+            )
+            localStorage.setItem('castallio_custom_project_types', JSON.stringify(customOnly))
+          }
+        } catch {
+          // ignore
+        }
+        return next
+      })
+
+      // 3. Automatically select newly added project type after successful creation
+      setSelectedProjectTypes((prev) => {
+        const exists = prev.some((p) => p.toLowerCase() === trimmed.toLowerCase())
+        const next = exists ? prev : [...prev, trimmed]
+        const joined = next.join(', ')
+        setProjectType(joined)
+        handleFieldChange('projectType', joined)
+        return next
+      })
+
+      showToast(`Project type "${trimmed}" created and selected.`)
+      setIsCustomProjectTypeModalOpen(false)
+      setCustomProjectTypeInput('')
+      return true
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to add custom project type.'
+      setCustomProjectTypeError(msg)
+      return false
+    } finally {
+      setIsAddingCustomProjectType(false)
+    }
+  }, [customProjectTypeInput, projectTypes, currentCompanyId, handleFieldChange, showToast])
+
   // On blur handler to mark field as touched
   const handleBlur = useCallback((field: keyof PostJobFormData) => {
     setTouched((prev) => ({ ...prev, [field]: true }))
@@ -483,6 +1047,66 @@ export function usePostJob(onSuccess?: () => void) {
     }))
   }, [validateSingleField])
 
+  // Switch salary period with unit preservation safety (clears inputs to prevent unit misinterpretation)
+  const handleSalaryPeriodChange = useCallback((newPeriod: 'monthly' | 'yearly_lpa') => {
+    setSalaryPeriod((current) => {
+      if (current === newPeriod) return current
+      setSalaryMin('')
+      setSalaryMax('')
+      setErrors((prev) => ({
+        ...prev,
+        salaryMin: undefined,
+        salaryMax: undefined,
+      }))
+      return newPeriod
+    })
+  }, [])
+
+  // Input change handler for monthly and yearly_lpa
+  const handleSalaryChange = useCallback(
+    (field: 'min' | 'max', inputVal: string) => {
+      if (salaryPeriod === 'monthly') {
+        const cleanDigits = inputVal.replace(/[^0-9]/g, '')
+        if (!cleanDigits) {
+          if (field === 'min') {
+            setSalaryMin('')
+            handleFieldChange('salaryMin', '')
+          } else {
+            setSalaryMax('')
+            handleFieldChange('salaryMax', '')
+          }
+          return
+        }
+        const formatted = Number(cleanDigits).toLocaleString('en-IN')
+        if (field === 'min') {
+          setSalaryMin(formatted)
+          handleFieldChange('salaryMin', formatted)
+        } else {
+          setSalaryMax(formatted)
+          handleFieldChange('salaryMax', formatted)
+        }
+      } else {
+        // yearly_lpa: allow decimal input e.g. 3.6, 6.0
+        let clean = inputVal.replace(/[^0-9.]/g, '')
+        const parts = clean.split('.')
+        if (parts.length > 2) {
+          clean = parts[0] + '.' + parts.slice(1).join('')
+        }
+        if (parts.length === 2 && parts[1].length > 2) {
+          clean = parts[0] + '.' + parts[1].slice(0, 2)
+        }
+        if (field === 'min') {
+          setSalaryMin(clean)
+          handleFieldChange('salaryMin', clean)
+        } else {
+          setSalaryMax(clean)
+          handleFieldChange('salaryMax', clean)
+        }
+      }
+    },
+    [salaryPeriod, handleFieldChange]
+  )
+
   // Toggle employment type (multi-select)
   const handleToggleEmploymentType = useCallback((type: string) => {
     setEmploymentTypes((prev) => {
@@ -491,6 +1115,104 @@ export function usePostJob(onSuccess?: () => void) {
       return next
     })
   }, [handleFieldChange])
+
+  // Toggle project type (multi-select)
+  const handleToggleProjectType = useCallback(
+    (typeToToggle: string) => {
+      const trimmed = typeToToggle.trim()
+      if (!trimmed) return
+
+      setSelectedProjectTypes((prev) => {
+        const exists = prev.some((p) => p.toLowerCase() === trimmed.toLowerCase())
+        let next: string[]
+        if (exists) {
+          next = prev.filter((p) => p.toLowerCase() !== trimmed.toLowerCase())
+        } else {
+          next = [...prev, trimmed]
+        }
+        const joined = next.join(', ')
+        setProjectType(joined)
+        handleFieldChange('projectType', joined)
+        return next
+      })
+      setErrors((prev) => {
+        if (!prev.projectType) return prev
+        const next = { ...prev }
+        delete next.projectType
+        return next
+      })
+    },
+    [handleFieldChange]
+  )
+
+  // Location handlers
+  const handleAddLocation = useCallback(
+    (locToAdd: string) => {
+      const parts = locToAdd
+        .split(/[,;/]+/)
+        .map((p) => p.trim())
+        .filter(Boolean)
+      if (parts.length === 0) return
+
+      setLocations((prev) => {
+        const next = [...prev]
+        parts.forEach((p) => {
+          if (!next.some((existing) => existing.toLowerCase() === p.toLowerCase())) {
+            next.push(p)
+          }
+        })
+        const joined = next.join(', ')
+        setLocation(joined)
+        handleFieldChange('location', joined)
+        return next
+      })
+      setErrors((prev) => {
+        if (!prev.location) return prev
+        const next = { ...prev }
+        delete next.location
+        return next
+      })
+    },
+    [handleFieldChange]
+  )
+
+  const handleRemoveLocation = useCallback(
+    (locToRemove: string) => {
+      setLocations((prev) => {
+        const next = prev.filter((l) => l.toLowerCase() !== locToRemove.toLowerCase())
+        const joined = next.join(', ')
+        setLocation(joined)
+        handleFieldChange('location', joined)
+        return next
+      })
+    },
+    [handleFieldChange]
+  )
+
+  const handleToggleLocation = useCallback(
+    (locToToggle: string) => {
+      const trimmed = locToToggle.trim()
+      if (!trimmed) return
+
+      setLocations((prev) => {
+        const exists = prev.some((l) => l.toLowerCase() === trimmed.toLowerCase())
+        const next = exists
+          ? prev.filter((l) => l.toLowerCase() !== trimmed.toLowerCase())
+          : [...prev, trimmed]
+        const joined = next.join(', ')
+        setLocation(joined)
+        handleFieldChange('location', joined)
+        return next
+      })
+      setErrors((prev) => {
+        if (!prev.location) return prev
+        const next = { ...prev }
+        delete next.location
+        return next
+      })
+    },
+    [handleFieldChange]
+  )
 
   // Validate entire form
   const validateForm = useCallback((): boolean => {
@@ -593,7 +1315,82 @@ export function usePostJob(onSuccess?: () => void) {
         throw new Error('Company profile not found. Please complete company setup first.')
       }
 
-      // 1. Enforce Subscription Total Job Post Limit
+      const minClean = salaryMin ? String(salaryMin).replace(/,/g, '').trim() : ''
+      const maxClean = salaryMax ? String(salaryMax).replace(/,/g, '').trim() : ''
+      const hasSalary = minClean !== '' || maxClean !== ''
+      const parsedSalaryMin = minClean ? parseFloat(minClean) : null
+      const parsedSalaryMax = maxClean ? parseFloat(maxClean) : null
+      const parsedSalaryPeriod = hasSalary ? salaryPeriod : null
+
+      // If updating an existing job post, update in-place without deducting subscription quota
+      if (isEditMode && jobIdToEdit) {
+        const newStatus = existingStatus === 'draft' ? 'active' : (existingStatus || 'active')
+
+        const finalLocations = locations.length > 0
+          ? locations
+          : location.trim()
+          ? location.split(/[,;/]+/).map((s) => s.trim()).filter(Boolean)
+          : []
+        const finalLocationString = finalLocations.length > 0 ? finalLocations.join(', ') : location.trim()
+
+        const finalProjectTypes = selectedProjectTypes.length > 0
+          ? selectedProjectTypes
+          : projectType.trim()
+          ? projectType.split(/[,;/]+/).map((s) => s.trim()).filter(Boolean)
+          : ['Commercial']
+        const finalProjectTypeString = finalProjectTypes.join(', ')
+
+        const updatePayload = {
+          title: title.trim(),
+          category: category.trim(),
+          project_type: finalProjectTypeString,
+          project_types: finalProjectTypes,
+          experience: experience.trim(),
+          work_type: workType,
+          location: finalLocationString,
+          locations: finalLocations.length > 0 ? finalLocations : null,
+          employment_type: employmentTypes,
+          salary_min: parsedSalaryMin,
+          salary_max: parsedSalaryMax,
+          salary_period: parsedSalaryPeriod,
+          number_of_openings: numberOfOpenings ? parseInt(String(numberOfOpenings), 10) : 1,
+          job_description: jobDescription.trim(),
+          technical_requirements: technicalRequirements.trim(),
+          responsibilities: responsibilities.trim(),
+          about_us: whatWeOffer.trim() || null,
+          status: newStatus,
+          updated_at: new Date().toISOString(),
+        }
+
+        const { data: updatedJob, error: updateError } = await supabase
+          .from('create_job_post')
+          .update(updatePayload)
+          .eq('id', jobIdToEdit)
+          .select()
+          .single()
+
+        if (updateError) {
+          throw new Error(updateError.message)
+        }
+
+        if (updatedJob?.id) {
+          generateJobEmbedding(updatedJob.id, updatedJob).catch((edgeErr) => {
+            console.warn('[PostJob] Edge function generate-job-embedding notice:', edgeErr)
+          })
+        }
+
+        setIsPublishSuccessModalOpen(true)
+        showToast('Requisition successfully updated!')
+
+        if (onSuccess) {
+          setTimeout(() => {
+            onSuccess()
+          }, 1800)
+        }
+        return
+      }
+
+      // 1. Enforce Subscription Total Job Post Limit for new job posts
       const currentQuota = await getCompanyJobQuota(companyId)
       setQuota(currentQuota)
 
@@ -608,18 +1405,35 @@ export function usePostJob(onSuccess?: () => void) {
       const now = new Date()
       const expiresAt = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000)
 
+      const finalLocations = locations.length > 0
+        ? locations
+        : location.trim()
+        ? location.split(/[,;/]+/).map((s) => s.trim()).filter(Boolean)
+        : []
+      const finalLocationString = finalLocations.length > 0 ? finalLocations.join(', ') : location.trim()
+
+      const finalProjectTypes = selectedProjectTypes.length > 0
+        ? selectedProjectTypes
+        : projectType.trim()
+        ? projectType.split(/[,;/]+/).map((s) => s.trim()).filter(Boolean)
+        : ['Commercial']
+      const finalProjectTypeString = finalProjectTypes.join(', ')
+
       const payload = {
         company_id: companyId,
         posted_by: user.id,
         title: title.trim(),
         category: category.trim(),
-        project_type: projectType.trim(),
+        project_type: finalProjectTypeString,
+        project_types: finalProjectTypes,
         experience: experience.trim(),
         work_type: workType,
-        location: location.trim(),
+        location: finalLocationString,
+        locations: finalLocations.length > 0 ? finalLocations : null,
         employment_type: employmentTypes,
-        salary_min: salaryMin ? parseFloat(String(salaryMin).replace(/,/g, '')) : null,
-        salary_max: salaryMax ? parseFloat(String(salaryMax).replace(/,/g, '')) : null,
+        salary_min: parsedSalaryMin,
+        salary_max: parsedSalaryMax,
+        salary_period: parsedSalaryPeriod,
         number_of_openings: numberOfOpenings ? parseInt(String(numberOfOpenings), 10) : 1,
         job_description: jobDescription.trim(),
         technical_requirements: technicalRequirements.trim(),
@@ -695,10 +1509,13 @@ export function usePostJob(onSuccess?: () => void) {
     title,
     category,
     projectType,
+    selectedProjectTypes,
     experience,
     workType,
     location,
+    locations,
     employmentTypes,
+    salaryPeriod,
     salaryMin,
     salaryMax,
     numberOfOpenings,
@@ -709,6 +1526,9 @@ export function usePostJob(onSuccess?: () => void) {
     showToast,
     onSuccess,
     refreshQuota,
+    isEditMode,
+    jobIdToEdit,
+    existingStatus,
   ])
 
   // Save Draft to Supabase
@@ -734,6 +1554,57 @@ export function usePostJob(onSuccess?: () => void) {
       }
 
       if (user && companyId) {
+        const minClean = salaryMin ? String(salaryMin).replace(/,/g, '').trim() : ''
+        const maxClean = salaryMax ? String(salaryMax).replace(/,/g, '').trim() : ''
+        const hasSalary = minClean !== '' || maxClean !== ''
+        const parsedSalaryMin = minClean ? parseFloat(minClean) : null
+        const parsedSalaryMax = maxClean ? parseFloat(maxClean) : null
+        const parsedSalaryPeriod = hasSalary ? salaryPeriod : null
+
+        const finalLocations = locations.length > 0
+          ? locations
+          : location.trim()
+          ? location.split(/[,;/]+/).map((s) => s.trim()).filter(Boolean)
+          : []
+        const finalLocationString = finalLocations.length > 0 ? finalLocations.join(', ') : (location.trim() || null)
+
+        const finalProjectTypes = selectedProjectTypes.length > 0
+          ? selectedProjectTypes
+          : projectType.trim()
+          ? projectType.split(/[,;/]+/).map((s) => s.trim()).filter(Boolean)
+          : []
+        const finalProjectTypeString = finalProjectTypes.length > 0 ? finalProjectTypes.join(', ') : (projectType.trim() || null)
+
+        if (isEditMode && jobIdToEdit) {
+          const { error } = await supabase
+            .from('create_job_post')
+            .update({
+              title: title.trim(),
+              category: category.trim() || null,
+              project_type: finalProjectTypeString,
+              project_types: finalProjectTypes.length > 0 ? finalProjectTypes : null,
+              experience: experience.trim() || null,
+              work_type: workType,
+              location: finalLocationString,
+              locations: finalLocations.length > 0 ? finalLocations : null,
+              employment_type: employmentTypes,
+              salary_min: parsedSalaryMin,
+              salary_max: parsedSalaryMax,
+              salary_period: parsedSalaryPeriod,
+              number_of_openings: numberOfOpenings || 1,
+              job_description: jobDescription.trim() || null,
+              technical_requirements: technicalRequirements.trim() || null,
+              responsibilities: responsibilities.trim() || null,
+              about_us: whatWeOffer.trim() || null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', jobIdToEdit)
+
+          if (error) throw error
+          showToast('Requisition changes saved.')
+          return
+        }
+
         const now = new Date()
         const expiresAt = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000)
 
@@ -742,13 +1613,16 @@ export function usePostJob(onSuccess?: () => void) {
           posted_by: user.id,
           title: title.trim(),
           category: category.trim() || null,
-          project_type: projectType || null,
+          project_type: finalProjectTypeString,
+          project_types: finalProjectTypes.length > 0 ? finalProjectTypes : null,
           experience: experience.trim() || null,
           work_type: workType,
-          location: location.trim() || null,
+          location: finalLocationString,
+          locations: finalLocations.length > 0 ? finalLocations : null,
           employment_type: employmentTypes,
-          salary_min: salaryMin ? parseFloat(String(salaryMin).replace(/,/g, '')) : null,
-          salary_max: salaryMax ? parseFloat(String(salaryMax).replace(/,/g, '')) : null,
+          salary_min: parsedSalaryMin,
+          salary_max: parsedSalaryMax,
+          salary_period: parsedSalaryPeriod,
           number_of_openings: numberOfOpenings || 1,
           job_description: jobDescription.trim() || null,
           technical_requirements: technicalRequirements.trim() || null,
@@ -775,10 +1649,13 @@ export function usePostJob(onSuccess?: () => void) {
     title,
     category,
     projectType,
+    selectedProjectTypes,
     experience,
     workType,
     location,
+    locations,
     employmentTypes,
+    salaryPeriod,
     salaryMin,
     salaryMax,
     numberOfOpenings,
@@ -787,6 +1664,8 @@ export function usePostJob(onSuccess?: () => void) {
     responsibilities,
     whatWeOffer,
     showToast,
+    isEditMode,
+    jobIdToEdit,
   ])
 
   return {
@@ -804,6 +1683,9 @@ export function usePostJob(onSuccess?: () => void) {
       handleFieldChange('category', val)
     },
     projectType,
+    selectedProjectTypes,
+    setSelectedProjectTypes,
+    handleToggleProjectType,
     setProjectType: (val: string) => {
       setProjectType(val)
       handleFieldChange('projectType', val)
@@ -819,12 +1701,21 @@ export function usePostJob(onSuccess?: () => void) {
       handleFieldChange('workType', val)
     },
     location,
+    locations,
+    setLocations,
+    handleAddLocation,
+    handleRemoveLocation,
+    handleToggleLocation,
     setLocation: (val: string) => {
       setLocation(val)
       handleFieldChange('location', val)
     },
     employmentTypes,
     handleToggleEmploymentType,
+    salaryPeriod,
+    setSalaryPeriod,
+    handleSalaryPeriodChange,
+    handleSalaryChange,
     salaryMin,
     setSalaryMin: (val: string) => {
       setSalaryMin(val)
@@ -889,5 +1780,29 @@ export function usePostJob(onSuccess?: () => void) {
     showToast,
     handleSaveDraft,
     handlePublishRequisition,
+    isEditMode,
+    isLoadingJob,
+    // Custom Categories
+    categories,
+    isCustomCategoryModalOpen,
+    openCustomCategoryModal,
+    closeCustomCategoryModal,
+    customCategoryInput,
+    setCustomCategoryInput,
+    customCategoryError,
+    setCustomCategoryError,
+    isAddingCustomCategory,
+    handleAddCustomCategory,
+    // Custom Project Types
+    projectTypes,
+    isCustomProjectTypeModalOpen,
+    openCustomProjectTypeModal,
+    closeCustomProjectTypeModal,
+    customProjectTypeInput,
+    setCustomProjectTypeInput,
+    customProjectTypeError,
+    setCustomProjectTypeError,
+    isAddingCustomProjectType,
+    handleAddCustomProjectType,
   }
 }
