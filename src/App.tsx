@@ -105,7 +105,7 @@ function App() {
     clearUserRole()
     await signOut()
     showInfo('You have been logged out.', 'Signed Out')
-    navigate('/signin', { replace: true })
+    window.location.replace('/signin')
   }
 
   return (

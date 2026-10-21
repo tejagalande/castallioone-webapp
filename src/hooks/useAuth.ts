@@ -109,19 +109,24 @@ export function useAuth(): UseAuthReturn {
     localStorage.setItem('castallio_signup_role', role)
     localStorage.setItem('castallio_user_role', role)
     try {
-      const { error: signInError } = await supabase.auth.signInWithOAuth({
+      const { data, error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: getRedirectUrl(role),
+          skipBrowserRedirect: true,
           queryParams: {
             access_type: 'offline',
-            prompt: 'consent',
+            prompt: 'select_account',
           },
         },
       })
 
       if (signInError) {
         throw signInError
+      }
+
+      if (data?.url) {
+        window.location.replace(data.url)
       }
     } catch (err: unknown) {
       const authErr = err as AuthError
@@ -136,15 +141,20 @@ export function useAuth(): UseAuthReturn {
     localStorage.setItem('castallio_signup_role', role)
     localStorage.setItem('castallio_user_role', role)
     try {
-      const { error: signInError } = await supabase.auth.signInWithOAuth({
+      const { data, error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'linkedin_oidc',
         options: {
           redirectTo: getRedirectUrl(role),
+          skipBrowserRedirect: true,
         },
       })
 
       if (signInError) {
         throw signInError
+      }
+
+      if (data?.url) {
+        window.location.replace(data.url)
       }
     } catch (err: unknown) {
       const authErr = err as AuthError

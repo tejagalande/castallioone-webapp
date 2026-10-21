@@ -20,6 +20,11 @@ function SignIn({ onNavigateToSignUp, onSignInSuccess }: SignInProps) {
     if (returnToParam) {
       sessionStorage.setItem('castallio_return_to', returnToParam)
     }
+
+    // Clean any OAuth code or hash remnants from URL
+    if (window.location.hash || window.location.search.includes('code=')) {
+      window.history.replaceState(null, '', window.location.pathname)
+    }
   }, [searchParams, location.state])
 
   const [activeTab, setActiveTab] = useState<AuthTab>('talent')
