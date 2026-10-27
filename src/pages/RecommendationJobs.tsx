@@ -1,5 +1,6 @@
 import { useState, useMemo, type FC } from 'react'
 import type { RecommendedJob, TalentProfileInfo } from './useTalentDashboard'
+import { JobDetailsModal } from '../components/JobDetailsModal'
 import './RecommendationJobs.css'
 
 export interface RecommendationJobsProps {
@@ -12,6 +13,7 @@ export interface RecommendationJobsProps {
   appliedJobIds: Set<string>
   profile: TalentProfileInfo
   onNavigateToFindJobs?: () => void
+  onNavigateToMessages?: (companyName?: string, companyId?: string) => void
 }
 
 type WorkModeFilter = 'all' | 'Remote' | 'Hybrid' | 'On-site'
@@ -24,13 +26,23 @@ export const RecommendationJobs: FC<RecommendationJobsProps> = ({
   applyingJobId,
   onApply,
   onSave,
+  savedJobIds,
+  appliedJobIds,
   profile,
   onNavigateToFindJobs,
+  onNavigateToMessages,
 }) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [workModeFilter, setWorkModeFilter] = useState<WorkModeFilter>('all')
   const [fitFilter, setFitFilter] = useState<FitFilter>('all')
   const [sortBy, setSortBy] = useState<SortOption>('fit')
+  const [selectedJobForDetails, setSelectedJobForDetails] = useState<RecommendedJob | null>(null)
+
+  const activeSelectedJob = useMemo(() => {
+    if (!selectedJobForDetails) return null
+    const latest = jobs.find((j) => j.id === selectedJobForDetails.id)
+    return latest || selectedJobForDetails
+  }, [jobs, selectedJobForDetails])
 
 
   const getCompanyInitials = (name: string): string => {
@@ -245,7 +257,13 @@ export const RecommendationJobs: FC<RecommendationJobsProps> = ({
 
                   </div>
 
-                  <h2 className="rec-job-title">{job.title}</h2>
+                  <h2
+                    className="rec-job-title clickable"
+                    onClick={() => setSelectedJobForDetails(job)}
+                    title="Click to view full job requisition details"
+                  >
+                    {job.title}
+                  </h2>
                   <p className="rec-company-subtitle">
                     {job.company} • {job.location}
                   </p>
@@ -273,6 +291,19 @@ export const RecommendationJobs: FC<RecommendationJobsProps> = ({
                   </div>
 
                   <div className="rec-actions-row">
+                    <button
+                      type="button"
+                      className="rec-btn-details"
+                      onClick={() => setSelectedJobForDetails(job)}
+                      aria-label={`View full details for ${job.title}`}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                      View Details
+                    </button>
+
                     <button
                       type="button"
                       className={`rec-btn-apply ${job.isApplied ? 'applied' : ''} ${applyingJobId === job.id ? 'loading' : ''}`}
@@ -341,6 +372,21 @@ export const RecommendationJobs: FC<RecommendationJobsProps> = ({
           </div>
         )}
       </section>
+
+      {/* Reusable Job Requisition Details Modal */}
+      <JobDetailsModal
+        job={activeSelectedJob}
+        isOpen={activeSelectedJob !== null}
+        onClose={() => setSelectedJobForDetails(null)}
+        onApply={async (jobToApply) => {
+          await onApply(jobToApply)
+        }}
+        onSave={onSave}
+        isApplied={activeSelectedJob ? appliedJobIds.has(activeSelectedJob.id) : false}
+        isSaved={activeSelectedJob ? savedJobIds.has(activeSelectedJob.id) : false}
+        isApplying={activeSelectedJob ? applyingJobId === activeSelectedJob.id : false}
+        onNavigateToMessages={onNavigateToMessages}
+      />
     </div>
   )
 }

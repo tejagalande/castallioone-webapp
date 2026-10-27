@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { notifyEvent } from '../lib/webPush'
 import {
@@ -74,6 +74,12 @@ export interface UseSavedJobsOptions {
 }
 
 export function useSavedJobs(options?: UseSavedJobsOptions) {
+  const optionsRef = useRef(options)
+
+  useEffect(() => {
+    optionsRef.current = options
+  }, [options])
+
   const [internalLoading, setInternalLoading] = useState<boolean>(true)
   const [dbJobs, setDbJobs] = useState<SavedJobItem[]>([])
   const [savedDrives, setSavedDrives] = useState<SavedDriveItem[]>([])
@@ -88,6 +94,9 @@ export function useSavedJobs(options?: UseSavedJobsOptions) {
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [mountTimestamp] = useState<number>(() => Date.now())
 
+  const isFetchingRef = useRef(false)
+  const lastFetchedRef = useRef(0)
+
   // Determine overall loading state (use parent's if available)
   const loading = options?.loading !== undefined ? options.loading : internalLoading
 
@@ -100,6 +109,11 @@ export function useSavedJobs(options?: UseSavedJobsOptions) {
       return {}
     }
   })
+  const candidateNotesRef = useRef(candidateNotes)
+
+  useEffect(() => {
+    candidateNotesRef.current = candidateNotes
+  }, [candidateNotes])
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg)
@@ -160,6 +174,15 @@ export function useSavedJobs(options?: UseSavedJobsOptions) {
    * Main Supabase Query: Loads all saved jobs and saved drives for the user
    */
   const loadSavedData = useCallback(async () => {
+    const currentOptions = optionsRef.current
+    const now = Date.now()
+    if (isFetchingRef.current) return
+    if (lastFetchedRef.current > 0 && now - lastFetchedRef.current < 20000) {
+      setInternalLoading(false)
+      return
+    }
+    isFetchingRef.current = true
+
     try {
       // 1. Get authenticated user
       const {
@@ -179,15 +202,15 @@ export function useSavedJobs(options?: UseSavedJobsOptions) {
       })()
 
       // 2. Resolve candidate profile (checking localStorage first to match useTalentDashboard!)
-      let candidateDiscipline = options?.profile?.discipline || 'BIM Management'
-      let candidateSpecificSkill = options?.profile?.specificSkill || 'Senior BIM Coordinator'
-      let candidateSkillsList = options?.profile?.skills && options.profile.skills.length > 0
-        ? [...options.profile.skills]
+      let candidateDiscipline = currentOptions?.profile?.discipline || 'BIM Management'
+      let candidateSpecificSkill = currentOptions?.profile?.specificSkill || 'Senior BIM Coordinator'
+      let candidateSkillsList = currentOptions?.profile?.skills && currentOptions.profile.skills.length > 0
+        ? [...currentOptions.profile.skills]
         : ['Revit', 'Navisworks', 'Dynamo']
-      let candidateWorkMode = options?.profile?.workMode || 'Hybrid'
+      let candidateWorkMode = currentOptions?.profile?.workMode || 'Hybrid'
 
       // Check localStorage for exact profile data if not provided via props
-      if (!options?.profile) {
+      if (!currentOptions?.profile) {
         try {
           const raw = localStorage.getItem('castallio_talent_profile_data')
           if (raw) {
@@ -204,7 +227,7 @@ export function useSavedJobs(options?: UseSavedJobsOptions) {
         }
       }
 
-      if (resolvedUserId && !options?.profile) {
+      if (resolvedUserId && !currentOptions?.profile) {
         const { data: studentData } = await supabase
           .from('student_profile')
           .select('id, discipline, work_mode')
@@ -511,9 +534,11 @@ export function useSavedJobs(options?: UseSavedJobsOptions) {
     } catch (err: unknown) {
       console.warn('loadSavedData error:', err)
     } finally {
+      isFetchingRef.current = false
+      lastFetchedRef.current = Date.now()
       setInternalLoading(false)
     }
-  }, [candidateNotes, options?.profile])
+  }, [])
 
   useEffect(() => {
     let ignore = false

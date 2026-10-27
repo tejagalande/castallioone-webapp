@@ -45,18 +45,11 @@ export const Subscription: FC<SubscriptionProps> = ({
   const [gatewayError, setGatewayError] = useState<string | null>(null)
   const [copiedTxn, setCopiedTxn] = useState<boolean>(false)
 
-  // Razorpay Key Credentials Handling (reads .env or allows inline test key entry)
-  const envKey =
+  // Razorpay Key Configuration (loaded securely from environment)
+  const activeKeyId =
     (import.meta.env.VITE_RAZORPAY_KEY_ID as string | undefined) ||
     (import.meta.env.VITE_RAZORPAY_KEY as string | undefined) ||
     ''
-  const [customKeyId, setCustomKeyId] = useState<string>('')
-  const [showKeyConfig, setShowKeyConfig] = useState<boolean>(false)
-
-  const activeKeyId = customKeyId.trim() || envKey.trim()
-  const isSandbox = activeKeyId.startsWith('rzp_test_')
-  const isLive = activeKeyId.startsWith('rzp_live_')
-  const hasKey = Boolean(activeKeyId)
 
   // Trigger Real Razorpay Checkout Modal
   const handleProceedToGateway = async () => {
@@ -65,9 +58,8 @@ export const Subscription: FC<SubscriptionProps> = ({
 
     if (!activeKeyId) {
       setGatewayError(
-        'Razorpay Key ID is required. Please enter your test credentials below or add VITE_RAZORPAY_KEY_ID in your .env file.'
+        'Payment gateway service is currently unavailable. Please try again shortly or contact support.'
       )
-      setShowKeyConfig(true)
       return
     }
 
@@ -117,32 +109,6 @@ export const Subscription: FC<SubscriptionProps> = ({
       console.error('Razorpay gateway execution error:', err)
       const msg = err instanceof Error ? err.message : 'Payment processing encountered an unexpected issue.'
       setGatewayError(msg)
-    } finally {
-      setIsGatewayLoading(false)
-    }
-  }
-
-  // Developer / QA Simulated Sandbox Payment (Ensures testing works even without active internet/keys)
-  const handleSimulateSandboxPayment = async () => {
-    if (!selectedPlanForGateway) return
-    setGatewayError(null)
-    setIsGatewayLoading(true)
-
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      const simulatedPaymentId = `pay_test_${Math.random().toString(36).substring(2, 9)}${Date.now().toString().slice(-4)}`
-
-      const result = await handleConfirmSubscription(
-        selectedPlanForGateway,
-        'upi',
-        gstinNumber,
-        { paymentId: simulatedPaymentId }
-      )
-
-      if (result.success) {
-        setConfirmedPlan(selectedPlanForGateway)
-        setIsSuccessView(true)
-      }
     } finally {
       setIsGatewayLoading(false)
     }
@@ -445,61 +411,6 @@ export const Subscription: FC<SubscriptionProps> = ({
                   </div>
                 </div>
 
-                {/* Environment Mode Status Indicator */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span
-                      className={`sub-mode-pill ${
-                        isSandbox ? 'sandbox' : isLive ? 'live' : 'unconfigured'
-                      }`}
-                    >
-                      {isSandbox ? 'TEST SANDBOX' : isLive ? 'LIVE PRODUCTION' : 'SETUP REQUIRED'}
-                    </span>
-                    <span style={{ fontSize: '12px', color: '#475569', fontWeight: 500 }}>
-                      {hasKey
-                        ? `${activeKeyId.slice(0, 12)}••••`
-                        : 'No Razorpay Key Configured'}
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowKeyConfig((prev) => !prev)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#0056d2',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      padding: 0,
-                    }}
-                  >
-                    {showKeyConfig ? 'Hide Settings' : hasKey ? 'Change Key' : 'Enter Test Key'}
-                  </button>
-                </div>
-
-                {/* Optional Key Configuration Widget for Testing */}
-                {showKeyConfig && (
-                  <div className="sub-key-custom-card">
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#1e293b' }}>
-                      Razorpay Key ID (Test Credentials):
-                    </label>
-                    <input
-                      type="text"
-                      className="sub-form-input"
-                      placeholder="rzp_test_..."
-                      value={customKeyId}
-                      onChange={(e) => setCustomKeyId(e.target.value.trim())}
-                      style={{ fontSize: '12.5px', padding: '8px 12px' }}
-                    />
-                    <span style={{ fontSize: '11px', color: '#64748b' }}>
-                      You can also permanently configure this by adding{' '}
-                      <code>VITE_RAZORPAY_KEY_ID=rzp_test_...</code> to your <code>.env</code> file.
-                    </span>
-                  </div>
-                )}
-
                 {/* Error Banner if Gateway Error Occurs */}
                 {gatewayError && (
                   <div
@@ -570,20 +481,6 @@ export const Subscription: FC<SubscriptionProps> = ({
                       ? 'Launching Razorpay Gateway...'
                       : `Proceed to Pay ₹${totalWithGst} via Razorpay`}
                   </span>
-                </button>
-
-                {/* Secondary Simulated Sandbox Fallback */}
-                <button
-                  type="button"
-                  className="btn-simulate-sandbox"
-                  onClick={handleSimulateSandboxPayment}
-                  disabled={isGatewayLoading}
-                  title="Simulate instant payment verification for developer testing"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
-                    science
-                  </span>
-                  <span>Simulate Instant Sandbox Payment (Developer Bypass)</span>
                 </button>
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '12px', color: '#64748b' }}>

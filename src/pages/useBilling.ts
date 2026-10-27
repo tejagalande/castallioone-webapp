@@ -329,7 +329,7 @@ export const useBilling = () => {
     return () => {
       isMounted = false
     }
-  }, [user])
+  }, [user?.id])
 
   // Filtered invoices
   const filteredInvoices = useMemo(() => {

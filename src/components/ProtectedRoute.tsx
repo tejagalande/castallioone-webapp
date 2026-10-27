@@ -22,11 +22,20 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const [userRole, setUserRole] = useState<'talent' | 'employers' | null>(null)
   const [needsProfileSetup, setNeedsProfileSetup] = useState<boolean>(false)
 
+  const verifiedUserIdRef = React.useRef<string | null>(null)
+
   useEffect(() => {
     let isMounted = true
 
     const verify = async () => {
       if (!user) {
+        verifiedUserIdRef.current = null
+        if (isMounted) setProfileChecking(false)
+        return
+      }
+
+      // If already verified for this user, do not re-verify or flash loading
+      if (verifiedUserIdRef.current === user.id) {
         if (isMounted) setProfileChecking(false)
         return
       }
@@ -47,6 +56,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
             setNeedsProfileSetup(!exists || needsOnboarding)
           }
         }
+        verifiedUserIdRef.current = user.id
       } catch (err) {
         console.error('Failed to verify profile status:', err)
       } finally {
@@ -63,7 +73,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return () => {
       isMounted = false
     }
-  }, [user, loading, requireCompletedProfile, requiredRole])
+  }, [user?.id, loading, requireCompletedProfile, requiredRole])
 
   if (loading || profileChecking) {
     return (

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { notifyEvent } from '../lib/webPush'
 import { computeStudentRowCompleteness } from '../lib/talentService'
@@ -23,6 +23,14 @@ export interface RecommendedJob {
   postedDate?: string
   expiresAt?: string
   validityDaysLeft?: number
+  responsibilities?: string
+  technicalRequirements?: string[]
+  aboutUs?: string
+  employmentType?: string[]
+  numberOfOpenings?: number
+  companyWebsite?: string
+  companySize?: string
+  companyAbout?: string
 }
 
 export interface DashboardUpcomingEvent {
@@ -345,10 +353,26 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
   // Recent Activity
   const [recentActivity, setRecentActivity] = useState<DashboardActivity[]>([])
 
+  const isFetchingRef = useRef(false)
+  const lastFetchedRef = useRef(0)
+  const profileRef = useRef(profile)
+
+  useEffect(() => {
+    profileRef.current = profile
+  }, [profile])
+
   /**
    * Main fetcher attached to Supabase backend
    */
-  const loadDashboardData = useCallback(async () => {
+  const loadDashboardData = useCallback(async (force = false) => {
+    const now = Date.now()
+    if (!force && isFetchingRef.current) return
+    if (!force && lastFetchedRef.current > 0 && now - lastFetchedRef.current < 20000) {
+      setLoading(false)
+      return
+    }
+    isFetchingRef.current = true
+
     try {
       // 1. Get authenticated user
       const {
@@ -356,13 +380,13 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
       } = await supabase.auth.getUser()
 
       const resolvedUserId = user?.id || null
-      let currentDiscipline = profile.discipline
-      let currentSkill = profile.specificSkill
-      let currentSkillsList = [...profile.skills]
-      let currentWorkMode = profile.workMode
-      let completeness = profile.profileStrength
-      let fullName = profile.fullName
-      let profileAvatar = profile.avatarUrl
+      let currentDiscipline = profileRef.current.discipline
+      let currentSkill = profileRef.current.specificSkill
+      let currentSkillsList = [...profileRef.current.skills]
+      let currentWorkMode = profileRef.current.workMode
+      let completeness = profileRef.current.profileStrength
+      let fullName = profileRef.current.fullName
+      let profileAvatar = profileRef.current.avatarUrl
       let studentRecordId: string | null = null
 
       // 2. Query student_profile from Supabase if user exists
@@ -412,18 +436,36 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
         }
       }
 
-      // Update Profile state
-      setProfile((prev) => ({
-        ...prev,
-        id: resolvedUserId || prev.id,
-        fullName,
-        discipline: currentDiscipline,
-        specificSkill: currentSkill,
-        skills: currentSkillsList,
-        workMode: currentWorkMode,
-        profileStrength: completeness,
-        avatarUrl: profileAvatar,
-      }))
+      // Update Profile state only if fields actually changed
+      setProfile((prev) => {
+        const isSkillsEqual =
+          prev.skills.length === currentSkillsList.length &&
+          prev.skills.every((s, i) => s === currentSkillsList[i])
+        const targetId = resolvedUserId || prev.id
+        if (
+          prev.id === targetId &&
+          prev.fullName === fullName &&
+          prev.discipline === currentDiscipline &&
+          prev.specificSkill === currentSkill &&
+          prev.workMode === currentWorkMode &&
+          prev.profileStrength === completeness &&
+          prev.avatarUrl === profileAvatar &&
+          isSkillsEqual
+        ) {
+          return prev
+        }
+        return {
+          ...prev,
+          id: targetId,
+          fullName,
+          discipline: currentDiscipline,
+          specificSkill: currentSkill,
+          skills: isSkillsEqual ? prev.skills : currentSkillsList,
+          workMode: currentWorkMode,
+          profileStrength: completeness,
+          avatarUrl: profileAvatar,
+        }
+      })
 
       // 3. Query Real Active Jobs from create_job_post joined with companies
       const { data: dbJobs, error: jobsError } = await supabase
@@ -434,13 +476,23 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
         .limit(20)
 
       // Query companies for metadata
-      const companiesMap: Record<string, { name: string; logo_url?: string; location?: string }> = {}
+      const companiesMap: Record<
+        string,
+        {
+          name: string
+          logo_url?: string
+          location?: string
+          website?: string
+          size?: string
+          description?: string
+        }
+      > = {}
       if (!jobsError && dbJobs && dbJobs.length > 0) {
         const companyIds = Array.from(new Set(dbJobs.map((j) => j.company_id).filter(Boolean)))
         if (companyIds.length > 0) {
           const { data: companiesData } = await supabase
             .from('companies')
-            .select('id, name, logo_url')
+            .select('id, name, logo_url, website, size, description')
             .in('id', companyIds)
 
           if (companiesData) {
@@ -448,6 +500,9 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
               companiesMap[c.id] = {
                 name: c.name,
                 logo_url: c.logo_url || undefined,
+                website: c.website || undefined,
+                size: c.size || undefined,
+                description: c.description || undefined,
               }
             })
           }
@@ -695,6 +750,19 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
               ? new Date(new Date(j.created_at).getTime() + 15 * 24 * 60 * 60 * 1000).toISOString()
               : undefined)
 
+          const fullTechReqs = j.technical_requirements
+            ? j.technical_requirements
+                .split(/[,;\n•|]+/)
+                .map((t: string) => t.trim())
+                .filter((t: string) => t.length > 1 && t.length < 50)
+            : skillsTags
+
+          const empTypes: string[] = Array.isArray(j.employment_type)
+            ? j.employment_type
+            : typeof j.employment_type === 'string'
+            ? [j.employment_type]
+            : ['Full-Time']
+
           return {
             id: j.id,
             title: j.title,
@@ -715,6 +783,14 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
             postedDate: j.created_at,
             expiresAt,
             validityDaysLeft,
+            responsibilities: j.responsibilities || undefined,
+            technicalRequirements: fullTechReqs.length > 0 ? fullTechReqs : skillsTags,
+            aboutUs: j.about_us || undefined,
+            employmentType: empTypes,
+            numberOfOpenings: j.number_of_openings || 1,
+            companyWebsite: comp?.website,
+            companySize: comp?.size,
+            companyAbout: comp?.description,
           }
         })
       } else {
@@ -763,17 +839,11 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
       setRawJobs([])
       setRecentActivity([])
     } finally {
+      isFetchingRef.current = false
+      lastFetchedRef.current = Date.now()
       setLoading(false)
     }
-  }, [
-    profile.discipline,
-    profile.specificSkill,
-    profile.skills,
-    profile.workMode,
-    profile.profileStrength,
-    profile.fullName,
-    profile.avatarUrl,
-  ])
+  }, [])
 
   useEffect(() => {
     let ignore = false
@@ -935,7 +1005,7 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
     toggleSaveJob,
     refreshData: async () => {
       setLoading(true)
-      await loadDashboardData()
+      await loadDashboardData(true)
     },
   }
 }

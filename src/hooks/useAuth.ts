@@ -68,8 +68,38 @@ export function useAuth(): UseAuthReturn {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (!mounted) return
-      setSession(newSession)
-      setUser(newSession?.user ?? null)
+
+      // Preserve user reference across TOKEN_REFRESHED / window focus events if user has not changed
+      setUser((prevUser) => {
+        const nextUser = newSession?.user ?? null
+        if (!prevUser && !nextUser) return null
+        if (
+          prevUser &&
+          nextUser &&
+          prevUser.id === nextUser.id &&
+          prevUser.email === nextUser.email &&
+          prevUser.updated_at === nextUser.updated_at &&
+          JSON.stringify(prevUser.user_metadata) === JSON.stringify(nextUser.user_metadata)
+        ) {
+          return prevUser
+        }
+        return nextUser
+      })
+
+      // Preserve session reference if token & user have not changed
+      setSession((prevSession) => {
+        if (!prevSession && !newSession) return null
+        if (
+          prevSession &&
+          newSession &&
+          prevSession.access_token === newSession.access_token &&
+          prevSession.user?.id === newSession.user?.id
+        ) {
+          return prevSession
+        }
+        return newSession
+      })
+
       setLoading(false)
       if (event === 'SIGNED_IN' && newSession?.user) {
         void loginOneSignal(newSession.user.id, localStorage.getItem('castallio_user_role'))

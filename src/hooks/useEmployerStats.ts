@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 
@@ -60,13 +60,25 @@ export function useEmployerStats(): UseEmployerStatsReturn {
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchStats = useCallback(async () => {
+  const isFetchingRef = useRef(false)
+  const lastFetchedRef = useRef(0)
+
+  const fetchStats = useCallback(async (force = false) => {
     if (!user) {
       setLoading(false)
       return
     }
 
+    // Cooldown check (30 seconds) to avoid hammering the database on focus changes
+    const nowTimestamp = Date.now()
+    if (!force && isFetchingRef.current) return
+    if (!force && lastFetchedRef.current > 0 && nowTimestamp - lastFetchedRef.current < 30000) {
+      setLoading(false)
+      return
+    }
+
     try {
+      isFetchingRef.current = true
       setLoading(true)
       setError(null)
 
@@ -267,9 +279,11 @@ export function useEmployerStats(): UseEmployerStatsReturn {
       console.error('useEmployerStats error:', msg)
       setError(msg)
     } finally {
+      lastFetchedRef.current = Date.now()
+      isFetchingRef.current = false
       setLoading(false)
     }
-  }, [user])
+  }, [user?.id])
 
   useEffect(() => {
     if (!authLoading) {
@@ -283,6 +297,6 @@ export function useEmployerStats(): UseEmployerStatsReturn {
     recentApplicants,
     loading: authLoading || loading,
     error,
-    refreshStats: fetchStats,
+    refreshStats: () => fetchStats(true),
   }
 }

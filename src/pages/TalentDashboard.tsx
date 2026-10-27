@@ -11,6 +11,7 @@ import Notifications from './Notifications'
 import Training from './Training'
 import { WalkInDrivesTalent } from './WalkInDrivesTalent'
 import { LogoutModal } from '../components/LogoutModal'
+import { JobDetailsModal } from '../components/JobDetailsModal'
 import { useTalentDashboard, type RecommendedJob } from './useTalentDashboard'
 import { useToast } from '../hooks/useToast'
 import { ToastContainer } from '../components/Toast'
@@ -46,8 +47,8 @@ const menuItems: { id: MenuItem; label: string; icon: string }[] = [
   { id: 'messages', label: 'Messages', icon: 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z' },
   { id: 'interviews', label: 'Interviews', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
   { id: 'notifications', label: 'Notifications', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
-  { id: 'training', label: 'Training / Courses', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
-  { id: 'settings', label: 'Settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
+  // { id: 'training', label: 'Training / Courses', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
+  // { id: 'settings', label: 'Settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
 ]
 
 export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
@@ -188,6 +189,13 @@ export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
   } = useTalentDashboard()
 
   const DASHBOARD_REC_LIMIT = 3
+  const [selectedJobForDetails, setSelectedJobForDetails] = useState<RecommendedJob | null>(null)
+
+  const activeDashboardSelectedJob = useMemo(() => {
+    if (!selectedJobForDetails) return null
+    const latest = recommendedJobs.find((j) => j.id === selectedJobForDetails.id)
+    return latest || selectedJobForDetails
+  }, [recommendedJobs, selectedJobForDetails])
 
   const talentName = profile.fullName || 'Talent Member'
   const talentRole = profile.specificSkill || profile.discipline || 'AEC Candidate'
@@ -301,6 +309,7 @@ export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
               appliedJobIds={appliedJobIds}
               profile={profile}
               onNavigateToFindJobs={() => setActiveMenu('find-jobs')}
+              onNavigateToMessages={handleNavigateToMessages}
             />
           </div>
         ) : activeMenu === 'find-jobs' ? (
@@ -546,7 +555,13 @@ export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
 
                           </div>
 
-                          <h3 className="job-title-text">{job.title}</h3>
+                          <h3
+                            className="job-title-text clickable"
+                            onClick={() => setSelectedJobForDetails(job)}
+                            title="Click to view full job requisition details"
+                          >
+                            {job.title}
+                          </h3>
                           <p className="job-company">{job.company} • {job.location}</p>
 
                           <div className="job-meta-row">
@@ -572,6 +587,19 @@ export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
                           </div>
 
                           <div className="job-actions">
+                            <button
+                              type="button"
+                              className="btn-details"
+                              onClick={() => setSelectedJobForDetails(job)}
+                              aria-label={`View full details for ${job.title}`}
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                <circle cx="12" cy="12" r="3" />
+                              </svg>
+                              View Details
+                            </button>
+
                             <button
                               type="button"
                               className={`btn-apply ${job.isApplied ? 'applied' : ''} ${applyingJobId === job.id ? 'loading' : ''}`}
@@ -683,6 +711,20 @@ export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
         onConfirm={onLogout}
         userName={talentName}
         role="Talent"
+      />
+
+      <JobDetailsModal
+        job={activeDashboardSelectedJob}
+        isOpen={activeDashboardSelectedJob !== null}
+        onClose={() => setSelectedJobForDetails(null)}
+        onApply={async (jobToApply) => {
+          await handleApply(jobToApply)
+        }}
+        onSave={handleSave}
+        isApplied={activeDashboardSelectedJob ? appliedJobIds.has(activeDashboardSelectedJob.id) : false}
+        isSaved={activeDashboardSelectedJob ? savedJobIds.has(activeDashboardSelectedJob.id) : false}
+        isApplying={activeDashboardSelectedJob ? applyingJobId === activeDashboardSelectedJob.id : false}
+        onNavigateToMessages={handleNavigateToMessages}
       />
     </div>
   )

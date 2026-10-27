@@ -294,7 +294,7 @@ export function useSubscription() {
     return () => {
       isMounted = false
     }
-  }, [user])
+  }, [user?.id])
 
   // Select a plan to open Payment Gateway page
   const handleSelectPlan = useCallback((plan: EnterprisePlan) => {

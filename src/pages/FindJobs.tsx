@@ -1,6 +1,9 @@
 import { useState, useMemo, type FC } from 'react'
-import { useTalentDashboard, type RecommendedJob, type TalentProfileInfo } from './useTalentDashboard'
+import { type RecommendedJob, type TalentProfileInfo } from './useTalentDashboard'
 import './FindJobs.css'
+
+const EMPTY_SET = new Set<string>()
+const EMPTY_JOBS: RecommendedJob[] = []
 
 export interface FindJobsProps {
   jobs?: RecommendedJob[]
@@ -19,16 +22,13 @@ type FitFilter = 'all' | '80' | '70'
 type SortOption = 'fit' | 'recent'
 
 export const FindJobs: FC<FindJobsProps> = (props) => {
-  // If props are passed from TalentDashboard, use them; otherwise fallback to the real hook
-  const dashboardData = useTalentDashboard()
-
-  const jobs = props.jobs ?? dashboardData.recommendedJobs
-  const loading = props.loading ?? dashboardData.loading
-  const applyingJobId = props.applyingJobId ?? dashboardData.applyingJobId
-  const onApply = props.onApply ?? (async (j: RecommendedJob) => { await dashboardData.applyForJob(j) })
-  const onSave = props.onSave ?? dashboardData.toggleSaveJob
-  const savedJobIds = props.savedJobIds ?? dashboardData.savedJobIds
-  const appliedJobIds = props.appliedJobIds ?? dashboardData.appliedJobIds
+  const jobs = props.jobs ?? EMPTY_JOBS
+  const loading = props.loading ?? false
+  const applyingJobId = props.applyingJobId ?? null
+  const onApply = props.onApply ?? (async () => {})
+  const onSave = props.onSave ?? (() => {})
+  const savedJobIds = props.savedJobIds ?? EMPTY_SET
+  const appliedJobIds = props.appliedJobIds ?? EMPTY_SET
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('')
