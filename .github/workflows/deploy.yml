@@ -32,12 +32,10 @@ jobs:
 
       - name: 📝 Create temporary .env from GitHub Secrets
         run: |
-          cat << 'EOF' > .env
-          VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          VITE_RAZORPAY_KEY_ID=${{ secrets.VITE_RAZORPAY_KEY_ID }}
-          VITE_ONESIGNAL_APP_ID=${{ secrets.VITE_ONESIGNAL_APP_ID }}
-          EOF
+          echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" > .env
+          echo "VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}" >> .env
+          echo "VITE_RAZORPAY_KEY_ID=${{ secrets.VITE_RAZORPAY_KEY_ID }}" >> .env
+          echo "VITE_ONESIGNAL_APP_ID=${{ secrets.VITE_ONESIGNAL_APP_ID }}" >> .env
 
       - name: 🔍 Run SEO & Sitemaps pipeline
         env:
