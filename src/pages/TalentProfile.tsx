@@ -6,6 +6,7 @@ import {
   type StudentExperienceItem,
   type TalentSearchQuota,
 } from '../hooks/useTalentSearch'
+import { resolveValidResumeUrl } from '../lib/talentService'
 import './TalentProfile.css'
 
 export const TalentProfile: FC = () => {
@@ -171,7 +172,9 @@ export const TalentProfile: FC = () => {
           expectedCtc: sp.expected_ctc ? `₹${sp.expected_ctc}` : 'Open to negotiate',
           noticePeriod: sp.notice_period || 'Immediately',
           portfolioUrl: sp.portfolio_url || undefined,
-          resumeFileUrl: sp.resume_file_url || undefined,
+          resumeFileUrl: isUnlocked
+            ? resolveValidResumeUrl(sp.resume_file_url, sp.user_id || sp.id)
+            : undefined,
           hasResume: Boolean(sp.resume_file_url),
           linkedinUrl: sp.linkedin_url || undefined,
           isUnlocked,
@@ -260,8 +263,48 @@ export const TalentProfile: FC = () => {
         }
         const res = data as UnlockResult | null
         if (res?.success) {
+          // Fetch genuine contact and resume details now that profile is unlocked
+          let resolvedEmail = candidate.email
+          let resolvedPhone = candidate.phone
+          let resolvedResumeUrl = candidate.resumeFileUrl
+
+          try {
+            const { data: unlockedSp } = await supabase
+              .from('student_profile')
+              .select('id, user_id, email, phone, resume_file_url')
+              .eq('id', candidate.id)
+              .maybeSingle()
+
+            if (unlockedSp) {
+              resolvedEmail = unlockedSp.email || candidate.email
+              resolvedPhone = unlockedSp.phone ? String(unlockedSp.phone) : candidate.phone
+              resolvedResumeUrl = resolveValidResumeUrl(
+                unlockedSp.resume_file_url,
+                unlockedSp.user_id || candidate.userId || candidate.id
+              )
+            }
+          } catch {
+            // fallback
+          }
+
           showToast(`Success: ${candidate.name}'s profile & CV unlocked!`)
-          setCandidate((prev) => (prev ? { ...prev, isUnlocked: true } : null))
+          setCandidate((prev) => {
+            if (!prev) return null
+            const updated = {
+              ...prev,
+              isUnlocked: true,
+              email: resolvedEmail,
+              phone: resolvedPhone,
+              resumeFileUrl: resolvedResumeUrl,
+              hasResume: Boolean(resolvedResumeUrl),
+            }
+            try {
+              sessionStorage.setItem(`talent_candidate_${candidate.id}`, JSON.stringify(updated))
+            } catch {
+              // ignore
+            }
+            return updated
+          })
           if (typeof res.remaining === 'number') {
             setQuota((q) => ({
               ...q,
@@ -334,7 +377,7 @@ export const TalentProfile: FC = () => {
             sync
           </span>
           <h2>Loading Candidate Profile &amp; Resume...</h2>
-          <p>Retrieving verified credentials and portfolio records from PostgreSQL AI Repository.</p>
+          <p>Retrieving verified credentials and portfolio records from talent network.</p>
         </div>
       </div>
     )
@@ -641,7 +684,7 @@ export const TalentProfile: FC = () => {
                 </div>
               </div>
 
-              {candidate.resumeFileUrl && (
+              {candidate.isUnlocked && candidate.resumeFileUrl && (
                 <div className="card-header-actions">
                   <a
                     href={candidate.resumeFileUrl}
@@ -668,8 +711,8 @@ export const TalentProfile: FC = () => {
               )}
             </div>
 
-            <div className="tp-resume-viewer-container">
-              {candidate.resumeFileUrl ? (
+            {candidate.isUnlocked && candidate.resumeFileUrl ? (
+              <div className="tp-resume-viewer-container">
                 <object
                   data={`${candidate.resumeFileUrl}#toolbar=1&view=FitH`}
                   type="application/pdf"
@@ -699,7 +742,33 @@ export const TalentProfile: FC = () => {
                     </div>
                   </iframe>
                 </object>
-              ) : (
+              </div>
+            ) : !candidate.isUnlocked ? (
+              <div className="tp-resume-locked-container">
+                <div className="tp-resume-locked-badge">
+                  <span className="material-symbols-outlined" aria-hidden="true">
+                    lock
+                  </span>
+                </div>
+                <h3>Official Candidate Resume / CV Locked</h3>
+                <p>
+                  This candidate has an authenticated resume on file. Unlock their profile using 1 CV credit to view the full PDF document, download it, and access verified direct contact credentials.
+                </p>
+                <div className="tp-resume-locked-actions">
+                  <button
+                    type="button"
+                    className="btn-tp-unlock-full"
+                    onClick={() => setShowUnlockModal(true)}
+                  >
+                    <span className="material-symbols-outlined" aria-hidden="true">
+                      lock_open
+                    </span>
+                    <span>Unlock Profile to View CV (1 Quota)</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="tp-resume-viewer-container">
                 <div className="tp-empty-resume-state">
                   <span className="material-symbols-outlined empty-icon" aria-hidden="true">
                     picture_as_pdf
@@ -710,8 +779,8 @@ export const TalentProfile: FC = () => {
                     raw PDF document.
                   </p>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </article>
 
           {/* 2. Career Experience Timeline */}
@@ -840,8 +909,8 @@ export const TalentProfile: FC = () => {
 
             <div className="tp-telemetry-stats">
               <div className="telemetry-stat-row">
-                <span className="telemetry-label">Embedding Dimensions</span>
-                <span className="telemetry-value">1536 Float32</span>
+                <span className="telemetry-label">Match Verification</span>
+                <span className="telemetry-value">Verified Profile</span>
               </div>
               <div className="telemetry-stat-row">
                 <span className="telemetry-label">Profile Verification</span>
@@ -914,6 +983,19 @@ export const TalentProfile: FC = () => {
               <span>Remaining Monthly Quota:</span>
               <strong>{quota.remainingCvs} Unlocks</strong>
             </div>
+
+            {quota.remainingCvs <= 0 && (
+              <div className="modal-quota-alert" role="alert" style={{ background: '#fef2f2', border: '1px solid #f87171', borderRadius: '8px', padding: '12px', margin: '14px 0', textAlign: 'left' }}>
+                <strong style={{ color: '#991b1b', fontSize: '13px', display: 'block', marginBottom: '4px' }}>Monthly Quota Reached</strong>
+                <p style={{ color: '#7f1d1d', fontSize: '12px', margin: '0 0 8px 0', lineHeight: '1.4' }}>
+                  You have 0 CV unlocks remaining this cycle. Please upgrade your subscription to unlock more candidate profiles.
+                </p>
+                <a href="/company-dashboard?tab=subscription" style={{ color: '#00418f', fontSize: '12px', fontWeight: '700', textDecoration: 'underline' }}>
+                  Upgrade Plan →
+                </a>
+              </div>
+            )}
+
             <div className="modal-btn-row">
               <button
                 type="button"
@@ -927,7 +1009,7 @@ export const TalentProfile: FC = () => {
                 type="button"
                 className="btn-tp-modal-confirm"
                 onClick={handleConfirmUnlock}
-                disabled={isUnlocking}
+                disabled={isUnlocking || quota.remainingCvs <= 0}
               >
                 <span className="material-symbols-outlined" aria-hidden="true">
                   {isUnlocking ? 'sync' : 'lock_open'}

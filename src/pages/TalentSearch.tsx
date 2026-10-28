@@ -40,6 +40,18 @@ const TALENT_SORT_OPTIONS: SortOptionItem<TalentSortOption>[] = [
   },
 ]
 
+// Helper to ensure only authentic web/blob URLs are used for PDF previews
+const isValidResumeUrl = (url?: string | null): boolean => {
+  if (!url) return false
+  const trimmed = url.trim()
+  return (
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('data:application/pdf') ||
+    trimmed.startsWith('blob:')
+  )
+}
+
 export const TalentSearch: FC<TalentSearchProps> = () => {
   const {
     loading,
@@ -167,12 +179,12 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
         <div className="ts-telemetry-left">
           <span className="ts-telemetry-beacon">
             <span className="ts-pulse-dot" aria-hidden="true"></span>
-            TALENT_WORKSPACE // POSTGRESQL AI REPO
+            TALENT_WORKSPACE // VERIFIED TALENT REPO
           </span>
           <span className="ts-slash">/</span>
           <span>COMPANY: {(companyName || 'Enterprise Studio').toUpperCase()}</span>
           <span className="ts-slash">/</span>
-          <span className="ts-tag-iso">PGVECTOR 1536 EMBEDDINGS ACTIVE</span>
+          <span className="ts-tag-iso">AI SMART SEARCH ACTIVE</span>
           <span className="ts-slash">•</span>
           <span>
             CV UNLOCK QUOTA: <strong>{quota?.remainingCvs ?? 0} REMAINING</strong>
@@ -202,12 +214,12 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               psychology
             </span>
-            <span>AI VECTOR &amp; SEMANTIC DISCOVERY ENGINE</span>
+            <span>AI-POWERED CANDIDATE DISCOVERY</span>
           </div>
           <h1 className="ts-header-title">AEC Talent &amp; Candidate Search</h1>
           <p className="ts-header-desc">
             Discover pre-verified civil engineers, structural designers, and BIM coordinators. Search using natural
-            language queries with Gemini AI vector embeddings or browse by technical disciplines.
+            language queries or browse by technical disciplines.
           </p>
         </div>
 
@@ -224,18 +236,18 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
             <span>Export Talent Pool (CSV)</span>
           </button> */}
           <div className="semantic-toggle-pill">
-            <span className="toggle-label">AI Semantic Search:</span>
+            <span className="toggle-label">AI Smart Search:</span>
             <button
               type="button"
               className={`toggle-switch-btn ${isSemanticMode ? 'active' : ''}`}
               onClick={() => setIsSemanticMode(!isSemanticMode)}
               aria-pressed={isSemanticMode}
-              title="Toggle AI Semantic Vector Search vs Standard Search"
+              title="Toggle AI Smart Search vs Standard Search"
             >
               <span className="material-symbols-outlined text-xs" aria-hidden="true">
                 {isSemanticMode ? 'bolt' : 'filter_alt'}
               </span>
-              <span>{isSemanticMode ? 'ON (Vector Embeddings)' : 'OFF (Keyword)'}</span>
+              <span>{isSemanticMode ? 'ON (Smart Match)' : 'OFF (Keyword)'}</span>
             </button>
           </div>
         </div>
@@ -475,8 +487,8 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
                 </span>
                 <span>
                   {semanticSearching
-                    ? 'AI Vector Engine: Generating Gemini 1536-dim Embeddings & Calculating Cosine Similarity...'
-                    : 'Querying Remote PostgreSQL Repository & Evaluating Pre-Verified Credentials...'}
+                    ? 'Finding the best candidate matches for your search...'
+                    : 'Loading verified candidates & evaluating qualifications...'}
                 </span>
               </div>
               {[1, 2, 3].map((skeletonId) => (
@@ -676,24 +688,17 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
                           lock
                         </span>
                         <span>
-                          Direct phone and email are locked.
+                          Direct contact details &amp; resume PDF are locked.
                         </span>
                       </div>
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        {cand.resumeFileUrl && (
-                          <button
-                            type="button"
-                            className="btn-view-cv-inline"
-                            onClick={() => {
-                              setPreviewResumeUrl(cand.resumeFileUrl || null)
-                              setPreviewCandidateName(formatTalentName(cand.name))
-                            }}
-                          >
-                            <span className="material-symbols-outlined" aria-hidden="true">
+                        {cand.hasResume && (
+                          <span className="ts-cv-locked-badge" title="Verified Resume PDF attached. Unlock profile to access.">
+                            <span className="material-symbols-outlined" style={{ fontSize: '14px' }} aria-hidden="true">
                               description
                             </span>
-                            <span>Preview CV</span>
-                          </button>
+                            <span>CV Attached</span>
+                          </span>
                         )}
                         <button
                           type="button"
@@ -703,7 +708,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
                           <span className="material-symbols-outlined" aria-hidden="true">
                             key
                           </span>
-                          <span>Unlock Contact (1 Quota)</span>
+                          <span>Unlock Profile (1 Quota)</span>
                         </button>
                       </div>
                     </div>
@@ -723,7 +728,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
                     <span className="material-symbols-outlined" aria-hidden="true">
                       badge
                     </span>
-                    <span>View Profile &amp; Resume</span>
+                    <span>{cand.isUnlocked ? 'View Profile & CV' : 'View Profile'}</span>
                     <span
                       className="material-symbols-outlined"
                       style={{ fontSize: '15px', marginLeft: '2px' }}
@@ -982,7 +987,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
               <div>
                 <h5 className="dossier-section-title">Verified Documents &amp; External Links</h5>
                 <div className="dossier-docs-row">
-                  {selectedCandidate.resumeFileUrl && (
+                  {selectedCandidate.isUnlocked && selectedCandidate.resumeFileUrl ? (
                     <button
                       type="button"
                       className="btn-card-primary"
@@ -996,7 +1001,17 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
                       </span>
                       <span>Preview Official Resume PDF</span>
                     </button>
-                  )}
+                  ) : !selectedCandidate.isUnlocked ? (
+                    <div className="dossier-resume-locked-notice">
+                      <span className="material-symbols-outlined" style={{ color: '#d97706', fontSize: '20px' }} aria-hidden="true">
+                        lock
+                      </span>
+                      <div>
+                        <strong>Resume PDF is Locked</strong>
+                        <p>Unlock this profile to view and download the verified CV document.</p>
+                      </div>
+                    </div>
+                  ) : null}
                   {selectedCandidate.portfolioUrl && (
                     <a
                       href={selectedCandidate.portfolioUrl}
@@ -1138,9 +1153,30 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
                     <span className="material-symbols-outlined" aria-hidden="true">
                       check
                     </span>
-                    <span>Remaining quota after unlock: {Math.max(0, quota.remainingCvs - 1)} CVs</span>
+                    <span>
+                      {quota.remainingCvs > 0
+                        ? `Remaining quota after unlock: ${Math.max(0, quota.remainingCvs - 1)} CVs`
+                        : 'No CV unlock credits remaining'}
+                    </span>
                   </div>
                 </div>
+
+                {quota.remainingCvs <= 0 && (
+                  <div className="unlock-quota-exhausted-alert" role="alert">
+                    <span className="material-symbols-outlined alert-icon" aria-hidden="true">
+                      warning
+                    </span>
+                    <div className="alert-content">
+                      <strong className="alert-title">Monthly CV Unlock Quota Reached</strong>
+                      <p className="alert-desc">
+                        You have 0 CV unlock credits remaining in your current subscription. Upgrade your plan to unlock more candidate profiles and official resumes.
+                      </p>
+                      <a href="/company-dashboard?tab=subscription" className="btn-quota-upgrade-link">
+                        Upgrade Subscription Plan →
+                      </a>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1156,7 +1192,7 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
                 type="button"
                 className="btn-card-primary"
                 onClick={handleConfirmUnlock}
-                disabled={isUnlocking}
+                disabled={isUnlocking || quota.remainingCvs <= 0}
               >
                 <span className="material-symbols-outlined" aria-hidden="true">
                   lock_open
@@ -1303,11 +1339,25 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
             </div>
 
             <div className="ts-modal-body resume-iframe-body">
-              <iframe
-                src={previewResumeUrl}
-                title={`${formatTalentName(previewCandidateName)} Resume`}
-                className="resume-pdf-iframe"
-              />
+              {isValidResumeUrl(previewResumeUrl) ? (
+                <iframe
+                  src={previewResumeUrl!}
+                  title={`${formatTalentName(previewCandidateName)} Resume`}
+                  className="resume-pdf-iframe"
+                />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px', padding: '40px', color: '#727784', textAlign: 'center' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#ba1a1a' }}>
+                    document_scanner
+                  </span>
+                  <p style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1a1c1e' }}>
+                    No Valid Resume Document Available
+                  </p>
+                  <p style={{ margin: 0, fontSize: '13px' }}>
+                    This candidate does not have an authentic PDF resume document uploaded.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="ts-modal-footer">
@@ -1318,18 +1368,20 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
               >
                 Close Viewer
               </button>
-              <a
-                href={previewResumeUrl}
-                download
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-card-primary"
-              >
-                <span className="material-symbols-outlined" aria-hidden="true">
+              {isValidResumeUrl(previewResumeUrl) && (
+                <a
+                  href={previewResumeUrl!}
                   download
-                </span>
-                <span>Download PDF</span>
-              </a>
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-card-primary"
+                >
+                  <span className="material-symbols-outlined" aria-hidden="true">
+                    download
+                  </span>
+                  <span>Download PDF</span>
+                </a>
+              )}
             </div>
           </div>
         </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { notifyEvent } from '../lib/webPush'
-import { computeStudentRowCompleteness } from '../lib/talentService'
+import { computeStudentRowCompleteness, resolveValidResumeUrl } from '../lib/talentService'
 
 export interface RecommendedJob {
   id: string
@@ -65,6 +65,8 @@ export interface TalentProfileInfo {
   skills: string[]
   profileStrength: number
   avatarUrl?: string
+  resumeFileUrl?: string
+  hasResume?: boolean
 }
 
 export interface UseTalentDashboardReturn {
@@ -388,6 +390,7 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
       let fullName = profileRef.current.fullName
       let profileAvatar = profileRef.current.avatarUrl
       let studentRecordId: string | null = null
+      let resumeUrl: string | undefined = undefined
 
       // 2. Query student_profile from Supabase if user exists
       if (resolvedUserId) {
@@ -400,6 +403,7 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
 
         if (studentData) {
           studentRecordId = studentData.id || null
+          resumeUrl = resolveValidResumeUrl(studentData.resume_file_url, studentData.user_id || studentData.id || resolvedUserId)
           if (studentData.full_name) fullName = studentData.full_name
           if (studentData.discipline) currentDiscipline = studentData.discipline
           if (studentData.work_mode) currentWorkMode = studentData.work_mode
@@ -450,6 +454,8 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
           prev.workMode === currentWorkMode &&
           prev.profileStrength === completeness &&
           prev.avatarUrl === profileAvatar &&
+          prev.resumeFileUrl === resumeUrl &&
+          prev.hasResume === Boolean(resumeUrl) &&
           isSkillsEqual
         ) {
           return prev
@@ -464,6 +470,8 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
           workMode: currentWorkMode,
           profileStrength: completeness,
           avatarUrl: profileAvatar,
+          resumeFileUrl: resumeUrl,
+          hasResume: Boolean(resumeUrl),
         }
       })
 
@@ -872,6 +880,22 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
         } = await supabase.auth.getUser()
 
         const candidateId = user?.id || profile.id || 'candidate-alex'
+
+        // Pre-application gatekeeper: verified resume PDF is strictly mandatory
+        if (!profile.hasResume) {
+          const { data: currentSp } = await supabase
+            .from('student_profile')
+            .select('id, user_id, resume_file_url')
+            .or(`user_id.eq.${candidateId},id.eq.${candidateId}`)
+            .limit(1)
+            .maybeSingle()
+
+          const validResume = resolveValidResumeUrl(currentSp?.resume_file_url, candidateId)
+          if (!validResume) {
+            setApplyingJobId(null)
+            return false
+          }
+        }
 
         // 1. If not a mock job and user is authenticated, insert to Supabase
         if (user && !job.id.startsWith('seed-job-')) {

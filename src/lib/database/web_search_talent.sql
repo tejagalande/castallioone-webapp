@@ -80,7 +80,10 @@ BEGIN
                     'graduation_year', COALESCE(sp.graduation_year, '2025'),
                     'portfolio_url', sp.portfolio_url,
                     'profile_image_url', sp.profile_image_url,
-                    'resume_file_url', sp.resume_file_url,
+                    'resume_file_url', CASE 
+                        WHEN is_unlocked THEN sp.resume_file_url 
+                        ELSE NULL 
+                    END,
                     'has_resume', (sp.resume_file_url IS NOT NULL AND sp.resume_file_url != ''),
                     'work_mode', COALESCE(sp.work_mode, 'Flexible'),
                     'expected_ctc', COALESCE(sp.expected_ctc, 'Negotiable'),

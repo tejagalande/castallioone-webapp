@@ -66,6 +66,8 @@ export const PostJob: FC<PostJobProps> = ({ jobIdToEdit, onCancel, onSuccess, on
     isQuotaExceededModalOpen,
     setIsQuotaExceededModalOpen,
     quota,
+    isCheckingQuota,
+    requiresJobCredit,
     toastMessage,
     handleSaveDraft,
     handlePublishRequisition,
@@ -198,12 +200,61 @@ export const PostJob: FC<PostJobProps> = ({ jobIdToEdit, onCancel, onSuccess, on
       {/* 2. Header & Action Ribbon */}
       <header className="pj-header-section">
         <div className="pj-title-wrapper">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <span className="pj-stage-tag">{isEditMode ? 'Edit Existing Requisition' : 'AEC Talent Deployment'}</span>
             <span style={{ color: '#727784' }}>/</span>
             <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>
               {isEditMode ? 'REQUISITION MODIFIER' : 'REQUISITION BUILDER'}
             </span>
+
+            {/* Live Job Post Credits Pill */}
+            {isCheckingQuota ? (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: '#f1f5f9',
+                  color: '#475569',
+                  padding: '3px 10px',
+                  borderRadius: '6px',
+                  fontWeight: 600,
+                  fontSize: '11px',
+                  fontFamily: 'JetBrains Mono, monospace',
+                }}
+              >
+                Checking job post credits...
+              </span>
+            ) : quota ? (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: quota.isLimitReached ? '#fee2e2' : '#e0f2fe',
+                  color: quota.isLimitReached ? '#991b1b' : '#0369a1',
+                  border: `1px solid ${quota.isLimitReached ? '#fecaca' : '#bae6fd'}`,
+                  padding: '3px 10px',
+                  borderRadius: '6px',
+                  fontWeight: 700,
+                  fontSize: '11px',
+                  fontFamily: 'JetBrains Mono, monospace',
+                }}
+                title={
+                  quota.isLimitReached
+                    ? '0 job post credits remaining on current plan'
+                    : 'Available job posting credits on current plan'
+                }
+              >
+                <span>{quota.planName.toUpperCase()}</span>
+                <span>•</span>
+                <span>
+                  {quota.jobPostLimit === null
+                    ? 'UNLIMITED CREDITS'
+                    : `${quota.remainingJobs ?? 0} OF ${quota.jobPostLimit} CREDIT${quota.jobPostLimit === 1 ? '' : 'S'} REMAINING`}
+                </span>
+              </span>
+            ) : null}
           </div>
           <h1 className="pj-main-heading">{isEditMode ? 'Edit Job Requisition' : 'Post a New Job Opportunity'}</h1>
           <p className="pj-lead-description">
@@ -212,8 +263,8 @@ export const PostJob: FC<PostJobProps> = ({ jobIdToEdit, onCancel, onSuccess, on
               : 'Complete the job specifications below to publish your opening directly to verified AEC professionals and talent pools.'}
           </p>
 
-          {/* Quota Limit Alert Banner if Reached (Only for new job posts) */}
-          {!isEditMode && quota && quota.isLimitReached && (
+          {/* Quota Limit Alert Banner if Reached (For new job posts or draft publishing) */}
+          {requiresJobCredit && quota && quota.isLimitReached && (
             <div
               style={{
                 marginTop: '12px',
@@ -233,7 +284,7 @@ export const PostJob: FC<PostJobProps> = ({ jobIdToEdit, onCancel, onSuccess, on
                   lock
                 </span>
                 <span>
-                  <strong>Job Post Limit Reached:</strong> Your {quota.planName} has used {quota.totalJobsCount} of {quota.jobPostLimit} total job posts allowed.
+                  <strong>No Job Post Credits Remaining:</strong> Your {quota.planName} has used {quota.totalJobsCount} of {quota.jobPostLimit} allowed job post credit{quota.jobPostLimit === 1 ? '' : 's'} (0 remaining).
                   You can save this job as a draft, or upgrade your plan to publish.
                 </span>
               </div>
@@ -1108,19 +1159,45 @@ export const PostJob: FC<PostJobProps> = ({ jobIdToEdit, onCancel, onSuccess, on
       {/* 4. Sticky Bottom Deployment Bar */}
       <footer className="pj-bottom-launch-bar" aria-label="Deployment Controls">
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#d8e2ff', color: '#00418f', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '22px', height: '22px' }}>
-              <line x1="22" y1="2" x2="11" y2="13" />
-              <polygon points="22 2 15 22 11 13 2 9 22 2" />
-            </svg>
+          <div
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              background: requiresJobCredit && quota?.isLimitReached ? '#fee2e2' : '#d8e2ff',
+              color: requiresJobCredit && quota?.isLimitReached ? '#dc2626' : '#00418f',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            {requiresJobCredit && quota?.isLimitReached ? (
+              <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>
+                lock
+              </span>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '22px', height: '22px' }}>
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+            )}
           </div>
           <div>
-            <strong style={{ fontSize: '14px', color: '#1a1c1e', display: 'block' }}>
-              {isEditMode ? 'Ready to Save Requisition Changes' : 'Ready to Launch Job Requisition'}
+            <strong style={{ fontSize: '14px', color: requiresJobCredit && quota?.isLimitReached ? '#991b1b' : '#1a1c1e', display: 'block' }}>
+              {requiresJobCredit && quota?.isLimitReached
+                ? `No Job Post Credits Remaining (${quota.totalJobsCount}/${quota.jobPostLimit} Used)`
+                : isEditMode
+                ? 'Ready to Save Requisition Changes'
+                : 'Ready to Launch Job Requisition'}
             </strong>
             <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#727784' }}>
-              {isEditMode
+              {requiresJobCredit && quota?.isLimitReached
+                ? `Upgrade your ${quota.planName} to publish, or save this job as a draft`
+                : isEditMode
                 ? 'Instant sync across Castallio network & candidate radar'
+                : quota && quota.jobPostLimit !== null
+                ? `${quota.remainingJobs ?? 0} of ${quota.jobPostLimit} job post credit${quota.jobPostLimit === 1 ? '' : 's'} remaining on ${quota.planName}`
                 : 'Instant publication to Castallio network & matching talent alerts'}
             </span>
           </div>
@@ -1140,10 +1217,24 @@ export const PostJob: FC<PostJobProps> = ({ jobIdToEdit, onCancel, onSuccess, on
             type="button"
             className="btn-pj-primary"
             onClick={handlePublishRequisition}
-            disabled={isSubmitting}
+            disabled={isSubmitting || (requiresJobCredit && isCheckingQuota)}
+            style={
+              requiresJobCredit && quota?.isLimitReached
+                ? { background: '#e11d48', borderColor: '#e11d48' }
+                : undefined
+            }
           >
             {isSubmitting ? (
               <span>{isEditMode ? 'Saving Changes...' : 'Publishing...'}</span>
+            ) : requiresJobCredit && isCheckingQuota ? (
+              <span>Checking Credits...</span>
+            ) : requiresJobCredit && quota?.isLimitReached ? (
+              <>
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                  lock
+                </span>
+                <span>Limit Reached — Upgrade to Publish</span>
+              </>
             ) : (
               <>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

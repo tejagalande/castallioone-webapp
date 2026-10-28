@@ -15,6 +15,9 @@ DECLARE
     v_company record;
     v_sub record;
     v_plan record;
+    v_actual_jobs_count integer := 0;
+    v_effective_jobs_posted integer := 0;
+    v_effective_limit integer;
     v_txns jsonb;
     v_result jsonb;
 BEGIN
@@ -50,7 +53,21 @@ BEGIN
     -- Always initialize v_plan so the record is never unassigned
     SELECT * INTO v_plan FROM subscription_plans WHERE id = 'free' LIMIT 1;
 
-    -- 2. Fetch Active Subscription
+    -- Count actual non-draft jobs in create_job_post
+    SELECT count(*)
+    INTO v_actual_jobs_count
+    FROM create_job_post jp
+    WHERE (jp.company_id = v_company_id OR jp.posted_by = v_user_id)
+      AND COALESCE(lower(trim(jp.status)), 'active') != 'draft'
+      AND (
+          COALESCE(v_sub.plan_id, 'free') = 'free'
+          OR v_sub.started_at IS NULL
+          OR jp.created_at IS NULL
+          OR jp.created_at >= v_sub.started_at
+      );
+
+    v_effective_jobs_posted := GREATEST(COALESCE(v_sub.jobs_posted, 0), COALESCE(v_actual_jobs_count, 0));
+    v_effective_limit := COALESCE(v_sub.plan_job_limit, v_plan.job_post_limit, 1);
 
     -- 3. Fetch Transaction History
     SELECT COALESCE(
@@ -88,13 +105,13 @@ BEGIN
             'plan_id', COALESCE(v_sub.plan_id, 'free'),
             'plan_name', COALESCE(v_sub.plan_name, v_plan.name, 'Free Plan'),
             'price_inr', COALESCE(v_sub.price_inr, v_plan.price_inr, 0),
-            'job_post_limit', CASE WHEN COALESCE(v_sub.plan_id, 'free') = 'unlimited' THEN NULL ELSE COALESCE(v_sub.plan_job_limit, v_plan.job_post_limit, 1) END,
-            'jobs_posted', COALESCE(v_sub.jobs_posted, 0),
+            'job_post_limit', CASE WHEN COALESCE(v_sub.plan_id, 'free') = 'unlimited' THEN NULL ELSE v_effective_limit END,
+            'jobs_posted', v_effective_jobs_posted,
             'cv_unlock_limit', COALESCE(v_sub.plan_cv_limit, v_plan.cv_unlock_limit, 3),
             'cvs_unlocked', COALESCE(v_sub.cvs_unlocked, 0),
             'remaining_jobs', CASE 
                 WHEN COALESCE(v_sub.plan_id, 'free') = 'unlimited' THEN 999999 
-                ELSE GREATEST(0, COALESCE(v_sub.plan_job_limit, v_plan.job_post_limit, 1) - COALESCE(v_sub.jobs_posted, 0)) 
+                ELSE GREATEST(0, v_effective_limit - v_effective_jobs_posted) 
             END,
             'remaining_cvs', GREATEST(0, COALESCE(v_sub.plan_cv_limit, v_plan.cv_unlock_limit, 3) - COALESCE(v_sub.cvs_unlocked, 0)),
             'started_at', v_sub.started_at,

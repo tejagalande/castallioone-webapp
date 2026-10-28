@@ -387,7 +387,7 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = ({
                 <span className="material-symbols-outlined sl-spin-icon" aria-hidden="true">
                   sync
                 </span>
-                <span>Connecting to Supabase Database &amp; Loading Shortlisted Talent Pipeline...</span>
+                <span>Loading Shortlisted Talent Pipeline...</span>
               </div>
               {[1, 2, 3].map((skeletonId) => (
                 <article key={skeletonId} className="sl-candidate-card sl-skeleton-card">
@@ -623,7 +623,7 @@ export const ShortlistedCandidates: FC<ShortlistedCandidatesProps> = ({
                       </span>
                       <p>
                         <strong>Resume &amp; Contact:</strong>{' '}
-                        {cand.hasResume ? 'PDF Resume attached in Supabase vault.' : 'Profile registered without external PDF.'}
+                        {cand.hasResume ? 'PDF Resume verified and attached.' : 'Profile registered without external PDF.'}
                         {cand.email ? ` • ${cand.email}` : ''}
                       </p>
                     </div>

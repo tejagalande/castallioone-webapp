@@ -997,6 +997,18 @@
   border-color: #00418f;
 }
 
+.resume-drop-zone.has-error,
+.form-group.has-error .resume-drop-zone {
+  border-color: #ef4444;
+  background: #fffafb;
+}
+
+.resume-drop-zone.has-error .drop-icon,
+.form-group.has-error .resume-drop-zone .drop-icon {
+  border-color: #fca5a5;
+  color: #ef4444;
+}
+
 .drop-icon {
   width: 48px;
   height: 48px;

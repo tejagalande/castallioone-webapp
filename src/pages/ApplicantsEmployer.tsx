@@ -43,6 +43,18 @@ const APPLICANT_SORT_OPTIONS: SortOptionItem<SortOption>[] = [
   },
 ]
 
+// Helper to ensure only authentic web/blob URLs are used for PDF previews
+const isValidResumeUrl = (url?: string | null): boolean => {
+  if (!url) return false
+  const trimmed = url.trim()
+  return (
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('data:application/pdf') ||
+    trimmed.startsWith('blob:')
+  )
+}
+
 export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
   onBrowseJobs,
   initialJobFilter,
@@ -161,7 +173,7 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
         <div className="app-telemetry-left">
           <span className="telemetry-tag-active">
             <span className="telemetry-pulse" aria-hidden="true"></span>
-            POSTGRESQL TALENT REPO
+            TALENT CANDIDATE DIRECTORY
           </span>
           <span className="telemetry-slash">/</span>
           <span className="telemetry-pill">{companyName.toUpperCase()}</span>
@@ -169,7 +181,7 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
           <span className="telemetry-pill">PIPELINE ENGINE: LIVE</span>
           <span className="telemetry-slash">•</span>
           <span className="telemetry-cand-id">
-            DATABASE: <strong>SUPABASE CONNECTED</strong>
+            STATUS: <strong>CONNECTED</strong>
           </span>
         </div>
 
@@ -677,7 +689,7 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
                   {/* Action Buttons Row */}
                   <div className="app-card-buttons-row">
                     {/* View Resume Button */}
-                    {app.resumeFileUrl ? (
+                    {isValidResumeUrl(app.resumeFileUrl) ? (
                       <button
                         type="button"
                         className="btn-card-primary"
@@ -697,7 +709,7 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
                         type="button"
                         className="btn-card-secondary"
                         onClick={() => setSelectedApplicant(app)}
-                        title="View Candidate Profile"
+                        title="Candidate has no resume uploaded. View Profile."
                       >
                         <span className="material-symbols-outlined" aria-hidden="true">
                           folder_open
@@ -740,7 +752,7 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
                     {/* View Full Details */}
                     <button
                       type="button"
-                      className="btn-card-tertiary"
+                      className="btn-card-details"
                       onClick={() => setSelectedApplicant(app)}
                       title="View Complete Application Details"
                     >
@@ -975,7 +987,7 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
               <div>
                 <h5 className="dossier-section-title">Verified Documents &amp; Attachments</h5>
                 <div className="dossier-docs-row">
-                  {selectedApplicant.resumeFileUrl && (
+                  {isValidResumeUrl(selectedApplicant.resumeFileUrl) ? (
                     <button
                       type="button"
                       className="btn-card-primary"
@@ -989,6 +1001,11 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
                       </span>
                       <span>Preview Resume PDF</span>
                     </button>
+                  ) : (
+                    <span style={{ fontSize: '12px', color: '#727784', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>info</span>
+                      No resume PDF uploaded by candidate
+                    </span>
                   )}
                   {selectedApplicant.portfolioUrl && (
                     <a
@@ -1351,11 +1368,25 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
             </div>
 
             <div className="app-modal-body resume-iframe-body">
-              <iframe
-                src={previewResumeUrl}
-                title={`${previewCandidateName} Resume`}
-                className="resume-pdf-iframe"
-              />
+              {isValidResumeUrl(previewResumeUrl) ? (
+                <iframe
+                  src={previewResumeUrl!}
+                  title={`${previewCandidateName} Resume`}
+                  className="resume-pdf-iframe"
+                />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px', padding: '40px', color: '#727784', textAlign: 'center' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#ba1a1a' }}>
+                    document_scanner
+                  </span>
+                  <p style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1a1c1e' }}>
+                    No Valid Resume Document Available
+                  </p>
+                  <p style={{ margin: 0, fontSize: '13px' }}>
+                    This applicant does not have an authentic PDF resume document uploaded.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="app-modal-footer">
@@ -1366,18 +1397,20 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
               >
                 Close Viewer
               </button>
-              <a
-                href={previewResumeUrl}
-                download
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-card-primary"
-              >
-                <span className="material-symbols-outlined" aria-hidden="true">
+              {isValidResumeUrl(previewResumeUrl) && (
+                <a
+                  href={previewResumeUrl!}
                   download
-                </span>
-                <span>Download PDF</span>
-              </a>
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-card-primary"
+                >
+                  <span className="material-symbols-outlined" aria-hidden="true">
+                    download
+                  </span>
+                  <span>Download PDF</span>
+                </a>
+              )}
             </div>
           </div>
         </div>

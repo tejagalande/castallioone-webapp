@@ -177,9 +177,7 @@ export function useMyJobs(onPostNewJob?: () => void) {
       setCompanyName(cName)
 
       // Fetch active job quota
-      if (cId) {
-        void getCompanyJobQuota(cId).then((q) => setJobQuota(q))
-      }
+      void getCompanyJobQuota(cId || '', user.id).then((q) => setJobQuota(q))
 
       // 2. Fetch jobs
       let jobsQuery = supabase

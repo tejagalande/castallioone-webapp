@@ -354,7 +354,7 @@ export function useCompanyProfile() {
     }
   }, [profile])
 
-  // Logo file upload
+  // Logo file upload with atomic database persistence
   const handleLogoUpload = useCallback(
     async (file: File) => {
       if (!userId) {
@@ -364,8 +364,45 @@ export function useCompanyProfile() {
       setIsUploadingLogo(true)
       try {
         const publicUrl = await uploadCompanyLogo(userId, file)
+
+        // Persist directly to Supabase remote database
+        const { data: updatedRows, error: updateError } = await supabase
+          .from('companies')
+          .update({
+            logo_url: publicUrl,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('owner_id', userId)
+          .select('id')
+
+        if (updateError) {
+          throw new Error(`Failed to save logo to database: ${updateError.message}`)
+        }
+
+        if (!updatedRows || updatedRows.length === 0) {
+          const { error: upsertError } = await supabase
+            .from('companies')
+            .upsert(
+              {
+                owner_id: userId,
+                name: profile.name.trim() || 'My Company',
+                logo_url: publicUrl,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'owner_id' }
+            )
+
+          if (upsertError) {
+            throw new Error(`Failed to save logo to database: ${upsertError.message}`)
+          }
+        }
+
         updateProfileField('logo_url', publicUrl)
-        showToast('Logo uploaded successfully. Remember to save changes.')
+        setSavedSnapshot((prev) => ({
+          ...prev,
+          logo_url: publicUrl,
+        }))
+        showToast('Company logo updated and saved successfully.')
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Logo upload failed'
         console.error('Logo upload error:', msg)
@@ -374,16 +411,45 @@ export function useCompanyProfile() {
         setIsUploadingLogo(false)
       }
     },
-    [userId, updateProfileField, showToast]
+    [userId, profile.name, updateProfileField, showToast]
   )
 
-  // Remove current logo
-  const handleRemoveLogo = useCallback(() => {
-    updateProfileField('logo_url', null)
-    showToast('Logo removed. Save changes to update your profile.')
-  }, [updateProfileField, showToast])
+  // Remove current logo with atomic database persistence
+  const handleRemoveLogo = useCallback(async () => {
+    if (!userId) {
+      showToast('Authentication required.')
+      return
+    }
+    setIsUploadingLogo(true)
+    try {
+      const { error: updateError } = await supabase
+        .from('companies')
+        .update({
+          logo_url: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('owner_id', userId)
 
-  // Document upload (Registration Certificate or PAN card)
+      if (updateError) {
+        throw new Error(`Failed to remove logo from database: ${updateError.message}`)
+      }
+
+      updateProfileField('logo_url', null)
+      setSavedSnapshot((prev) => ({
+        ...prev,
+        logo_url: null,
+      }))
+      showToast('Logo removed and saved successfully.')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to remove logo'
+      console.error('Logo removal error:', msg)
+      showToast(msg)
+    } finally {
+      setIsUploadingLogo(false)
+    }
+  }, [userId, updateProfileField, showToast])
+
+  // Document upload (Registration Certificate or PAN card) with atomic database persistence
   const handleDocumentUpload = useCallback(
     async (file: File, type: 'certificate' | 'pan_card') => {
       if (!userId) {
@@ -399,13 +465,31 @@ export function useCompanyProfile() {
 
       try {
         const publicUrl = await uploadCompanyDocument(userId, file, type)
-        if (type === 'certificate') {
-          updateProfileField('certificate_link', publicUrl)
-          showToast('Registration certificate uploaded.')
-        } else {
-          updateProfileField('pan_card_link', publicUrl)
-          showToast('PAN card document uploaded.')
+        const fieldKey = type === 'certificate' ? 'certificate_link' : 'pan_card_link'
+
+        // Persist to remote database
+        const { error: updateError } = await supabase
+          .from('companies')
+          .update({
+            [fieldKey]: publicUrl,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('owner_id', userId)
+
+        if (updateError) {
+          console.warn(`Could not immediately update ${fieldKey} in DB:`, updateError.message)
         }
+
+        updateProfileField(fieldKey, publicUrl)
+        setSavedSnapshot((prev) => ({
+          ...prev,
+          [fieldKey]: publicUrl,
+        }))
+        showToast(
+          type === 'certificate'
+            ? 'Registration certificate uploaded and saved.'
+            : 'PAN card document uploaded and saved.'
+        )
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : `${type} upload failed`
         console.error('Document upload error:', msg)

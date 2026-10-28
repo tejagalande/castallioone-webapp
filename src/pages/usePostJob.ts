@@ -266,6 +266,9 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
     }, 3500)
   }, [])
 
+  // Whether publishing this requisition consumes a job post credit
+  const requiresJobCredit = !isEditMode || existingStatus === 'draft'
+
   // Initial Quota Loader
   const refreshQuota = useCallback(async (): Promise<CompanyJobQuota | null> => {
     try {
@@ -279,12 +282,9 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
         .eq('owner_id', userData.user.id)
         .maybeSingle()
 
-      if (comp?.id) {
-        const q = await getCompanyJobQuota(comp.id)
-        setQuota(q)
-        return q
-      }
-      return null
+      const q = await getCompanyJobQuota(comp?.id || '', userData.user.id)
+      setQuota(q)
+      return q
     } catch (err) {
       console.warn('Error fetching company job quota:', err)
       return null
@@ -307,19 +307,26 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
           .eq('owner_id', userData.user.id)
           .maybeSingle()
 
-        if (comp?.id && isMounted) {
-          setCurrentCompanyId(comp.id)
-          const q = await getCompanyJobQuota(comp.id)
-          if (isMounted) {
-            setQuota(q)
-          }
+        const resolvedCompId = comp?.id || ''
+        if (resolvedCompId && isMounted) {
+          setCurrentCompanyId(resolvedCompId)
+        }
 
+        const q = await getCompanyJobQuota(resolvedCompId, userData.user.id)
+        if (isMounted) {
+          setQuota(q)
+          if (!jobIdToEdit && q.isLimitReached) {
+            setIsQuotaExceededModalOpen(true)
+          }
+        }
+
+        if (resolvedCompId && isMounted) {
           // Fetch previously saved taxonomies from company_job_taxonomies
           try {
             const { data: taxData } = await supabase
               .from('company_job_taxonomies')
               .select('type, name')
-              .eq('company_id', comp.id)
+              .eq('company_id', resolvedCompId)
 
             if (taxData && isMounted) {
               setCategories((prev) => {
@@ -357,7 +364,7 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
             const { data: jobPosts } = await supabase
               .from('create_job_post')
               .select('category, project_type')
-              .eq('company_id', comp.id)
+              .eq('company_id', resolvedCompId)
 
             if (jobPosts && isMounted) {
               setCategories((prev) => {
@@ -400,7 +407,7 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [jobIdToEdit])
 
   // Load existing job details when in edit mode
   useEffect(() => {
@@ -1288,6 +1295,15 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
 
   // Publish Job Requisition to Supabase
   const handlePublishRequisition = useCallback(async () => {
+    // 0. Fast pre-check: if this action consumes a job post credit and cached quota shows 0 credits left, block immediately before form validation
+    if (requiresJobCredit && quota && (quota.isLimitReached || (quota.remainingJobs !== null && quota.remainingJobs <= 0))) {
+      setIsQuotaExceededModalOpen(true)
+      showToast(
+        `No job post credits remaining (${quota.totalJobsCount}/${quota.jobPostLimit} used on ${quota.planName}). Please upgrade your plan to publish.`
+      )
+      return
+    }
+
     if (!validateForm()) {
       showToast('Please fix the highlighted errors before publishing.')
       return
@@ -1315,6 +1331,20 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
         throw new Error('Company profile not found. Please complete company setup first.')
       }
 
+      // 1. Live Quota / Credit Check before creating a new job OR publishing a draft job
+      if (requiresJobCredit) {
+        const currentQuota = await getCompanyJobQuota(companyId, user.id)
+        setQuota(currentQuota)
+
+        if (currentQuota.isLimitReached || (currentQuota.remainingJobs !== null && currentQuota.remainingJobs <= 0)) {
+          setIsQuotaExceededModalOpen(true)
+          showToast(
+            `Plan limit reached: You have used ${currentQuota.totalJobsCount} of ${currentQuota.jobPostLimit} job post credits allowed on your ${currentQuota.planName}. Please upgrade to publish.`
+          )
+          return
+        }
+      }
+
       const minClean = salaryMin ? String(salaryMin).replace(/,/g, '').trim() : ''
       const maxClean = salaryMax ? String(salaryMax).replace(/,/g, '').trim() : ''
       const hasSalary = minClean !== '' || maxClean !== ''
@@ -1322,9 +1352,10 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
       const parsedSalaryMax = maxClean ? parseFloat(maxClean) : null
       const parsedSalaryPeriod = hasSalary ? salaryPeriod : null
 
-      // If updating an existing job post, update in-place without deducting subscription quota
+      // If updating an existing job post
       if (isEditMode && jobIdToEdit) {
-        const newStatus = existingStatus === 'draft' ? 'active' : (existingStatus || 'active')
+        const wasDraft = existingStatus === 'draft'
+        const newStatus = wasDraft ? 'active' : (existingStatus || 'active')
 
         const finalLocations = locations.length > 0
           ? locations
@@ -1379,26 +1410,41 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
           })
         }
 
+        // If publishing a draft for the first time, increment jobs_posted and refresh quota
+        if (wasDraft) {
+          try {
+            const { data: subData } = await supabase
+              .from('company_subscriptions')
+              .select('id, jobs_posted')
+              .eq('company_id', companyId)
+              .eq('is_active', true)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+
+            if (subData?.id) {
+              await supabase
+                .from('company_subscriptions')
+                .update({
+                  jobs_posted: (subData.jobs_posted || 0) + 1,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', subData.id)
+            }
+          } catch (subErr) {
+            console.warn('Note updating company_subscriptions jobs_posted:', subErr)
+          }
+          void refreshQuota()
+        }
+
         setIsPublishSuccessModalOpen(true)
-        showToast('Requisition successfully updated!')
+        showToast(wasDraft ? 'Draft requisition published to Castallio Talent Radar!' : 'Requisition successfully updated!')
 
         if (onSuccess) {
           setTimeout(() => {
             onSuccess()
           }, 1800)
         }
-        return
-      }
-
-      // 1. Enforce Subscription Total Job Post Limit for new job posts
-      const currentQuota = await getCompanyJobQuota(companyId)
-      setQuota(currentQuota)
-
-      if (currentQuota.isLimitReached) {
-        setIsQuotaExceededModalOpen(true)
-        showToast(
-          `Plan limit reached: You have posted ${currentQuota.totalJobsCount} of ${currentQuota.jobPostLimit} total jobs allowed by your plan. Please upgrade to post more.`
-        )
         return
       }
 
@@ -1505,6 +1551,8 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
       setIsSubmitting(false)
     }
   }, [
+    requiresJobCredit,
+    quota,
     validateForm,
     title,
     category,
@@ -1782,6 +1830,7 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
     handlePublishRequisition,
     isEditMode,
     isLoadingJob,
+    requiresJobCredit,
     // Custom Categories
     categories,
     isCustomCategoryModalOpen,

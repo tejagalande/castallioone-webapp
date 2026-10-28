@@ -13,9 +13,11 @@ export const CompanyProfile: FC<CompanyProfileProps> = () => {
     touched,
     handleBlur,
     isLoading,
+    isSaving,
     isUploadingLogo,
     isUploadingCertificate,
     isUploadingPan,
+    isDirty,
     completeness,
     activeTab,
     setActiveTab,
@@ -26,6 +28,8 @@ export const CompanyProfile: FC<CompanyProfileProps> = () => {
     handleLogoUpload,
     handleRemoveLogo,
     handleDocumentUpload,
+    handleSaveAndPublish,
+    handleDiscardChanges,
   } = useCompanyProfile()
 
   const [previewDoc, setPreviewDoc] = useState<{ title: string; url: string } | null>(null)
@@ -247,7 +251,7 @@ export const CompanyProfile: FC<CompanyProfileProps> = () => {
       />
 
       {/* ── 1. Top Action & Navigation Control Bar ── */}
-      {/* <section className="cp-top-control-bar" aria-label="Company Profile Header Bar">
+      <section className="cp-top-control-bar" aria-label="Company Profile Header Bar">
         <div className="cp-control-inner">
           <div className="cp-breadcrumb-row">
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#727784', fontWeight: 600 }}>
@@ -321,7 +325,7 @@ export const CompanyProfile: FC<CompanyProfileProps> = () => {
             </button>
           </div>
         </div>
-      </section> */}
+      </section>
 
       <div className="cp-main-wrap">
         {/* ── 2. Studio Branding Hero Card ── */}
@@ -368,19 +372,20 @@ export const CompanyProfile: FC<CompanyProfileProps> = () => {
                         background: '#f3f3f6',
                         border: '1px solid #c2c6d5',
                         borderRadius: '6px',
-                        cursor: 'pointer',
+                        cursor: isUploadingLogo ? 'wait' : 'pointer',
                         color: '#00418f',
                       }}
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
                         {isUploadingLogo ? 'sync' : profile.logo_url ? 'edit' : 'upload'}
                       </span>
-                      <span>{isUploadingLogo ? 'Uploading...' : profile.logo_url ? 'Change Logo' : 'Upload Logo'}</span>
+                      <span>{isUploadingLogo ? 'Saving...' : profile.logo_url ? 'Change Logo' : 'Upload Logo'}</span>
                     </button>
                     {profile.logo_url && (
                       <button
                         type="button"
                         onClick={handleRemoveLogo}
+                        disabled={isUploadingLogo}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -391,14 +396,14 @@ export const CompanyProfile: FC<CompanyProfileProps> = () => {
                           background: '#ffffff',
                           border: '1px solid #ffdad6',
                           borderRadius: '6px',
-                          cursor: 'pointer',
+                          cursor: isUploadingLogo ? 'wait' : 'pointer',
                           color: '#ba1a1a',
                         }}
                       >
                         <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#ba1a1a' }}>
                           delete
                         </span>
-                        <span>Remove</span>
+                        <span>{isUploadingLogo ? 'Removing...' : 'Remove'}</span>
                       </button>
                     )}
                   </div>
@@ -715,7 +720,7 @@ export const CompanyProfile: FC<CompanyProfileProps> = () => {
                       <span>
                         {profile.description.length} characters {profile.description.length < 20 ? '(min 20 recommended)' : ''}
                       </span>
-                      <span>Changes stored in Supabase</span>
+                      <span>Changes saved securely</span>
                     </div>
                   </div>
                 </section>

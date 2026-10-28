@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { notifyEvent } from '../lib/webPush'
+import { resolveValidResumeUrl } from '../lib/talentService'
 import {
   computeRecommendationFit,
   formatIndianSalary,
@@ -925,6 +926,20 @@ export function useSavedJobs(options?: UseSavedJobsOptions) {
         } = await supabase.auth.getUser()
 
         if (user) {
+          // Gatekeeper: Check for verified resume before applying
+          const { data: studentSp } = await supabase
+            .from('student_profile')
+            .select('id, user_id, resume_file_url')
+            .or(`user_id.eq.${user.id},id.eq.${user.id}`)
+            .limit(1)
+            .maybeSingle()
+
+          const validResume = resolveValidResumeUrl(studentSp?.resume_file_url, user.id)
+          if (!validResume) {
+            showToast('A verified resume PDF is mandatory before applying. Please upload your resume in My Profile.')
+            return
+          }
+
           const { data: createdApp, error } = await supabase
             .from('job_applications')
             .insert({
@@ -977,6 +992,20 @@ export function useSavedJobs(options?: UseSavedJobsOptions) {
       } = await supabase.auth.getUser()
 
       if (user) {
+        // Gatekeeper: Check for verified resume before bulk applying
+        const { data: studentSp } = await supabase
+          .from('student_profile')
+          .select('id, user_id, resume_file_url')
+          .or(`user_id.eq.${user.id},id.eq.${user.id}`)
+          .limit(1)
+          .maybeSingle()
+
+        const validResume = resolveValidResumeUrl(studentSp?.resume_file_url, user.id)
+        if (!validResume) {
+          showToast('A verified resume PDF is mandatory before applying. Please upload your resume in My Profile.')
+          return
+        }
+
         const rows = unappliedIds.map((jid) => {
           const matchingJob = jobs.find((j) => j.jobId === jid)
           return {

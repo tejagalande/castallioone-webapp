@@ -1108,3 +1108,58 @@
     padding: 0 16px;
   }
 }
+
+
+/* ── Talent Profile Locked Resume Teaser ── */
+.tp-resume-locked-container {
+  height: 100%;
+  min-height: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 24px;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 12px;
+  border: 1px dashed #cbd5e1;
+}
+
+.tp-resume-locked-badge {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: #fef3c7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d97706;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.15);
+}
+
+.tp-resume-locked-badge .material-symbols-outlined {
+  font-size: 28px;
+}
+
+.tp-resume-locked-container h3 {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+}
+
+.tp-resume-locked-container p {
+  font-size: 14px;
+  color: #475569;
+  max-width: 460px;
+  margin: 0 0 22px 0;
+  line-height: 1.55;
+}
+
+.tp-resume-locked-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}

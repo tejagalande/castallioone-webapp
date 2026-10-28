@@ -211,7 +211,15 @@ export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
     return name.slice(0, 2).toUpperCase()
   }
 
+  const [gatekeeperModalOpen, setGatekeeperModalOpen] = useState(false)
+  const [gatekeeperJob, setGatekeeperJob] = useState<RecommendedJob | null>(null)
+
   const handleApply = async (job: RecommendedJob) => {
+    if (!profile.hasResume) {
+      setGatekeeperJob(job)
+      setGatekeeperModalOpen(true)
+      return
+    }
     const success = await applyForJob(job)
     if (success) {
       showSuccess(`Application submitted to ${job.company}! Recruiter will review your credentials.`, 'Application Sent')
@@ -297,6 +305,28 @@ export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
       </aside>
 
       <main className="talent-main">
+        {!loading && !profile.hasResume && (
+          <aside className="talent-resume-alert-banner" role="alert">
+            <div className="talent-resume-alert-content">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="talent-resume-alert-icon" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <div>
+                <h4 className="talent-resume-alert-title">Resume Missing – Mandatory Profile Requirement</h4>
+                <p className="talent-resume-alert-desc">
+                  You have not uploaded a verified PDF resume. Employers cannot review your application or schedule interviews until your resume is uploaded.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="talent-resume-alert-btn"
+              onClick={() => setActiveMenu('my-profile')}
+            >
+              Upload Resume Now
+            </button>
+          </aside>
+        )}
         {activeMenu === 'recommendation-jobs' ? (
           <div className="talent-page-content">
             <RecommendationJobs
@@ -726,6 +756,41 @@ export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
         isApplying={activeDashboardSelectedJob ? applyingJobId === activeDashboardSelectedJob.id : false}
         onNavigateToMessages={handleNavigateToMessages}
       />
+
+      {gatekeeperModalOpen && (
+        <div className="gatekeeper-modal-overlay" role="dialog" aria-modal="true" onClick={() => setGatekeeperModalOpen(false)}>
+          <div className="gatekeeper-modal-window" onClick={(e) => e.stopPropagation()}>
+            <div className="gatekeeper-icon-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 className="gatekeeper-modal-title">Resume Required to Apply</h3>
+            <p className="gatekeeper-modal-desc">
+              To apply for {gatekeeperJob ? `"${gatekeeperJob.title}" at ${gatekeeperJob.company}` : 'jobs'}, you must have an active resume uploaded to your profile so hiring managers can review your qualifications.
+            </p>
+            <div className="gatekeeper-modal-actions">
+              <button
+                type="button"
+                className="gatekeeper-btn-primary"
+                onClick={() => {
+                  setGatekeeperModalOpen(false)
+                  setActiveMenu('my-profile')
+                }}
+              >
+                Upload Resume in Profile
+              </button>
+              <button
+                type="button"
+                className="gatekeeper-btn-secondary"
+                onClick={() => setGatekeeperModalOpen(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -44,6 +44,7 @@ export interface TalentProfileData {
   resumeFile: File | null
   resumeFileName: string
   resumeFileSize: string
+  resumeFileUrl?: string
   portfolioLink: string
   linkedinLink: string
 
@@ -353,6 +354,23 @@ export const validateSingleTalentField = (
       return ''
     }
 
+    case 'resumeFile':
+    case 'resumeFileName': {
+      if (!allData.resumeFile && !allData.resumeFileName && !allData.resumeFileUrl) {
+        return 'Resume document (PDF) is mandatory. Please upload your resume.'
+      }
+      if (allData.resumeFile) {
+        const file = allData.resumeFile
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+          return 'Please upload your resume in PDF format only.'
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          return 'Resume file size must be under 10 MB.'
+        }
+      }
+      return ''
+    }
+
     case 'portfolioLink':
       if (strVal) {
         if (!/^(https?:\/\/|[a-zA-Z0-9-]+\.)/i.test(strVal)) {
@@ -458,6 +476,7 @@ export function useTalentProfileSetup({
           resumeFile: null,
           resumeFileName: parsed.resumeFileName || '',
           resumeFileSize: parsed.resumeFileSize || '',
+          resumeFileUrl: parsed.resumeFileUrl || '',
           portfolioLink: parsed.portfolioLink || '',
           linkedinLink: parsed.linkedinLink || '',
           specificSkill: parsed.specificSkill || '',
@@ -495,6 +514,7 @@ export function useTalentProfileSetup({
       resumeFile: null,
       resumeFileName: '',
       resumeFileSize: '',
+      resumeFileUrl: '',
       portfolioLink: '',
       linkedinLink: '',
       specificSkill: '',
@@ -670,7 +690,7 @@ export function useTalentProfileSetup({
         id: 'resumeFile',
         label: 'Resume PDF document',
         weight: 7,
-        isDone: Boolean(formData.resumeFile || formData.resumeFileName),
+        isDone: Boolean(formData.resumeFile || formData.resumeFileName || formData.resumeFileUrl),
         category: 'docs',
       },
       {
@@ -836,11 +856,21 @@ export function useTalentProfileSetup({
 
       if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
         showToast('Please upload your resume in PDF format only.', 'error')
+        setErrors((prev) => ({
+          ...prev,
+          resumeFile: 'Only PDF format is allowed.',
+        }))
+        setTouched((prev) => ({ ...prev, resumeFile: true }))
         return
       }
 
       if (file.size > 10 * 1024 * 1024) {
         showToast('Resume file size must be under 10 MB.', 'error')
+        setErrors((prev) => ({
+          ...prev,
+          resumeFile: 'Resume file size must be under 10 MB.',
+        }))
+        setTouched((prev) => ({ ...prev, resumeFile: true }))
         return
       }
 
@@ -851,6 +881,13 @@ export function useTalentProfileSetup({
         resumeFileName: file.name,
         resumeFileSize: sizeStr,
       }))
+      setTouched((prev) => ({ ...prev, resumeFile: true }))
+      setErrors((prev) => {
+        const copy = { ...prev }
+        delete copy.resumeFile
+        delete copy.resumeFileName
+        return copy
+      })
       showToast(`Resume "${file.name}" attached successfully!`, 'success')
     },
     [showToast]
@@ -862,8 +899,15 @@ export function useTalentProfileSetup({
       resumeFile: null,
       resumeFileName: '',
       resumeFileSize: '',
+      resumeFileUrl: '',
     }))
-  }, [])
+    setTouched((prev) => ({ ...prev, resumeFile: true }))
+    setErrors((prev) => ({
+      ...prev,
+      resumeFile: 'Resume document (PDF) is mandatory. Please upload your resume.',
+    }))
+    showToast('Resume removed. Please upload a new resume PDF to continue.', 'warning')
+  }, [showToast])
 
   // Locations multi-tag management with instant validation
   const toggleLocation = useCallback((loc: string) => {
@@ -1145,6 +1189,7 @@ export function useTalentProfileSetup({
       'workMode',
       'preferredLocations',
       'expectedCtc',
+      'resumeFile',
       'portfolioLink',
       'linkedinLink',
     ]
@@ -1164,7 +1209,11 @@ export function useTalentProfileSetup({
     setErrors((prev) => ({ ...prev, ...errs }))
 
     if (Object.keys(errs).length > 0) {
-      showToast('Please resolve the highlighted fields in your profile.', 'warning')
+      if (errs.resumeFile) {
+        showToast('Resume is mandatory. Please upload your resume PDF before continuing.', 'warning')
+      } else {
+        showToast('Please resolve the highlighted fields in your profile.', 'warning')
+      }
       return false
     }
 
@@ -1237,6 +1286,17 @@ export function useTalentProfileSetup({
       }
 
       if (!validateStep2()) {
+        return
+      }
+
+      if (!formData.resumeFile && !formData.resumeFileName && !formData.resumeFileUrl) {
+        setCurrentStep(1)
+        setTouched((prev) => ({ ...prev, resumeFile: true }))
+        setErrors((prev) => ({
+          ...prev,
+          resumeFile: 'Resume document (PDF) is mandatory. Please upload your resume.',
+        }))
+        showToast('Resume is mandatory. Please attach your resume PDF before completing setup.', 'error')
         return
       }
 

@@ -27,17 +27,6 @@ function loadEnv() {
   return { ...process.env, ...envVars }
 }
 
-const env = loadEnv()
-const supabaseUrl = env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL
-const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Supabase credentials missing in .env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)')
-  process.exit(1)
-}
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
 // Indian States fallback lookup for location parsing
 const KNOWN_STATES = [
   'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
@@ -108,6 +97,18 @@ function parseLocation(locRaw) {
 }
 
 export async function exportJobs() {
+  const env = loadEnv()
+  const supabaseUrl = env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase credentials missing in environment (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)')
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false },
+  })
+
   console.log('🔄 Fetching active jobs from Supabase create_job_post...')
 
   // Fetch active/published job requisitions

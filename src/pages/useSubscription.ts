@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { getCompanyJobQuota } from '../lib/jobQuotaService'
 
 export interface PlanBadge {
   icon: 'work' | 'group'
@@ -232,12 +233,18 @@ export function useSubscription() {
           if (data.company.gstin) setCompanyGstin(data.company.gstin)
 
           if (data.subscription) {
+            const liveQuota = await getCompanyJobQuota(data.company.id, user.id)
+            if (!isMounted) return
+            const effectiveJobsPosted = Math.max(
+              data.subscription.jobs_posted ?? 0,
+              liveQuota.totalJobsCount
+            )
             setActivePlanId(data.subscription.plan_id || 'free')
             setUsage({
               planId: data.subscription.plan_id || 'free',
               planName: data.subscription.plan_name || 'Free Plan',
               jobPostLimit: data.subscription.job_post_limit,
-              jobsPosted: data.subscription.jobs_posted ?? 0,
+              jobsPosted: effectiveJobsPosted,
               cvUnlockLimit: data.subscription.cv_unlock_limit ?? 3,
               cvsUnlocked: data.subscription.cvs_unlocked ?? 0,
               startedAt: data.subscription.started_at,
@@ -267,6 +274,9 @@ export function useSubscription() {
             setCompanyGstin(comp.gst_number)
           }
 
+          const liveQuota = await getCompanyJobQuota(comp.id, user.id)
+          if (!isMounted) return
+
           const { data: sub } = await supabase
             .from('company_subscriptions')
             .select('*')
@@ -276,8 +286,16 @@ export function useSubscription() {
             .limit(1)
             .maybeSingle()
 
-          if (isMounted && sub?.plan_id) {
-            setActivePlanId(sub.plan_id)
+          if (isMounted) {
+            setActivePlanId(sub?.plan_id || liveQuota.planId || 'free')
+            setUsage((prev) => ({
+              ...prev,
+              planId: sub?.plan_id || liveQuota.planId || 'free',
+              planName: liveQuota.planName,
+              jobPostLimit: liveQuota.jobPostLimit,
+              jobsPosted: liveQuota.totalJobsCount,
+              cvsUnlocked: sub?.cvs_unlocked ?? prev.cvsUnlocked,
+            }))
           }
         }
       } catch (err) {

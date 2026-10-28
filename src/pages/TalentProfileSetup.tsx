@@ -788,10 +788,10 @@ export const TalentProfileSetup: React.FC<TalentProfileSetupProps> = ({
                 </h3>
 
                 {/* Resume Upload (PDF) */}
-                <div className="form-group">
+                <div className={`form-group ${getFieldClass('resumeFile')}`}>
                   <label className="form-label" htmlFor="resumeFileInput">
                     <span className="label-title">Resume / CV (PDF) <span className="req-star">*</span></span>
-                    <span className="field-hint">(Recommended for fast-track recruiter reviews, max 10 MB)</span>
+                    <span className="field-hint">(Mandatory for recruiter reviews &amp; direct applications, max 10 MB)</span>
                   </label>
 
                   <div className="resume-upload-card">
@@ -822,7 +822,7 @@ export const TalentProfileSetup: React.FC<TalentProfileSetupProps> = ({
                       </div>
                     ) : (
                       <div
-                        className="resume-drop-zone"
+                        className={`resume-drop-zone ${errors.resumeFile && touched.resumeFile ? 'has-error' : ''}`}
                         onClick={() => resumeInputRef.current?.click()}
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={(e) => {
@@ -848,10 +848,20 @@ export const TalentProfileSetup: React.FC<TalentProfileSetupProps> = ({
                         <div className="drop-text">
                           <strong>Click to upload PDF</strong> or drag and drop your resume here
                         </div>
-                        <span className="drop-meta">PDF format up to 10 MB</span>
+                        <span className="drop-meta">PDF format up to 10 MB (Mandatory)</span>
                       </div>
                     )}
                   </div>
+                  {touched.resumeFile && errors.resumeFile && (
+                    <div className="field-error-msg" role="alert" style={{ marginTop: '8px' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                      <span>{errors.resumeFile}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="form-grid-2">

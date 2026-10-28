@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { notifyEvent, NOTIFIABLE_STATUSES } from '../lib/webPush'
+import { resolveValidResumeUrl } from '../lib/talentService'
 
 export type ApplicationDBStatus =
   | 'new'
@@ -154,6 +155,7 @@ function getStageLabel(status: ApplicationDBStatus): string {
 // Helper interfaces for raw applicants query mapping
 interface RawApplicantCandidate {
   id?: string
+  user_id?: string
   full_name?: string
   bio?: string
   email?: string
@@ -314,7 +316,7 @@ function mapRawApplicant(
     expectedCtc: student.expected_ctc ? `₹${student.expected_ctc}` : 'Open to negotiate',
     noticePeriod: student.notice_period || 'Immediately',
     portfolioUrl: student.portfolio_url || undefined,
-    resumeFileUrl: student.resume_file_url || undefined,
+    resumeFileUrl: resolveValidResumeUrl(student.resume_file_url, student.user_id || student.id || row.candidate_id),
     linkedinUrl: student.linkedin_url || undefined,
     rejectionReason: row.rejection_reason || undefined,
     experiences: experiencesList,

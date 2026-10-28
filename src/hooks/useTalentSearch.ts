@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { resolveValidResumeUrl } from '../lib/talentService'
 
 export type TalentDisciplineFilter =
   | 'all'
@@ -262,8 +263,8 @@ export function useTalentSearch() {
             expectedCtc: c.expected_ctc ? `₹${c.expected_ctc}` : 'Negotiable',
             noticePeriod: c.notice_period || 'Immediately',
             portfolioUrl: c.portfolio_url || undefined,
-            resumeFileUrl: c.resume_file_url || undefined,
-            hasResume: c.has_resume,
+            resumeFileUrl: c.is_unlocked ? resolveValidResumeUrl(c.resume_file_url, c.id) : undefined,
+            hasResume: Boolean(resolveValidResumeUrl(c.resume_file_url, c.id)) || Boolean(c.has_resume),
             linkedinUrl: c.linkedin_url || undefined,
             isUnlocked: c.is_unlocked,
             hasEmbedding: c.has_embedding,
@@ -373,7 +374,7 @@ export function useTalentSearch() {
         const mapped: CandidateTalentItem[] = res.candidates.map((c) => {
           const isUnlocked = unlockedSet.has(c.id)
           const p = profileMap.get(c.id)
-          const resumeUrl = p?.resume_file_url || undefined
+          const resumeUrl = resolveValidResumeUrl(p?.resume_file_url, p?.user_id || c.id)
           const rawSkills = c.skills || []
           const skillsList = Array.isArray(rawSkills)
             ? rawSkills
@@ -405,7 +406,7 @@ export function useTalentSearch() {
             workMode: c.work_mode || 'Flexible',
             expectedCtc: 'Competitive',
             noticePeriod: c.availability || 'Immediately',
-            resumeFileUrl: resumeUrl,
+            resumeFileUrl: isUnlocked ? resumeUrl : undefined,
             hasResume: Boolean(resumeUrl),
             portfolioUrl: p?.portfolio_url || undefined,
             linkedinUrl: p?.linkedin_url || undefined,
@@ -479,12 +480,58 @@ export function useTalentSearch() {
         const res = data as UnlockResult | null
 
         if (res?.success) {
+          // Fetch genuine contact and resume details now that profile is unlocked
+          let resolvedEmail = cand.email
+          let resolvedPhone = cand.phone
+          let resolvedResumeUrl = cand.resumeFileUrl
+
+          try {
+            const { data: unlockedSp } = await supabase
+              .from('student_profile')
+              .select('id, user_id, email, phone, resume_file_url')
+              .eq('id', cand.id)
+              .maybeSingle()
+
+            if (unlockedSp) {
+              resolvedEmail = unlockedSp.email || cand.email
+              resolvedPhone = unlockedSp.phone ? String(unlockedSp.phone) : cand.phone
+              resolvedResumeUrl = resolveValidResumeUrl(
+                unlockedSp.resume_file_url,
+                unlockedSp.user_id || cand.userId || cand.id
+              )
+            }
+          } catch {
+            // fallback to existing
+          }
+
           showNotification(`Success: Profile for ${formatTalentName(cand.name)} is now unlocked! Contact and CV available.`)
           setTalent((prev) =>
-            prev.map((t) => (t.id === cand.id ? { ...t, isUnlocked: true } : t))
+            prev.map((t) =>
+              t.id === cand.id
+                ? {
+                    ...t,
+                    isUnlocked: true,
+                    email: resolvedEmail,
+                    phone: resolvedPhone,
+                    resumeFileUrl: resolvedResumeUrl,
+                    hasResume: Boolean(resolvedResumeUrl),
+                  }
+                : t
+            )
           )
           if (selectedCandidate && selectedCandidate.id === cand.id) {
-            setSelectedCandidate((prev) => (prev ? { ...prev, isUnlocked: true } : null))
+            setSelectedCandidate((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    isUnlocked: true,
+                    email: resolvedEmail,
+                    phone: resolvedPhone,
+                    resumeFileUrl: resolvedResumeUrl,
+                    hasResume: Boolean(resolvedResumeUrl),
+                  }
+                : null
+            )
           }
           if (typeof res.remaining === 'number') {
             setQuota((q) => ({

@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { notifyEvent } from '../lib/webPush'
+import { resolveValidResumeUrl } from '../lib/talentService'
 
 export type ShortlistDisciplineCategory =
   | 'all'
@@ -360,7 +361,10 @@ export function useShortlistedCandidates() {
           discCategory = 'Computational Design'
         }
 
-        const resumeUrl = (student.resume_file_url as string) || undefined
+        const resumeUrl = resolveValidResumeUrl(
+          student.resume_file_url as string,
+          (student.user_id || student.id || row.candidate_id) as string
+        )
 
         return {
           id: String(row.id),

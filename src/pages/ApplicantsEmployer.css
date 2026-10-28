@@ -1095,24 +1095,52 @@
   border-color: rgba(194, 198, 213, 0.4);
 }
 
+/* Full Details & Highlighted Card Action Button */
+.btn-card-details,
 .btn-card-tertiary {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #f3f3f6;
-  color: #424753;
-  border: 1px solid transparent;
-  padding: 8px 12px;
+  background: #eef4ff;
+  color: #00418f;
+  border: 1.5px solid #00418f;
+  padding: 8px 14px;
   border-radius: 8px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 3px rgba(0, 65, 143, 0.12);
+  letter-spacing: 0.01em;
+  user-select: none;
 }
 
+.btn-card-details .material-symbols-outlined,
+.btn-card-tertiary .material-symbols-outlined {
+  font-size: 18px;
+  color: #00418f;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.btn-card-details:hover,
 .btn-card-tertiary:hover {
-  background: #eeeef0;
-  color: #1a1c1e;
+  background: #00418f;
+  color: #ffffff;
+  border-color: #00418f;
+  box-shadow: 0 4px 12px rgba(0, 65, 143, 0.25);
+  transform: translateY(-1px);
+}
+
+.btn-card-details:hover .material-symbols-outlined,
+.btn-card-tertiary:hover .material-symbols-outlined {
+  color: #ffffff;
+  transform: scale(1.1);
+}
+
+.btn-card-details:active,
+.btn-card-tertiary:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 65, 143, 0.18);
 }
 
 .btn-card-link-danger {

@@ -162,7 +162,10 @@ export async function fetchSavedTalentProfile(
     employmentType: str(sp.employment_type),
     noticePeriod: str(sp.notice_period),
     expectedCtc: str(sp.expected_ctc).replace(/^₹/, ''),
-    resumeFileName: sp.resume_file_url ? decodeURIComponent(String(sp.resume_file_url).split('/').pop() || 'resume.pdf') : '',
+    resumeFileUrl: resolveValidResumeUrl(sp.resume_file_url, sp.user_id || sp.id) || '',
+    resumeFileName: sp.resume_file_url
+      ? decodeURIComponent(String(sp.resume_file_url).split('/').pop()?.replace(/^resume-+/i, '') || 'resume.pdf')
+      : '',
     portfolioLink: str(sp.portfolio_url),
     linkedinLink: str(sp.linkedin_url),
   }
@@ -254,6 +257,31 @@ export async function uploadTalentAvatar(userId: string, file: File): Promise<st
 }
 
 /**
+ * Resolves and validates a candidate's resume URL.
+ * Automatically recovers full Supabase storage URL if it was stored with a relative "resume-" prefix.
+ */
+export function resolveValidResumeUrl(rawUrl?: string | null, userIdOrProfileId?: string): string | undefined {
+  if (!rawUrl) return undefined
+  const trimmed = String(rawUrl).trim()
+  if (
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('data:application/pdf') ||
+    trimmed.startsWith('blob:')
+  ) {
+    return trimmed
+  }
+
+  // Recover legacy corrupted entries such as "resume-resume_1792233519566.pdf"
+  const cleanFileName = trimmed.replace(/^resume-+/i, '')
+  if (cleanFileName.endsWith('.pdf') && userIdOrProfileId) {
+    return `https://pmqtsplqnwexxnojeezg.supabase.co/storage/v1/object/public/profile-resume/profiles/${userIdOrProfileId}/${cleanFileName}`
+  }
+
+  return undefined
+}
+
+/**
  * Uploads talent resume PDF file to storage bucket.
  * Falls back to local object URL or Data URL.
  */
@@ -337,13 +365,33 @@ export async function saveTalentProfile(
     }
   }
 
-  let resumeUrl = data.resumeFileName ? `resume-${data.resumeFileName}` : ''
+  // 1b. Upload mandatory resume file or resolve existing valid URL
+  let resumeUrl = ''
   if (data.resumeFile) {
     try {
       resumeUrl = await uploadTalentResume(userId, data.resumeFile)
     } catch (e) {
       console.warn('Resume upload fallback used:', e)
     }
+  } else if (data.resumeFileUrl && (data.resumeFileUrl.startsWith('http') || data.resumeFileUrl.startsWith('data:'))) {
+    resumeUrl = data.resumeFileUrl
+  } else {
+    // Check if user already has a valid resume in student_profile in DB
+    const { data: existingSp } = await supabase
+      .from('student_profile')
+      .select('resume_file_url')
+      .or(`user_id.eq.${userId},id.eq.${userId}`)
+      .limit(1)
+      .maybeSingle()
+
+    const resolved = resolveValidResumeUrl(existingSp?.resume_file_url, userId)
+    if (resolved) {
+      resumeUrl = resolved
+    }
+  }
+
+  if (!resumeUrl) {
+    throw new Error('A valid resume PDF document is mandatory. Please attach your resume before completing profile setup.')
   }
 
   // 2. Prepare payload for student_profile (must match real table columns)
