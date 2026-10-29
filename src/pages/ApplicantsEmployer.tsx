@@ -7,6 +7,7 @@ import {
 } from '../hooks/useApplicants'
 import { CustomSortDropdown, type SortOptionItem } from '../components/CustomSortDropdown'
 import { CandidateStatusDropdown } from '../components/CandidateStatusDropdown'
+import { getPaginationItems } from '../lib/pagination'
 import './ApplicantsEmployer.css'
 
 export interface ApplicantsEmployerProps {
@@ -800,17 +801,28 @@ export const ApplicantsEmployer: FC<ApplicantsEmployerProps> = ({
                 </button>
 
                 <div className="app-page-numbers-group">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                    <button
-                      key={pageNum}
-                      type="button"
-                      className={`app-page-number-btn ${safeCurrentPage === pageNum ? 'active' : ''}`}
-                      onClick={() => setCurrentPage(pageNum)}
-                      aria-current={safeCurrentPage === pageNum ? 'page' : undefined}
-                    >
-                      {pageNum}
-                    </button>
-                  ))}
+                  {getPaginationItems(safeCurrentPage, totalPages).map((item, idx) =>
+                    typeof item === 'number' ? (
+                      <button
+                        key={item}
+                        type="button"
+                        className={`app-page-number-btn ${safeCurrentPage === item ? 'active' : ''}`}
+                        onClick={() => setCurrentPage(item)}
+                        aria-current={safeCurrentPage === item ? 'page' : undefined}
+                        aria-label={`Page ${item}`}
+                      >
+                        {item}
+                      </button>
+                    ) : (
+                      <span
+                        key={`${item}-${idx}`}
+                        className="app-page-ellipsis"
+                        aria-hidden="true"
+                      >
+                        &hellip;
+                      </span>
+                    )
+                  )}
                 </div>
 
                 <button
