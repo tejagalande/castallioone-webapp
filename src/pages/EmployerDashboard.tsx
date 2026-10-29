@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import PostJob from './PostJob'
 import MyJobs from './MyJobs'
@@ -132,6 +132,15 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
     }
     return false
   })
+  const mainContentRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [activeMenu, location.pathname])
+
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
   const [selectedJobFilter, setSelectedJobFilter] = useState<{ id?: string; title?: string } | null>(null)
   const [highlightedJobId, setHighlightedJobId] = useState<string | null>(null)
@@ -210,7 +219,7 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
         </div>
       </aside>
 
-      <div className="dashboard-main">
+      <div className="dashboard-main" ref={mainContentRef}>
         <div className="dashboard-content">
           {activeMenu === 'post-job' && (
             <PostJob 
@@ -255,7 +264,11 @@ function EmployerDashboard({ onLogout }: EmployerDashboardProps) {
               onViewJobPost={handleViewJobPost}
             />
           )}
-          {activeMenu === 'talent-search' && <TalentSearchPage />}
+          {activeMenu === 'talent-search' && (
+            <TalentSearchPage
+              onNavigateToSubscription={() => setActiveMenu('subscription')}
+            />
+          )}
           {activeMenu === 'shortlisted' && (
             <ShortlistedPage
               onNavigateToApplicants={() => setActiveMenu('applicants')}

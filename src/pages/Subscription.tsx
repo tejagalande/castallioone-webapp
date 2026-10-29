@@ -1,4 +1,4 @@
-import { useState, type FC } from 'react'
+import { useState, useEffect, type FC } from 'react'
 import {
   useSubscription,
   type EnterprisePlan,
@@ -26,6 +26,10 @@ export const Subscription: FC<SubscriptionProps> = ({
     cvAddons,
     selectedPlanForGateway,
     setSelectedPlanForGateway,
+    downgradeModalPlan,
+    isDowngrading,
+    confirmDowngrade,
+    cancelDowngrade,
     lastTransactionId,
     handleSelectPlan,
     handleConfirmSubscription,
@@ -44,6 +48,15 @@ export const Subscription: FC<SubscriptionProps> = ({
   const [confirmedPlan, setConfirmedPlan] = useState<EnterprisePlan | null>(null)
   const [gatewayError, setGatewayError] = useState<string | null>(null)
   const [copiedTxn, setCopiedTxn] = useState<boolean>(false)
+
+  // Always reset scroll to the top of the container and window when mounting Subscription view
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    const mainEl = document.querySelector('.dashboard-main')
+    if (mainEl) {
+      mainEl.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    }
+  }, [])
 
   // Razorpay Key Configuration (loaded securely from environment)
   const activeKeyId =
@@ -518,12 +531,22 @@ export const Subscription: FC<SubscriptionProps> = ({
           <div className="sub-quota-left">
             <div className="sub-company-label-row">
               <h1 className="sub-company-title">{companyName}</h1>
-              <span className="sub-active-badge">
+              <button
+                type="button"
+                className="sub-active-badge clickable"
+                onClick={() => {
+                  const activeCard = document.querySelector('.sub-card.is-active-tier')
+                  if (activeCard) {
+                    activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+                  }
+                }}
+                title="View your active subscription card"
+              >
                 <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>
                   verified
                 </span>
                 <span>Active: {usage.planName}</span>
-              </span>
+              </button>
             </div>
             <p className="sub-quota-desc">
               Manage your firm's job postings, candidate search capabilities, and CV unlock quotas.
@@ -620,18 +643,33 @@ export const Subscription: FC<SubscriptionProps> = ({
                     isPopular ? 'featured-popular' : ''
                   }`}
                 >
-                  {/* Top Ribbon Banner if present */}
-                  {plan.ribbon && (
+                  {/* Top Ribbon Banner */}
+                  {isCurrent ? (
+                    <div className="sub-card-ribbon active-current">
+                      <span className="material-symbols-outlined sub-ribbon-icon">
+                        verified
+                      </span>
+                      <span>YOUR CURRENT PLAN{isPopular ? ' ★ MOST POPULAR' : ''}</span>
+                    </div>
+                  ) : plan.ribbon ? (
                     <div className={`sub-card-ribbon ${plan.ribbon.variant}`}>
                       <span className="material-symbols-outlined sub-ribbon-icon">
                         star
                       </span>
                       <span>{plan.ribbon.text}</span>
                     </div>
-                  )}
+                  ) : null}
 
                   <div className="sub-card-content">
-                    <span className="sub-card-category">{plan.category}</span>
+                    <div className="sub-card-header-row">
+                      <span className="sub-card-category">{plan.category}</span>
+                      {isCurrent && (
+                        <span className="sub-card-active-pill">
+                          <span className="active-pulse-dot" aria-hidden="true" />
+                          <span>Active Plan</span>
+                        </span>
+                      )}
+                    </div>
 
                     <div className="sub-card-price-row">
                       <span className="sub-card-price-val">{plan.priceDisplay}</span>
@@ -639,6 +677,15 @@ export const Subscription: FC<SubscriptionProps> = ({
                         <span className="sub-card-price-period">{plan.period}</span>
                       )}
                     </div>
+
+                    {isCurrent && (
+                      <div className="sub-card-current-status-banner">
+                        <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>
+                          check_circle
+                        </span>
+                        <span>Your Firm's Active Subscription</span>
+                      </div>
+                    )}
 
                     <p className="sub-card-subtitle">{plan.subtitle}</p>
 
@@ -686,16 +733,16 @@ export const Subscription: FC<SubscriptionProps> = ({
                         aria-label={`Current plan: ${plan.name}`}
                       >
                         <span className="material-symbols-outlined">check_circle</span>
-                        <span>Current Plan</span>
+                        <span>Current Active Plan</span>
                       </button>
                     ) : (
                       <button
                         type="button"
-                        className="btn-plan-cta solid-blue"
+                        className={`btn-plan-cta ${plan.id === 'free' ? 'outline-secondary' : 'solid-blue'}`}
                         onClick={() => handleSelectPlan(plan)}
                         aria-label={`Select ${plan.name} plan`}
                       >
-                        <span>{plan.buttonText}</span>
+                        <span>{plan.id === 'free' ? 'Downgrade to Free' : plan.buttonText}</span>
                         <span className="material-symbols-outlined btn-cta-arrow">
                           arrow_forward
                         </span>
@@ -738,17 +785,32 @@ export const Subscription: FC<SubscriptionProps> = ({
                   }`}
                 >
                   {/* Top Ribbon Banner */}
-                  {addon.ribbon && (
+                  {isCurrent ? (
+                    <div className="sub-card-ribbon active-current">
+                      <span className="material-symbols-outlined sub-ribbon-icon">
+                        verified
+                      </span>
+                      <span>YOUR CURRENT PLAN{isBestValue ? ' • BEST VALUE' : ''}</span>
+                    </div>
+                  ) : addon.ribbon ? (
                     <div className={`sub-card-ribbon ${addon.ribbon.variant}`}>
                       <span className="material-symbols-outlined sub-ribbon-icon">
                         verified
                       </span>
                       <span>{addon.ribbon.text}</span>
                     </div>
-                  )}
+                  ) : null}
 
                   <div className="sub-card-content">
-                    <span className="sub-card-category">{addon.category}</span>
+                    <div className="sub-card-header-row">
+                      <span className="sub-card-category">{addon.category}</span>
+                      {isCurrent && (
+                        <span className="sub-card-active-pill">
+                          <span className="active-pulse-dot" aria-hidden="true" />
+                          <span>Active Plan</span>
+                        </span>
+                      )}
+                    </div>
 
                     <div className="sub-card-price-row">
                       <span className="sub-card-price-val">{addon.priceDisplay}</span>
@@ -756,6 +818,15 @@ export const Subscription: FC<SubscriptionProps> = ({
                         <span className="sub-card-price-period">{addon.period}</span>
                       )}
                     </div>
+
+                    {isCurrent && (
+                      <div className="sub-card-current-status-banner">
+                        <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>
+                          check_circle
+                        </span>
+                        <span>Your Firm's Active Subscription</span>
+                      </div>
+                    )}
 
                     <p className="sub-card-subtitle">{addon.subtitle}</p>
 
@@ -794,7 +865,7 @@ export const Subscription: FC<SubscriptionProps> = ({
                         aria-label={`Current plan: ${addon.name}`}
                       >
                         <span className="material-symbols-outlined">check_circle</span>
-                        <span>Current Plan</span>
+                        <span>Current Active Plan</span>
                       </button>
                     ) : (
                       <button
@@ -900,6 +971,113 @@ export const Subscription: FC<SubscriptionProps> = ({
             </article>
           </div>
         </section>
+
+        {/* ── 6. THEMED DOWNGRADE CONFIRMATION MODAL ── */}
+        {downgradeModalPlan && (
+          <div
+            className="sub-modal-backdrop"
+            onClick={cancelDowngrade}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="downgrade-modal-title"
+          >
+            <div
+              className="sub-modal-dialog"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="sub-modal-header">
+                <div className="sub-modal-icon-wrap warning">
+                  <span className="material-symbols-outlined">warning</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn-sub-modal-close"
+                  onClick={cancelDowngrade}
+                  aria-label="Close modal"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+
+              <div className="sub-modal-body">
+                <h3 id="downgrade-modal-title" className="sub-modal-title">
+                  Downgrade to Free Plan?
+                </h3>
+                <p className="sub-modal-desc">
+                  Your enterprise is currently subscribed to the{' '}
+                  <strong>
+                    {jobPostingPlans.find((p) => p.id === activePlanId)?.name || 'Professional'} Plan
+                  </strong>
+                  . Switching to Free will adjust your account bandwidth immediately.
+                </p>
+
+                <div className="sub-modal-changes-card">
+                  <div className="sub-modal-change-row">
+                    <div className="change-icon-box">
+                      <span className="material-symbols-outlined">work_outline</span>
+                    </div>
+                    <div className="change-text">
+                      <span className="change-label">Job Posts Quota</span>
+                      <span className="change-value">
+                        Adjusted to <strong>1 Job Post</strong>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="sub-modal-change-row">
+                    <div className="change-icon-box">
+                      <span className="material-symbols-outlined">group</span>
+                    </div>
+                    <div className="change-text">
+                      <span className="change-label">CV Unlocks Quota</span>
+                      <span className="change-value">
+                        Adjusted to <strong>3 CV Unlocks</strong>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="sub-modal-change-row">
+                    <div className="change-icon-box">
+                      <span className="material-symbols-outlined">manage_search</span>
+                    </div>
+                    <div className="change-text">
+                      <span className="change-label">Candidate Discovery</span>
+                      <span className="change-value">
+                        Reverts to Standard Search Filters
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="sub-modal-actions">
+                  <button
+                    type="button"
+                    className="btn-sub-modal-primary"
+                    onClick={cancelDowngrade}
+                    disabled={isDowngrading}
+                  >
+                    Keep {jobPostingPlans.find((p) => p.id === activePlanId)?.name || 'Current'} Plan
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-sub-modal-secondary"
+                    onClick={confirmDowngrade}
+                    disabled={isDowngrading}
+                  >
+                    {isDowngrading ? (
+                      <>
+                        <span className="sub-modal-spinner" />
+                        <span>Downgrading...</span>
+                      </>
+                    ) : (
+                      <span>Confirm Downgrade</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   )

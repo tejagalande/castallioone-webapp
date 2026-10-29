@@ -35,9 +35,9 @@ export const TalentProfile: FC = () => {
   const [chatMessage, setChatMessage] = useState<string>('')
   const [isSendingChat, setIsSendingChat] = useState<boolean>(false)
   const [quota, setQuota] = useState<TalentSearchQuota>({
-    cvUnlockLimit: 50,
+    cvUnlockLimit: 3,
     cvsUnlocked: 0,
-    remainingCvs: 50,
+    remainingCvs: 3,
   })
 
   const showToast = useCallback((msg: string) => {
@@ -65,6 +65,15 @@ export const TalentProfile: FC = () => {
           .maybeSingle()
         if (empData?.company_id) {
           companyId = empData.company_id
+        } else {
+          const { data: comp } = await supabase
+            .from('companies')
+            .select('id')
+            .eq('owner_id', user.id)
+            .maybeSingle()
+          if (comp?.id) {
+            companyId = comp.id
+          }
         }
       }
 
@@ -81,21 +90,57 @@ export const TalentProfile: FC = () => {
           isUnlocked = true
         }
 
-        // Fetch company quota
-        const { data: compQuota } = await supabase
-          .from('companies')
-          .select('cv_unlock_limit, cvs_unlocked')
-          .eq('id', companyId)
+        // Fetch company subscription & authentic CV unlock quota
+        let cvLimit = 3 // default for Free Plan
+        let cvsUsed = 0
+
+        const { data: subData } = await supabase
+          .from('company_subscriptions')
+          .select('plan_id, cvs_unlocked, is_active')
+          .eq('company_id', companyId)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
           .maybeSingle()
-        if (compQuota) {
-          const limit = compQuota.cv_unlock_limit || 50
-          const used = compQuota.cvs_unlocked || 0
-          setQuota({
-            cvUnlockLimit: limit,
-            cvsUnlocked: used,
-            remainingCvs: Math.max(0, limit - used),
-          })
+
+        if (subData) {
+          const planId = (subData.plan_id || 'free').toLowerCase()
+          if (typeof subData.cvs_unlocked === 'number') {
+            cvsUsed = subData.cvs_unlocked
+          }
+
+          if (planId === 'free') cvLimit = 3
+          else if (planId === 'starter') cvLimit = 0
+          else if (planId === 'professional') cvLimit = 0
+          else if (planId === 'unlimited') cvLimit = 500
+          else if (planId === 'starter_cv') cvLimit = 100
+          else if (planId === 'professional_cv') cvLimit = 200
         }
+
+        // Also check if web_get_company_subscription_billing provides details
+        try {
+          const { data: rpcData } = await supabase.rpc('web_get_company_subscription_billing')
+          if (rpcData?.has_company && rpcData?.subscription) {
+            const s = rpcData.subscription
+            if (typeof s.cv_unlock_limit === 'number') {
+              cvLimit = s.cv_unlock_limit
+            } else if (typeof s.plan_cv_limit === 'number') {
+              cvLimit = s.plan_cv_limit
+            }
+            if (typeof s.cvs_unlocked === 'number') {
+              cvsUsed = s.cvs_unlocked
+            }
+          }
+        } catch {
+          // fallback
+        }
+
+        const remaining = Math.max(0, cvLimit - cvsUsed)
+        setQuota({
+          cvUnlockLimit: cvLimit,
+          cvsUnlocked: cvsUsed,
+          remainingCvs: remaining,
+        })
       }
 
       // 2. Fetch candidate profile details
@@ -239,6 +284,15 @@ export const TalentProfile: FC = () => {
           .maybeSingle()
         if (empData?.company_id) {
           companyId = empData.company_id
+        } else {
+          const { data: comp } = await supabase
+            .from('companies')
+            .select('id')
+            .eq('owner_id', user.id)
+            .maybeSingle()
+          if (comp?.id) {
+            companyId = comp.id
+          }
         }
       }
 
@@ -990,9 +1044,9 @@ export const TalentProfile: FC = () => {
                 <p style={{ color: '#7f1d1d', fontSize: '12px', margin: '0 0 8px 0', lineHeight: '1.4' }}>
                   You have 0 CV unlocks remaining this cycle. Please upgrade your subscription to unlock more candidate profiles.
                 </p>
-                <a href="/company-dashboard?tab=subscription" style={{ color: '#00418f', fontSize: '12px', fontWeight: '700', textDecoration: 'underline' }}>
-                  Upgrade Plan →
-                </a>
+                <Link to="/employer/subscription" style={{ color: '#00418f', fontSize: '12px', fontWeight: '700', textDecoration: 'underline' }}>
+                  Upgrade Subscription Plan →
+                </Link>
               </div>
             )}
 

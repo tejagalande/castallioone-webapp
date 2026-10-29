@@ -12,6 +12,7 @@ import './TalentSearch.css'
 
 export interface TalentSearchProps {
   onNavigateToFindJobs?: () => void
+  onNavigateToSubscription?: () => void
 }
 
 const TALENT_SORT_OPTIONS: SortOptionItem<TalentSortOption>[] = [
@@ -53,7 +54,7 @@ const isValidResumeUrl = (url?: string | null): boolean => {
   )
 }
 
-export const TalentSearch: FC<TalentSearchProps> = () => {
+export const TalentSearch: FC<TalentSearchProps> = ({ onNavigateToSubscription }) => {
   const {
     loading,
     semanticSearching,
@@ -1183,7 +1184,17 @@ export const TalentSearch: FC<TalentSearchProps> = () => {
                       <p className="alert-desc">
                         You have 0 CV unlock credits remaining in your current subscription. Upgrade your plan to unlock more candidate profiles and official resumes.
                       </p>
-                      <a href="/company-dashboard?tab=subscription" className="btn-quota-upgrade-link">
+                      <a
+                        href="/employer/subscription"
+                        onClick={(e) => {
+                          if (onNavigateToSubscription) {
+                            e.preventDefault()
+                            setCandidateToUnlock(null)
+                            onNavigateToSubscription()
+                          }
+                        }}
+                        className="btn-quota-upgrade-link"
+                      >
                         Upgrade Subscription Plan →
                       </a>
                     </div>

@@ -62,7 +62,7 @@ export const ENTERPRISE_JOB_PLANS: EnterprisePlan[] = [
       'Basic Search Filters',
       '3 CV Unlocks',
     ],
-    buttonText: 'Current Plan',
+    buttonText: 'Select Free Plan',
     type: 'job_posting',
   },
   {
@@ -204,6 +204,9 @@ export function useSubscription() {
 
   // Selected plan for payment gateway page
   const [selectedPlanForGateway, setSelectedPlanForGateway] = useState<EnterprisePlan | null>(null)
+  // Selected plan for themed downgrade confirmation modal
+  const [downgradeModalPlan, setDowngradeModalPlan] = useState<EnterprisePlan | null>(null)
+  const [isDowngrading, setIsDowngrading] = useState<boolean>(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   const showToast = useCallback((msg: string) => {
@@ -313,15 +316,6 @@ export function useSubscription() {
       isMounted = false
     }
   }, [user?.id])
-
-  // Select a plan to open Payment Gateway page
-  const handleSelectPlan = useCallback((plan: EnterprisePlan) => {
-    if (plan.id === activePlanId) {
-      showToast(`Your enterprise is currently on the ${plan.name} Plan.`)
-      return
-    }
-    setSelectedPlanForGateway(plan)
-  }, [activePlanId, showToast])
 
   // Helper to calculate updated quota usage in memory
   const getUpdatedUsage = useCallback(
@@ -556,6 +550,48 @@ export function useSubscription() {
     }
   }, [companyId, getUpdatedUsage, showToast, user])
 
+  // Select a plan to open Payment Gateway page (or open themed downgrade confirmation modal)
+  const handleSelectPlan = useCallback(
+    (plan: EnterprisePlan) => {
+      if (plan.id === activePlanId) {
+        showToast(`Your enterprise is currently on the ${plan.name} Plan.`)
+        return
+      }
+
+      if (plan.id === 'free') {
+        setDowngradeModalPlan(plan)
+        return
+      }
+
+      setSelectedPlanForGateway(plan)
+    },
+    [activePlanId, showToast]
+  )
+
+  // Confirm downgrade inside themed modal
+  const confirmDowngrade = useCallback(async () => {
+    if (!downgradeModalPlan) return
+    setIsDowngrading(true)
+    try {
+      const res = await handleConfirmSubscription(downgradeModalPlan, 'corporate_invoice')
+      if (res.success) {
+        setActivePlanId('free')
+        showToast('Switched to Free Plan successfully.')
+      }
+    } catch (err) {
+      console.error('Error switching to Free plan:', err)
+      showToast('Could not switch plan. Please try again.')
+    } finally {
+      setIsDowngrading(false)
+      setDowngradeModalPlan(null)
+    }
+  }, [downgradeModalPlan, handleConfirmSubscription, showToast])
+
+  // Cancel downgrade inside themed modal
+  const cancelDowngrade = useCallback(() => {
+    setDowngradeModalPlan(null)
+  }, [])
+
   // Download official GST invoice
   const handleDownloadGstInvoice = useCallback(() => {
     const activePlan = [...ENTERPRISE_JOB_PLANS, ...ENTERPRISE_CV_ADDONS].find(
@@ -613,6 +649,10 @@ export function useSubscription() {
     cvAddons: ENTERPRISE_CV_ADDONS,
     selectedPlanForGateway,
     setSelectedPlanForGateway,
+    downgradeModalPlan,
+    isDowngrading,
+    confirmDowngrade,
+    cancelDowngrade,
     lastTransactionId,
     handleSelectPlan,
     handleConfirmSubscription,
