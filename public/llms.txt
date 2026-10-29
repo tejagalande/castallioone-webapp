@@ -3,20 +3,19 @@
 > Castallio One is an AEC (architecture, engineering and construction) network and hiring platform in India. It lists jobs in BIM, civil, structural, MEP, mechanical, electrical, architecture and construction management across Indian states and cities.
 
 ## Facts
-- Open jobs listed: 8
-- Last updated: 2026-10-28
+- Open jobs listed: 7
+- Last updated: 2026-10-29
 - Coverage: 36 states and union territories, up to 10 cities each
 - Website: https://castallioone.com
 
 ## Jobs by state
-- [Maharashtra](https://castallioone.com/jobs/maharashtra/): 8 jobs
+- [Maharashtra](https://castallioone.com/jobs/maharashtra/): 7 jobs
 
 ## Jobs by role
 - [BIM Engineer jobs in India](https://castallioone.com/jobs/role/bim-engineer/): 2 jobs
 - [BIM Modeler jobs in India](https://castallioone.com/jobs/role/bim-modeler/): 1 job
 - [Structural Engineer jobs in India](https://castallioone.com/jobs/role/structural-engineer/): 2 jobs
 - [HVAC Engineer jobs in India](https://castallioone.com/jobs/role/hvac-engineer/): 1 job
-- [Electrical Engineer jobs in India](https://castallioone.com/jobs/role/electrical-engineer/): 1 job
 - [Architect jobs in India](https://castallioone.com/jobs/role/architect/): 1 job
 
 ## Sitemaps
