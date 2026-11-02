@@ -4,16 +4,18 @@
 
 ## Facts
 - Open jobs listed: 4
-- Last updated: 2026-11-01
+- Last updated: 2026-11-02
 - Coverage: 36 states and union territories, up to 10 cities each
 - Website: https://castallioone.com
 
 ## Jobs by state
-- [Maharashtra](https://castallioone.com/jobs/maharashtra/): 4 jobs
+- [Maharashtra](https://castallioone.com/jobs/maharashtra/): 3 jobs
+- [Tamil Nadu](https://castallioone.com/jobs/tamil-nadu/): 1 job
 
 ## Jobs by role
+- [BIM Engineer jobs in India](https://castallioone.com/jobs/role/bim-engineer/): 1 job
 - [BIM Modeler jobs in India](https://castallioone.com/jobs/role/bim-modeler/): 2 jobs
-- [Structural Engineer jobs in India](https://castallioone.com/jobs/role/structural-engineer/): 2 jobs
+- [Structural Engineer jobs in India](https://castallioone.com/jobs/role/structural-engineer/): 1 job
 
 ## Sitemaps
 - [Sitemap Index](https://castallioone.com/sitemap-index.xml)
