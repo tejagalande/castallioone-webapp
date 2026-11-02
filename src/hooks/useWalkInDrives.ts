@@ -436,6 +436,15 @@ export function useWalkInDrives() {
 
       if (error) throw error
 
+      interface RawCompany {
+        id: string
+        name: string
+        logo_url: string | null
+        office_address: string | null
+        email?: string | null
+        website?: string | null
+      }
+
       interface RawDriveRow {
         id: string
         company_id: string
@@ -453,38 +462,34 @@ export function useWalkInDrives() {
         created_at?: string | null
         company_email?: string | null
         company_website?: string | null
-        companies?: {
-          id: string
-          name: string
-          logo_url: string | null
-          office_address: string | null
-          email?: string | null
-          website?: string | null
-        } | null
+        companies?: RawCompany | RawCompany[] | null
       }
 
-      const rawList = (data as RawDriveRow[]) || []
-      const mapped: WalkInDriveItem[] = rawList.map((row) => ({
-        id: row.id,
-        company_id: row.company_id,
-        posted_by: row.posted_by,
-        title: row.title,
-        date_time: row.date_time,
-        location: row.location,
-        number_of_openings: row.number_of_openings,
-        primary_role: row.primary_role,
-        required_skills: row.required_skills,
-        description: row.description,
-        status: row.status,
-        is_urgent: row.is_urgent,
-        applicants_count: row.applicants_count,
-        created_at: row.created_at,
-        company_name: row.companies?.name || 'AEC Enterprise Firm',
-        company_logo: row.companies?.logo_url || null,
-        company_address: row.companies?.office_address || row.location,
-        company_email: row.company_email || row.companies?.email || null,
-        company_website: row.company_website || row.companies?.website || null,
-      }))
+      const rawList = (data as unknown as RawDriveRow[]) || []
+      const mapped: WalkInDriveItem[] = rawList.map((row) => {
+        const comp = Array.isArray(row.companies) ? row.companies[0] : row.companies
+        return {
+          id: row.id,
+          company_id: row.company_id,
+          posted_by: row.posted_by,
+          title: row.title,
+          date_time: row.date_time,
+          location: row.location,
+          number_of_openings: row.number_of_openings,
+          primary_role: row.primary_role,
+          required_skills: row.required_skills,
+          description: row.description,
+          status: row.status,
+          is_urgent: row.is_urgent,
+          applicants_count: row.applicants_count,
+          created_at: row.created_at,
+          company_name: comp?.name || 'AEC Enterprise Firm',
+          company_logo: comp?.logo_url || null,
+          company_address: comp?.office_address || row.location,
+          company_email: row.company_email || comp?.email || null,
+          company_website: row.company_website || comp?.website || null,
+        }
+      })
 
       setPublicDrives(mapped)
     } catch (err: unknown) {
