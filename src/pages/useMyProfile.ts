@@ -678,11 +678,14 @@ export function useMyProfile() {
       let studentProfileId: string | null = null
       let spData: StudentProfileRow | null = null
 
-      // 2. Query Supabase student_profile directly
+      const STUDENT_PROFILE_COLUMNS =
+        'id, user_id, full_name, bio, email, phone, location, institution, discipline, graduation_year, work_mode, preferred_location, relocation_preference, availability, employment_type, expected_ctc, notice_period, portfolio_url, linkedin_url, profile_image_url, resume_file_url'
+
+      // 2. Query Supabase student_profile directly (explicit columns, excluding large embedding vector)
       if (resolvedUserId) {
         const { data: userSp, error: spErr } = await supabase
           .from('student_profile')
-          .select('*')
+          .select(STUDENT_PROFILE_COLUMNS)
           .or(`user_id.eq.${resolvedUserId},id.eq.${resolvedUserId}`)
           .maybeSingle()
 
@@ -695,7 +698,7 @@ export function useMyProfile() {
       if (!spData) {
         const { data: latestSp, error: latestErr } = await supabase
           .from('student_profile')
-          .select('*')
+          .select(STUDENT_PROFILE_COLUMNS)
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle()
@@ -775,16 +778,29 @@ export function useMyProfile() {
         }
       }
 
-      // 3. Query Skills from student_skills table
+      // 3. Query Skills, Experience, and Certificates in parallel
       const profileLookupId = studentProfileId || resolvedUserId
       let loadedSkills: SoftwareSkill[] = []
+      const loadedCreds: CredentialItem[] = []
 
       if (profileLookupId) {
-        const { data: skillsData } = await supabase
-          .from('student_skills')
-          .select('skills')
-          .or(`student_id.eq.${profileLookupId},student_id.eq.${resolvedUserId}`)
-          .maybeSingle()
+        const [{ data: skillsData }, { data: expRows }, { data: certRows }] = await Promise.all([
+          supabase
+            .from('student_skills')
+            .select('skills')
+            .or(`student_id.eq.${profileLookupId},student_id.eq.${resolvedUserId}`)
+            .maybeSingle(),
+          supabase
+            .from('student_experience')
+            .select('id, role_title, organization_name, contributions, start_date, end_date')
+            .or(`student_id.eq.${profileLookupId},student_id.eq.${resolvedUserId}`)
+            .order('start_date', { ascending: false }),
+          supabase
+            .from('certificates')
+            .select('id, title, organization, issue_date, certificate_path')
+            .or(`student_id.eq.${profileLookupId},student_id.eq.${resolvedUserId}`)
+            .order('created_at', { ascending: false }),
+        ])
 
         if (skillsData && Array.isArray(skillsData.skills)) {
           loadedSkills = skillsData.skills.map((item, idx) => {
@@ -847,6 +863,48 @@ export function useMyProfile() {
             }
           })
         }
+
+        if (expRows && expRows.length > 0) {
+          const parsedExps: ExperienceMilestone[] = expRows.map((e, index) => {
+            const startYear = e.start_date ? new Date(e.start_date).getFullYear() : 'Active'
+            const endYear = e.end_date ? new Date(e.end_date).getFullYear() : 'Present'
+            const periodStr = `${startYear} — ${endYear}`
+
+            return {
+              id: e.id,
+              role: e.role_title || 'AEC Specialist',
+              company: e.organization_name || 'Design Practice',
+              period: periodStr,
+              location: 'India / Global Delivery',
+              description:
+                e.contributions ||
+                'Directed architectural model federation, BIM coordination matrices, and multidisciplinary clash sign-offs.',
+              tags: ['Federated Coordination', 'BIM Delivery', 'Trade Matrix'],
+              active: index === 0 && !e.end_date,
+              startDate: e.start_date,
+              endDate: e.end_date,
+            }
+          })
+          setExperiences(parsedExps)
+
+          // Calculate total active years
+          const yearsCount = Math.max(1, expRows.length * 2)
+          workingProfile.experienceYears = `${yearsCount}+ Years Industry Experience`
+        }
+
+        if (certRows && certRows.length > 0) {
+          certRows.forEach((c) => {
+            loadedCreds.push({
+              id: c.id,
+              title: c.title,
+              issuer: `${c.organization}${c.issue_date ? ` · ${c.issue_date}` : ''}`,
+              verified: true,
+              issueDate: c.issue_date || undefined,
+              fileUrl: c.certificate_path || undefined,
+            })
+          })
+          setCredentials(loadedCreds)
+        }
       }
 
       // If user profile has no registered skills yet, initialize verified standard stack
@@ -897,67 +955,6 @@ export function useMyProfile() {
             category: 'soft',
           })
         })
-      }
-
-      // 4. Query Experience from student_experience table
-      if (profileLookupId) {
-        const { data: expRows } = await supabase
-          .from('student_experience')
-          .select('*')
-          .or(`student_id.eq.${profileLookupId},student_id.eq.${resolvedUserId}`)
-          .order('start_date', { ascending: false })
-
-        if (expRows && expRows.length > 0) {
-          const parsedExps: ExperienceMilestone[] = expRows.map((e, index) => {
-            const startYear = e.start_date ? new Date(e.start_date).getFullYear() : 'Active'
-            const endYear = e.end_date ? new Date(e.end_date).getFullYear() : 'Present'
-            const periodStr = `${startYear} — ${endYear}`
-
-            return {
-              id: e.id,
-              role: e.role_title || 'AEC Specialist',
-              company: e.organization_name || 'Design Practice',
-              period: periodStr,
-              location: 'India / Global Delivery',
-              description:
-                e.contributions ||
-                'Directed architectural model federation, BIM coordination matrices, and multidisciplinary clash sign-offs.',
-              tags: ['Federated Coordination', 'BIM Delivery', 'Trade Matrix'],
-              active: index === 0 && !e.end_date,
-              startDate: e.start_date,
-              endDate: e.end_date,
-            }
-          })
-          setExperiences(parsedExps)
-
-          // Calculate total active years
-          const yearsCount = Math.max(1, expRows.length * 2)
-          workingProfile.experienceYears = `${yearsCount}+ Years Industry Experience`
-        }
-      }
-
-      // 5. Query Certificates from certificates table
-      const loadedCreds: CredentialItem[] = []
-      if (profileLookupId) {
-        const { data: certRows } = await supabase
-          .from('certificates')
-          .select('*')
-          .or(`student_id.eq.${profileLookupId},student_id.eq.${resolvedUserId}`)
-          .order('created_at', { ascending: false })
-
-        if (certRows && certRows.length > 0) {
-          certRows.forEach((c) => {
-            loadedCreds.push({
-              id: c.id,
-              title: c.title,
-              issuer: `${c.organization}${c.issue_date ? ` · ${c.issue_date}` : ''}`,
-              verified: true,
-              issueDate: c.issue_date || undefined,
-              fileUrl: c.certificate_path || undefined,
-            })
-          })
-          setCredentials(loadedCreds)
-        }
       }
 
       // 6. Assemble Verified Documents from real resume & certificates

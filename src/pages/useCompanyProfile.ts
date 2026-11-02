@@ -211,7 +211,9 @@ export function useCompanyProfile() {
         // Fallback to direct table query
         const { data: tableData, error: tableError } = await supabase
           .from('companies')
-          .select('*')
+          .select(
+            'id, owner_id, name, size, website, email, hr_contact_email, establishment_year, office_address, linkedin_url, description, logo_url, gst_number, certificate_type, certificate_link, pan_card_link, is_profile_complete, is_draft, created_at, updated_at'
+          )
           .eq('owner_id', user.id)
           .maybeSingle()
 
@@ -587,7 +589,7 @@ export function useCompanyProfile() {
         const { data: tableData, error: tableError } = await supabase
           .from('companies')
           .upsert(fallbackPayload, { onConflict: 'owner_id' })
-          .select()
+          .select('id, updated_at')
           .single()
 
         if (tableError) {

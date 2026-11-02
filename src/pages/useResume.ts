@@ -138,7 +138,7 @@ export function useResumeManagement() {
 
         const { data: student } = await supabase
           .from('student_profile')
-          .select('*')
+          .select('id, full_name, discipline, location, email, phone')
           .or(`user_id.eq.${user.id},id.eq.${user.id}`)
           .maybeSingle()
 
@@ -155,11 +155,23 @@ export function useResumeManagement() {
           }))
         }
 
-        // Skills
-        const { data: skillsRows } = await supabase
-          .from('student_skills')
-          .select('skill_name, category')
-          .or(`student_id.eq.${studentId},student_id.eq.${user.id}`)
+        // Parallelize Skills, Experiences, and Education queries
+        const [{ data: skillsRows }, { data: expRows }, { data: eduRows }] = await Promise.all([
+          supabase
+            .from('student_skills')
+            .select('skill_name, category')
+            .or(`student_id.eq.${studentId},student_id.eq.${user.id}`),
+          supabase
+            .from('student_experience')
+            .select('id, role_title, organization_name, start_date, end_date, contributions')
+            .or(`student_id.eq.${studentId},student_id.eq.${user.id}`)
+            .order('start_date', { ascending: false }),
+          supabase
+            .from('student_education')
+            .select('id, degree, institution_name, start_year, end_year')
+            .or(`student_id.eq.${studentId},student_id.eq.${user.id}`)
+            .order('start_year', { ascending: false }),
+        ])
 
         if (skillsRows && skillsRows.length > 0) {
           setProfile((prev) => ({
@@ -167,13 +179,6 @@ export function useResumeManagement() {
             skills: skillsRows.map((s) => s.skill_name),
           }))
         }
-
-        // Experiences
-        const { data: expRows } = await supabase
-          .from('student_experience')
-          .select('*')
-          .or(`student_id.eq.${studentId},student_id.eq.${user.id}`)
-          .order('start_date', { ascending: false })
 
         if (expRows && expRows.length > 0) {
           setProfile((prev) => ({
@@ -187,13 +192,6 @@ export function useResumeManagement() {
             })),
           }))
         }
-
-        // Education
-        const { data: eduRows } = await supabase
-          .from('student_education')
-          .select('*')
-          .or(`student_id.eq.${studentId},student_id.eq.${user.id}`)
-          .order('start_year', { ascending: false })
 
         if (eduRows && eduRows.length > 0) {
           setProfile((prev) => ({

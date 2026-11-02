@@ -250,7 +250,7 @@ export function useNotifications() {
       if (resolvedUserId) {
         const { data: dbData, error } = await supabase
           .from('notifications')
-          .select('*')
+          .select('id, user_id, title, body, type, is_read, metadata, created_at, job_id, visible_at')
           .eq('user_id', resolvedUserId)
           .lte('visible_at', new Date().toISOString())
           .order('created_at', { ascending: false })

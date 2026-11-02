@@ -252,33 +252,6 @@ export function useSavedJobs(options?: UseSavedJobsOptions) {
         }
       }
 
-      if (resolvedUserId) {
-        // Fetch user's applied jobs from Supabase
-        const { data: userApps } = await supabase
-          .from('job_applications')
-          .select('job_id')
-          .eq('candidate_id', resolvedUserId)
-
-        if (userApps && userApps.length > 0) {
-          const dbAppliedIds = userApps.map((a) => a.job_id).filter(Boolean)
-          const mergedApplied = Array.from(new Set([...cachedApplied, ...dbAppliedIds]))
-          setInternalAppliedJobIds(mergedApplied)
-          localStorage.setItem('castallio_applied_jobs', JSON.stringify(mergedApplied))
-        } else {
-          setInternalAppliedJobIds(cachedApplied)
-        }
-      } else {
-        setInternalAppliedJobIds(cachedApplied)
-      }
-
-      const candidateProfileForFit = {
-        discipline: candidateDiscipline,
-        specificSkill: candidateSpecificSkill,
-        skills: candidateSkillsList,
-        workMode: candidateWorkMode,
-      }
-
-      // 3. Query saved_jobs rows from Supabase
       let savedRows: Array<{
         id: string
         user_id: string
@@ -289,15 +262,40 @@ export function useSavedJobs(options?: UseSavedJobsOptions) {
       }> = []
 
       if (resolvedUserId) {
-        const { data: dbSaved, error: savedError } = await supabase
-          .from('saved_jobs')
-          .select('*')
-          .eq('user_id', resolvedUserId)
-          .order('created_at', { ascending: false })
+        // Fetch user's applied jobs and saved_jobs rows from Supabase in parallel
+        const [{ data: userApps }, { data: dbSaved, error: savedError }] = await Promise.all([
+          supabase
+            .from('job_applications')
+            .select('job_id')
+            .eq('candidate_id', resolvedUserId),
+          supabase
+            .from('saved_jobs')
+            .select('id, user_id, job_id, drive_id, item_type, created_at')
+            .eq('user_id', resolvedUserId)
+            .order('created_at', { ascending: false }),
+        ])
+
+        if (userApps && userApps.length > 0) {
+          const dbAppliedIds = userApps.map((a) => a.job_id).filter(Boolean)
+          const mergedApplied = Array.from(new Set([...cachedApplied, ...dbAppliedIds]))
+          setInternalAppliedJobIds(mergedApplied)
+          localStorage.setItem('castallio_applied_jobs', JSON.stringify(mergedApplied))
+        } else {
+          setInternalAppliedJobIds(cachedApplied)
+        }
 
         if (!savedError && dbSaved) {
           savedRows = dbSaved
         }
+      } else {
+        setInternalAppliedJobIds(cachedApplied)
+      }
+
+      const candidateProfileForFit = {
+        discipline: candidateDiscipline,
+        specificSkill: candidateSpecificSkill,
+        skills: candidateSkillsList,
+        workMode: candidateWorkMode,
       }
 
       // Local storage saved jobs IDs
@@ -320,50 +318,48 @@ export function useSavedJobs(options?: UseSavedJobsOptions) {
         .filter((r) => r.item_type === 'drive' && r.drive_id)
         .map((r) => r.drive_id as string)
 
-      // 4. Fetch job details from `create_job_post`
+      // 4. Fetch job details from `create_job_post` (explicit columns, excluding embedding vector)
       let fetchedJobs: SavedJobItem[] = []
       if (targetJobIds.length > 0) {
         const { data: jobPosts, error: postErr } = await supabase
           .from('create_job_post')
-          .select('*')
+          .select(
+            'id, company_id, title, category, project_type, project_types, experience, work_type, location, locations, employment_type, salary_min, salary_max, salary_period, number_of_openings, job_description, technical_requirements, responsibilities, about_us, status, created_at, expires_at'
+          )
           .in('id', targetJobIds)
 
         if (!postErr && jobPosts && jobPosts.length > 0) {
           const compIds = Array.from(new Set(jobPosts.map((j) => j.company_id).filter(Boolean)))
           const companiesMap: Record<string, { name: string; logo_url?: string }> = {}
+          const backendSimilarityMap: Record<string, number> = {}
 
-          if (compIds.length > 0) {
-            const { data: compRows } = await supabase
-              .from('companies')
-              .select('id, name, logo_url')
-              .in('id', compIds)
-            if (compRows) {
-              compRows.forEach((c) => {
-                companiesMap[c.id] = { name: c.name, logo_url: c.logo_url || undefined }
-              })
-            }
+          const [{ data: compRows }, rpcSimRes] = await Promise.all([
+            compIds.length > 0
+              ? supabase.from('companies').select('id, name, logo_url').in('id', compIds)
+              : Promise.resolve({ data: null }),
+            resolvedUserId
+              ? supabase
+                  .rpc('match_jobs_for_talent', {
+                    p_student_id: resolvedUserId,
+                    p_match_threshold: 0.0,
+                    p_match_count: 50,
+                  })
+                  .then((res) => res, () => ({ data: null }))
+              : Promise.resolve({ data: null }),
+          ])
+
+          if (compRows) {
+            compRows.forEach((c) => {
+              companiesMap[c.id] = { name: c.name, logo_url: c.logo_url || undefined }
+            })
           }
 
-          // Query Backend similarity scores from match_jobs_for_talent RPC if student profile exists
-          const backendSimilarityMap: Record<string, number> = {}
-          if (resolvedUserId) {
-            try {
-              const { data: rpcData } = await supabase.rpc('match_jobs_for_talent', {
-                p_student_id: resolvedUserId,
-                p_match_threshold: 0.0,
-                p_match_count: 50,
-              })
-
-              if (rpcData && Array.isArray(rpcData)) {
-                rpcData.forEach((row: { job_id: string; similarity: number }) => {
-                  if (row.job_id && typeof row.similarity === 'number') {
-                    backendSimilarityMap[row.job_id] = Math.min(99, Math.max(50, Math.round(row.similarity * 100)))
-                  }
-                })
+          if (rpcSimRes?.data && Array.isArray(rpcSimRes.data)) {
+            rpcSimRes.data.forEach((row: { job_id: string; similarity: number }) => {
+              if (row.job_id && typeof row.similarity === 'number') {
+                backendSimilarityMap[row.job_id] = Math.min(99, Math.max(50, Math.round(row.similarity * 100)))
               }
-            } catch {
-              // Fallback
-            }
+            })
           }
 
           fetchedJobs = jobPosts.map((j, idx) => {
@@ -473,7 +469,9 @@ export function useSavedJobs(options?: UseSavedJobsOptions) {
       if (dbDriveIds.length > 0) {
         const { data: driveRows, error: driveErr } = await supabase
           .from('walk_in_drives')
-          .select('*')
+          .select(
+            'id, company_id, title, location, date_time, number_of_openings, required_skills, is_urgent, status, created_at'
+          )
           .in('id', dbDriveIds)
 
         if (!driveErr && driveRows && driveRows.length > 0) {
@@ -494,7 +492,7 @@ export function useSavedJobs(options?: UseSavedJobsOptions) {
 
           fetchedDrives = driveRows.map((d) => {
             const matchingRow = savedRows.find((r) => r.drive_id === d.id)
-            const compName = driveCompaniesMap[d.company_id] || d.company_name || 'AEC Studio'
+            const compName = driveCompaniesMap[d.company_id] || 'AEC Studio'
 
             let dateFormatted = 'Date TBD'
             if (d.date_time) {

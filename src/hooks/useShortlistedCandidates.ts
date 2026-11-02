@@ -178,7 +178,7 @@ export function useShortlistedCandidates() {
       if (!rpcSucceeded || allApplicants.length === 0) {
         let appsQuery = supabase
           .from('job_applications')
-          .select('*')
+          .select('id, job_id, company_id, candidate_id, status, is_starred, applied_at, updated_at, rejection_reason')
           .order('applied_at', { ascending: false })
 
         if (cId) {
@@ -190,85 +190,90 @@ export function useShortlistedCandidates() {
         if (!dbAppsErr && dbApps && Array.isArray(dbApps) && dbApps.length > 0) {
           const candidateIds = Array.from(new Set(dbApps.map((a) => a.candidate_id).filter(Boolean)))
           const jobIds = Array.from(new Set(dbApps.map((a) => a.job_id).filter(Boolean)))
+          const appIds = dbApps.map((a) => a.id)
 
           const jobsMap: Record<string, Record<string, unknown>> = {}
-          if (jobIds.length > 0) {
-            const { data: dbJobs } = await supabase
-              .from('create_job_post')
-              .select('id, title, location, category, employment_type')
-              .in('id', jobIds)
-            if (dbJobs) {
-              dbJobs.forEach((j) => {
-                jobsMap[j.id] = j
-              })
-            }
-          }
-
           const candidatesMap: Record<string, Record<string, unknown>> = {}
           const skillsMap: Record<string, unknown[]> = {}
           const expsMap: Record<string, unknown[]> = {}
+          const ivMap: Record<string, unknown[]> = {}
 
-          if (candidateIds.length > 0) {
-            const { data: students } = await supabase
-              .from('student_profile')
-              .select('*')
-              .or(`user_id.in.(${candidateIds.join(',')}),id.in.(${candidateIds.join(',')})`)
+          const [{ data: dbJobs }, { data: students }, { data: ivs }] = await Promise.all([
+            jobIds.length > 0
+              ? supabase
+                  .from('create_job_post')
+                  .select('id, title, location, category, employment_type')
+                  .in('id', jobIds)
+              : Promise.resolve({ data: null }),
+            candidateIds.length > 0
+              ? supabase
+                  .from('student_profile')
+                  .select(
+                    'id, user_id, full_name, bio, email, phone, location, institution, discipline, graduation_year, portfolio_url, profile_image_url, resume_file_url, work_mode, expected_ctc, notice_period, linkedin_url'
+                  )
+                  .or(`user_id.in.(${candidateIds.join(',')}),id.in.(${candidateIds.join(',')})`)
+              : Promise.resolve({ data: null }),
+            appIds.length > 0
+              ? supabase
+                  .from('interviews')
+                  .select(
+                    'id, job_application_id, interview_date, interview_time, interview_type, location_type, location_value, status'
+                  )
+                  .in('job_application_id', appIds)
+              : Promise.resolve({ data: null }),
+          ])
 
-            if (students && Array.isArray(students)) {
-              const studentProfileIds: string[] = []
-              students.forEach((st) => {
-                if (st.user_id) candidatesMap[st.user_id] = st
-                if (st.id) {
-                  candidatesMap[st.id] = st
-                  studentProfileIds.push(st.id)
-                }
-              })
+          if (dbJobs) {
+            dbJobs.forEach((j) => {
+              jobsMap[j.id] = j
+            })
+          }
 
-              const profileIds = Array.from(new Set([...studentProfileIds, ...candidateIds]))
+          if (students && Array.isArray(students)) {
+            const studentProfileIds: string[] = []
+            students.forEach((st) => {
+              if (st.user_id) candidatesMap[st.user_id] = st
+              if (st.id) {
+                candidatesMap[st.id] = st
+                studentProfileIds.push(st.id)
+              }
+            })
 
-              if (profileIds.length > 0) {
-                const { data: skillsData } = await supabase
+            const profileIds = Array.from(new Set([...studentProfileIds, ...candidateIds]))
+
+            if (profileIds.length > 0) {
+              const [{ data: skillsData }, { data: expsData }] = await Promise.all([
+                supabase
                   .from('student_skills')
-                  .select('*')
-                  .in('student_id', profileIds)
-
-                if (skillsData && Array.isArray(skillsData)) {
-                  skillsData.forEach((sk) => {
-                    skillsMap[sk.student_id] = sk.skills || []
-                  })
-                }
-
-                const { data: expsData } = await supabase
+                  .select('student_id, skills')
+                  .in('student_id', profileIds),
+                supabase
                   .from('student_experience')
-                  .select('*')
+                  .select('id, student_id, role_title, organization_name, contributions, start_date, end_date')
                   .in('student_id', profileIds)
-                  .order('start_date', { ascending: false })
+                  .order('start_date', { ascending: false }),
+              ])
 
-                if (expsData && Array.isArray(expsData)) {
-                  expsData.forEach((exp) => {
-                    if (!expsMap[exp.student_id]) expsMap[exp.student_id] = []
-                    expsMap[exp.student_id].push(exp)
-                  })
-                }
+              if (skillsData && Array.isArray(skillsData)) {
+                skillsData.forEach((sk) => {
+                  skillsMap[sk.student_id] = sk.skills || []
+                })
+              }
+
+              if (expsData && Array.isArray(expsData)) {
+                expsData.forEach((exp) => {
+                  if (!expsMap[exp.student_id]) expsMap[exp.student_id] = []
+                  expsMap[exp.student_id].push(exp)
+                })
               }
             }
           }
 
-          // Fetch interviews
-          const appIds = dbApps.map((a) => a.id)
-          const ivMap: Record<string, unknown[]> = {}
-          if (appIds.length > 0) {
-            const { data: ivs } = await supabase
-              .from('interviews')
-              .select('*')
-              .in('job_application_id', appIds)
-
-            if (ivs && Array.isArray(ivs)) {
-              ivs.forEach((iv) => {
-                if (!ivMap[iv.job_application_id]) ivMap[iv.job_application_id] = []
-                ivMap[iv.job_application_id].push(iv)
-              })
-            }
+          if (ivs && Array.isArray(ivs)) {
+            ivs.forEach((iv) => {
+              if (!ivMap[iv.job_application_id]) ivMap[iv.job_application_id] = []
+              ivMap[iv.job_application_id].push(iv)
+            })
           }
 
           allApplicants = dbApps.map((a) => {
@@ -622,7 +627,7 @@ export function useShortlistedCandidates() {
             location_value: payload.locationValue,
             status: 'scheduled',
           })
-          .select()
+          .select('id')
           .single()
 
         if (error) {

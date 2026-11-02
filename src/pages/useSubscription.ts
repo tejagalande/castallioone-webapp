@@ -277,17 +277,18 @@ export function useSubscription() {
             setCompanyGstin(comp.gst_number)
           }
 
-          const liveQuota = await getCompanyJobQuota(comp.id, user.id)
+          const [liveQuota, { data: sub }] = await Promise.all([
+            getCompanyJobQuota(comp.id, user.id),
+            supabase
+              .from('company_subscriptions')
+              .select('id, plan_id, cvs_unlocked, jobs_posted, started_at, expires_at, is_active')
+              .eq('company_id', comp.id)
+              .eq('is_active', true)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle(),
+          ])
           if (!isMounted) return
-
-          const { data: sub } = await supabase
-            .from('company_subscriptions')
-            .select('*')
-            .eq('company_id', comp.id)
-            .eq('is_active', true)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
 
           if (isMounted) {
             setActivePlanId(sub?.plan_id || liveQuota.planId || 'free')

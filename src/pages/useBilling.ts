@@ -234,15 +234,22 @@ export const useBilling = () => {
             billingAddress: comp.office_address || prev.billingAddress || '',
           }))
 
-          // Also check active subscription from company_subscriptions
-          const { data: sub } = await supabase
-            .from('company_subscriptions')
-            .select('*, subscription_plans(name, price_inr)')
-            .eq('company_id', comp.id)
-            .eq('is_active', true)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
+          // Fetch active subscription and transactions in parallel if RPC didn't return them
+          const [{ data: sub }, { data: dbTxns }] = await Promise.all([
+            supabase
+              .from('company_subscriptions')
+              .select('id, plan_id, expires_at, is_active, subscription_plans(name, price_inr)')
+              .eq('company_id', comp.id)
+              .eq('is_active', true)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle(),
+            supabase
+              .from('subscription_transactions')
+              .select('id, plan_id, transaction_id, razorpay_payment_id, purchased_at, created_at, raw_event')
+              .eq('company_id', comp.id)
+              .order('purchased_at', { ascending: false }),
+          ])
 
           if (isMounted && sub) {
             const subTyped = sub as unknown as SubWithPlan
@@ -263,13 +270,6 @@ export const useBilling = () => {
               }
             }
           }
-
-          // Also fetch transactions directly if RPC didn't return them
-          const { data: dbTxns } = await supabase
-            .from('subscription_transactions')
-            .select('*')
-            .eq('company_id', comp.id)
-            .order('purchased_at', { ascending: false })
 
           if (!isMounted) return
 

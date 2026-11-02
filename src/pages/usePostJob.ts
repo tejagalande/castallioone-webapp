@@ -420,7 +420,9 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
       try {
         const { data, error } = await supabase
           .from('create_job_post')
-          .select('*')
+          .select(
+            'id, title, category, project_type, project_types, experience, work_type, location, locations, employment_type, salary_min, salary_max, salary_period, number_of_openings, job_description, technical_requirements, responsibilities, about_us, status'
+          )
           .eq('id', jobIdToEdit)
           .single()
 
@@ -583,38 +585,36 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
       try {
         setIsTalentLoading(true)
 
-        // 1. Fetch total count of verified talent profiles
-        const { count: totalCount } = await supabase
+        // 1 & 2. Fetch total count and matching candidates in parallel (excluding 1536-dim embedding vector)
+        const filterCategory = category.trim()
+        let matchQuery = supabase
           .from('student_profile')
-          .select('id', { count: 'exact', head: true })
+          .select('id, user_id, full_name, discipline, location, work_mode')
           .not('full_name', 'is', null)
           .neq('full_name', '')
+
+        if (filterCategory) {
+          matchQuery = matchQuery.or(`discipline.ilike.%${filterCategory}%,search_text.ilike.%${filterCategory}%`)
+        }
+
+        const [{ count: totalCount }, { data: matchedRows }] = await Promise.all([
+          supabase
+            .from('student_profile')
+            .select('id', { count: 'exact', head: true })
+            .not('full_name', 'is', null)
+            .neq('full_name', ''),
+          matchQuery.order('created_at', { ascending: false }).limit(8),
+        ])
 
         if (isMounted && typeof totalCount === 'number' && totalCount > 0) {
           setTotalCandidateCount(totalCount)
         }
 
-        // 2. Fetch candidates matching category / title if provided, or top active candidates
-        let query = supabase
-          .from('student_profile')
-          .select('id, user_id, full_name, discipline, location, work_mode, embedding')
-          .not('full_name', 'is', null)
-          .neq('full_name', '')
-
-        const filterCategory = category.trim()
-        if (filterCategory) {
-          query = query.or(`discipline.ilike.%${filterCategory}%,search_text.ilike.%${filterCategory}%`)
-        }
-
-        const { data: matchedRows } = await query
-          .order('created_at', { ascending: false })
-          .limit(8)
-
         const finalProfiles = matchedRows ? [...matchedRows] : []
-        if (finalProfiles.length < 3) {
+        if (finalProfiles.length < 3 && filterCategory) {
           const { data: fallbackRows } = await supabase
             .from('student_profile')
-            .select('id, user_id, full_name, discipline, location, work_mode, embedding')
+            .select('id, user_id, full_name, discipline, location, work_mode')
             .not('full_name', 'is', null)
             .neq('full_name', '')
             .order('created_at', { ascending: false })
@@ -672,7 +672,7 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
             displaySkills = p.discipline || (p.location ? `${p.location}` : 'AEC Modeling • Coordination')
           }
 
-          const baseScore = p.embedding ? 96 : 89
+          const baseScore = 96
           const fit = Math.max(84, baseScore - idx * 3)
 
           return {
@@ -704,7 +704,7 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
     return () => {
       isMounted = false
     }
-  }, [category, title])
+  }, [category])
 
   // Runtime field-level validation function
   const validateSingleField = useCallback((field: keyof PostJobFormData, val?: unknown): string => {
@@ -1397,7 +1397,7 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
           .from('create_job_post')
           .update(updatePayload)
           .eq('id', jobIdToEdit)
-          .select()
+          .select('id, title, category, job_description, technical_requirements, location, experience')
           .single()
 
         if (updateError) {
@@ -1494,7 +1494,7 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
       const { data: insertedJob, error: insertError } = await supabase
         .from('create_job_post')
         .insert(payload)
-        .select()
+        .select('id, title, category, job_description, technical_requirements, location, experience')
         .single()
 
       if (insertError) {

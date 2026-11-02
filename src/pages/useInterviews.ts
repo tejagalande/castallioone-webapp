@@ -84,33 +84,34 @@ export function useInterviews() {
         return
       }
 
-      // 1. Resolve Company (for employer account)
+      // 1 & 2. Resolve Company (for employer account) and Student Profile (for talent account) in parallel
       let cId = user.user_metadata?.company_id || null
       let cName = user.user_metadata?.company_name || null
 
-      if (!cId) {
-        const { data: comp } = await supabase
-          .from('companies')
-          .select('id, name')
-          .or(`owner_id.eq.${user.id},id.eq.${user.id}`)
-          .maybeSingle()
-        if (comp) {
-          cId = comp.id
-          if (!cName) cName = comp.name
-        }
+      const [compRes, { data: student }] = await Promise.all([
+        !cId
+          ? supabase
+              .from('companies')
+              .select('id, name')
+              .or(`owner_id.eq.${user.id},id.eq.${user.id}`)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+        supabase
+          .from('student_profile')
+          .select('id, user_id, full_name, discipline, profile_image_url')
+          .or(`user_id.eq.${user.id},id.eq.${user.id}`)
+          .maybeSingle(),
+      ])
+
+      if (compRes.data) {
+        cId = compRes.data.id
+        if (!cName) cName = compRes.data.name
       }
 
       const isEmployer = !!cId
       if (isMounted) {
         setUserRole(isEmployer ? 'employer' : 'talent')
       }
-
-      // 2. Resolve Student Profile (for talent account)
-      const { data: student } = await supabase
-        .from('student_profile')
-        .select('id, user_id, full_name, discipline, profile_image_url')
-        .or(`user_id.eq.${user.id},id.eq.${user.id}`)
-        .maybeSingle()
 
       // 3. Find jobs posted by this company or user
       let jobIds: string[] = []
@@ -127,39 +128,37 @@ export function useInterviews() {
         })
       }
 
-      // 4. Find job applications related to these jobs or submitted by this student
+      // 4. Find job applications related to these jobs or submitted by this student in parallel
       const appIds: string[] = []
       const appsCandidateMap: Record<string, string> = {}
       const appsJobMap: Record<string, string> = {}
 
-      if (jobIds.length > 0) {
-        const { data: apps } = await supabase
-          .from('job_applications')
-          .select('id, job_id, candidate_id')
-          .in('job_id', jobIds)
+      const [appsRes, studentAppsRes] = await Promise.all([
+        jobIds.length > 0
+          ? supabase.from('job_applications').select('id, job_id, candidate_id').in('job_id', jobIds)
+          : Promise.resolve({ data: null }),
+        student
+          ? supabase
+              .from('job_applications')
+              .select('id, job_id, candidate_id')
+              .or(`candidate_id.eq.${user.id},candidate_id.eq.${student.id}`)
+          : Promise.resolve({ data: null }),
+      ])
 
-        if (apps && apps.length > 0) {
-          apps.forEach((a) => {
-            appIds.push(a.id)
-            appsCandidateMap[a.id] = a.candidate_id
-            appsJobMap[a.id] = a.job_id
-          })
-        }
+      if (appsRes.data && appsRes.data.length > 0) {
+        appsRes.data.forEach((a) => {
+          appIds.push(a.id)
+          appsCandidateMap[a.id] = a.candidate_id
+          appsJobMap[a.id] = a.job_id
+        })
       }
 
-      if (student) {
-        const { data: studentApps } = await supabase
-          .from('job_applications')
-          .select('id, job_id, candidate_id')
-          .or(`candidate_id.eq.${user.id},candidate_id.eq.${student.id}`)
-
-        if (studentApps && studentApps.length > 0) {
-          studentApps.forEach((sa) => {
-            if (!appIds.includes(sa.id)) appIds.push(sa.id)
-            appsCandidateMap[sa.id] = sa.candidate_id
-            appsJobMap[sa.id] = sa.job_id
-          })
-        }
+      if (studentAppsRes.data && studentAppsRes.data.length > 0) {
+        studentAppsRes.data.forEach((sa) => {
+          if (!appIds.includes(sa.id)) appIds.push(sa.id)
+          appsCandidateMap[sa.id] = sa.candidate_id
+          appsJobMap[sa.id] = sa.job_id
+        })
       }
 
       // 5. Query interviews
@@ -171,7 +170,9 @@ export function useInterviews() {
 
       let ivsQuery = supabase
         .from('interviews')
-        .select('*')
+        .select(
+          'id, job_application_id, candidate_id, company_id, interview_date, interview_time, interview_type, location_type, location_value, status, notes, score, recommendation'
+        )
         .order('interview_date', { ascending: false })
 
       if (orClauses.length > 0) {
@@ -233,48 +234,49 @@ export function useInterviews() {
         }
       }
 
-      // Query candidate profiles
+      // Query candidate profiles and company details in parallel
       const candidatesMap: Record<string, { name: string; avatar?: string; discipline?: string }> = {}
+      const companyMap: Record<string, { name: string; logoUrl?: string; location?: string }> = {}
       const candidateIdList = Array.from(candidateIdSet)
-      if (candidateIdList.length > 0) {
-        const { data: students } = await supabase
-          .from('student_profile')
-          .select('id, user_id, full_name, profile_image_url, discipline')
-          .or(`id.in.(${candidateIdList.join(',')}),user_id.in.(${candidateIdList.join(',')})`)
+      const companyIdList = Array.from(companyIdSet)
 
-        if (students) {
-          students.forEach((st) => {
-            const info = {
-              name: st.full_name || 'Candidate',
-              avatar: st.profile_image_url || undefined,
-              discipline: st.discipline || 'Candidate',
-            }
-            if (st.id) candidatesMap[st.id] = info
-            if (st.user_id) candidatesMap[st.user_id] = info
-          })
-        }
+      const [{ data: students }, { data: comps }] = await Promise.all([
+        candidateIdList.length > 0
+          ? supabase
+              .from('student_profile')
+              .select('id, user_id, full_name, profile_image_url, discipline')
+              .or(`id.in.(${candidateIdList.join(',')}),user_id.in.(${candidateIdList.join(',')})`)
+          : Promise.resolve({ data: null }),
+        companyIdList.length > 0
+          ? supabase
+              .from('companies')
+              .select('id, name, logo_url, location')
+              .in('id', companyIdList)
+          : Promise.resolve({ data: null }),
+      ])
+
+      if (students) {
+        students.forEach((st) => {
+          const info = {
+            name: st.full_name || 'Candidate',
+            avatar: st.profile_image_url || undefined,
+            discipline: st.discipline || 'Candidate',
+          }
+          if (st.id) candidatesMap[st.id] = info
+          if (st.user_id) candidatesMap[st.user_id] = info
+        })
       }
 
-      // Query company details (names, logos, locations)
-      const companyMap: Record<string, { name: string; logoUrl?: string; location?: string }> = {}
-      const companyIdList = Array.from(companyIdSet)
-      if (companyIdList.length > 0) {
-        const { data: comps } = await supabase
-          .from('companies')
-          .select('id, name, logo_url, location')
-          .in('id', companyIdList)
-
-        if (comps) {
-          comps.forEach((c) => {
-            if (c.name) {
-              companyMap[c.id] = {
-                name: c.name,
-                logoUrl: c.logo_url || undefined,
-                location: c.location || undefined,
-              }
+      if (comps) {
+        comps.forEach((c) => {
+          if (c.name) {
+            companyMap[c.id] = {
+              name: c.name,
+              logoUrl: c.logo_url || undefined,
+              location: c.location || undefined,
             }
-          })
-        }
+          }
+        })
       }
 
       // Map into InterviewSession[]
@@ -290,7 +292,7 @@ export function useInterviews() {
           id: iv.id,
           jobApplicationId: iv.job_application_id || undefined,
           candidateId: iv.candidate_id || undefined,
-          candidateName: candInfo?.name || iv.candidate_name || 'Applicant Candidate',
+          candidateName: candInfo?.name || 'Applicant Candidate',
           candidateRole: roleTitle,
           candidateAvatar: candInfo?.avatar,
           companyId: iv.company_id || undefined,
@@ -409,7 +411,7 @@ export function useInterviews() {
         const { data: inserted, error } = await supabase
           .from('interviews')
           .insert(insertRecord)
-          .select()
+          .select('id')
           .single()
 
         if (error) {

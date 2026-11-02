@@ -387,7 +387,9 @@ export function useWalkInDrives() {
 
       let query = supabase
         .from('walk_in_drives')
-        .select('*')
+        .select(
+          'id, company_id, posted_by, title, date_time, location, number_of_openings, primary_role, required_skills, description, status, is_urgent, applicants_count, created_at, company_email, company_website'
+        )
         .order('date_time', { ascending: false })
 
       if (cId) {
@@ -426,7 +428,9 @@ export function useWalkInDrives() {
       // Query active drives with joined company details
       const { data, error } = await supabase
         .from('walk_in_drives')
-        .select('*, companies(id, name, logo_url, office_address, email, website)')
+        .select(
+          'id, company_id, posted_by, title, date_time, location, number_of_openings, primary_role, required_skills, description, status, is_urgent, applicants_count, created_at, company_email, company_website, companies(id, name, logo_url, office_address, email, website)'
+        )
         .eq('status', 'active')
         .order('date_time', { ascending: true })
 
@@ -757,7 +761,9 @@ export function useWalkInDrives() {
       const { data: inserted, error: insertError } = await supabase
         .from('walk_in_drives')
         .insert(payload)
-        .select()
+        .select(
+          'id, company_id, posted_by, title, date_time, location, number_of_openings, primary_role, required_skills, description, status, is_urgent, applicants_count, created_at, company_email, company_website'
+        )
         .single()
 
       if (insertError) {

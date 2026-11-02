@@ -392,11 +392,13 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
       let studentRecordId: string | null = null
       let resumeUrl: string | undefined = undefined
 
-      // 2. Query student_profile from Supabase if user exists
+      // 2. Query student_profile from Supabase if user exists (explicit columns, excluding large embedding vector)
       if (resolvedUserId) {
         const { data: studentData } = await supabase
           .from('student_profile')
-          .select('*')
+          .select(
+            'id, user_id, full_name, discipline, work_mode, profile_image_url, resume_file_url, completeness_percentage, email, phone, location, institution, graduation_year, bio, preferred_location, availability, employment_type, notice_period, expected_ctc, linkedin_url, portfolio_url'
+          )
           .or(`user_id.eq.${resolvedUserId},id.eq.${resolvedUserId}`)
           .limit(1)
           .maybeSingle()
@@ -475,15 +477,59 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
         }
       })
 
-      // 3. Query Real Active Jobs from create_job_post joined with companies
+      // 3. Query Real Active Jobs from create_job_post (explicit columns, excluding embedding vector)
       const { data: dbJobs, error: jobsError } = await supabase
         .from('create_job_post')
-        .select('*')
+        .select(
+          'id, company_id, title, category, technical_requirements, job_description, work_type, location, salary_min, salary_max, expires_at, created_at, experience, responsibilities, about_us, employment_type, number_of_openings'
+        )
         .eq('status', 'active')
         .order('created_at', { ascending: false })
         .limit(20)
 
-      // Query companies for metadata
+      // Prepare parallel queries for company metadata, similarity scores, user applications, and saved jobs
+      const companyIds =
+        !jobsError && dbJobs && dbJobs.length > 0
+          ? Array.from(new Set(dbJobs.map((j) => j.company_id).filter(Boolean)))
+          : []
+
+      const candidateQueries = resolvedUserId ? [`candidate_id.eq.${resolvedUserId}`] : []
+      if (resolvedUserId && studentRecordId && studentRecordId !== resolvedUserId) {
+        candidateQueries.push(`candidate_id.eq.${studentRecordId}`)
+      }
+
+      const [companiesRes, similarityRes, appsRes, savedRes] = await Promise.all([
+        companyIds.length > 0
+          ? supabase
+              .from('companies')
+              .select('id, name, logo_url, website, size, description')
+              .in('id', companyIds)
+          : Promise.resolve({ data: null }),
+        studentRecordId
+          ? supabase
+              .rpc('match_jobs_for_talent', {
+                p_student_id: studentRecordId,
+                p_match_threshold: 0.0,
+                p_match_count: 50,
+              })
+              .then((res) => res, () => ({ data: null, error: null }))
+          : Promise.resolve({ data: null, error: null }),
+        resolvedUserId
+          ? supabase
+              .from('job_applications')
+              .select('id, job_id, status, applied_at')
+              .or(candidateQueries.join(','))
+              .order('applied_at', { ascending: false })
+          : Promise.resolve({ data: null }),
+        resolvedUserId
+          ? supabase
+              .from('saved_jobs')
+              .select('job_id')
+              .eq('user_id', resolvedUserId)
+              .eq('item_type', 'job')
+          : Promise.resolve({ data: null }),
+      ])
+
       const companiesMap: Record<
         string,
         {
@@ -495,51 +541,28 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
           description?: string
         }
       > = {}
-      if (!jobsError && dbJobs && dbJobs.length > 0) {
-        const companyIds = Array.from(new Set(dbJobs.map((j) => j.company_id).filter(Boolean)))
-        if (companyIds.length > 0) {
-          const { data: companiesData } = await supabase
-            .from('companies')
-            .select('id, name, logo_url, website, size, description')
-            .in('id', companyIds)
-
-          if (companiesData) {
-            companiesData.forEach((c) => {
-              companiesMap[c.id] = {
-                name: c.name,
-                logo_url: c.logo_url || undefined,
-                website: c.website || undefined,
-                size: c.size || undefined,
-                description: c.description || undefined,
-              }
-            })
+      if (companiesRes.data) {
+        companiesRes.data.forEach((c) => {
+          companiesMap[c.id] = {
+            name: c.name,
+            logo_url: c.logo_url || undefined,
+            website: c.website || undefined,
+            size: c.size || undefined,
+            description: c.description || undefined,
           }
-        }
+        })
       }
 
-      // 3b. Query Backend Postgres similarity scores from match_jobs_for_talent RPC
       const backendSimilarityMap: Record<string, number> = {}
-      if (studentRecordId) {
-        try {
-          const { data: rpcData, error: rpcErr } = await supabase.rpc('match_jobs_for_talent', {
-            p_student_id: studentRecordId,
-            p_match_threshold: 0.0,
-            p_match_count: 50,
-          })
-
-          if (!rpcErr && rpcData && Array.isArray(rpcData)) {
-            rpcData.forEach((row: { job_id: string; similarity: number }) => {
-              if (row.job_id && typeof row.similarity === 'number') {
-                backendSimilarityMap[row.job_id] = Math.min(99, Math.max(50, Math.round(row.similarity * 100)))
-              }
-            })
+      if (!similarityRes.error && similarityRes.data && Array.isArray(similarityRes.data)) {
+        similarityRes.data.forEach((row: { job_id: string; similarity: number }) => {
+          if (row.job_id && typeof row.similarity === 'number') {
+            backendSimilarityMap[row.job_id] = Math.min(99, Math.max(50, Math.round(row.similarity * 100)))
           }
-        } catch {
-          // Fallback to domain recommendation algorithm if candidate has no embedding
-        }
+        })
       }
 
-      // 4. Query Applications count and applied jobs for current user
+      // 4. Process Applications count and applied jobs for current user
       const userAppliedSet = new Set<string>()
       try {
         const raw = localStorage.getItem('castallio_applied_jobs')
@@ -570,34 +593,18 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
       }
 
       if (resolvedUserId) {
-        const candidateQueries = [`candidate_id.eq.${resolvedUserId}`]
-        if (studentRecordId && studentRecordId !== resolvedUserId) {
-          candidateQueries.push(`candidate_id.eq.${studentRecordId}`)
-        }
-
-        const { data: dbApps, count } = await supabase
-          .from('job_applications')
-          .select('id, job_id, status, applied_at', { count: 'exact' })
-          .or(candidateQueries.join(','))
-          .order('applied_at', { ascending: false })
-
+        const dbApps = appsRes.data
         if (dbApps && dbApps.length > 0) {
           dbApps.forEach((a) => {
             if (a.job_id) userAppliedSet.add(a.job_id)
             applicationsList.push(a)
           })
-          dbAppliedCount = count || dbApps.length
+          dbAppliedCount = dbApps.length
           setAppliedJobIds(new Set(userAppliedSet))
           localStorage.setItem('castallio_applied_jobs', JSON.stringify(Array.from(userAppliedSet)))
         }
 
-        // Query saved_jobs from Supabase for current user
-        const { data: dbSavedJobs } = await supabase
-          .from('saved_jobs')
-          .select('job_id')
-          .eq('user_id', resolvedUserId)
-          .eq('item_type', 'job')
-
+        const dbSavedJobs = savedRes.data
         if (dbSavedJobs && dbSavedJobs.length > 0) {
           dbSavedJobs.forEach((s) => {
             if (s.job_id) loadedSaved.add(s.job_id)
@@ -629,39 +636,47 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
 
         const { data: dbInterviews, error: ivsErr } = await supabase
           .from('interviews')
-          .select('*')
+          .select(
+            'id, company_id, job_application_id, interview_date, interview_time, interview_type, location_type, location_value, status'
+          )
           .or(candidateClauses.join(','))
           .neq('status', 'cancelled')
           .order('interview_date', { ascending: true })
 
         if (!ivsErr && dbInterviews && dbInterviews.length > 0) {
-          const ivCompanyIds = Array.from(new Set(dbInterviews.map((iv) => iv.company_id).filter(Boolean)))
-          const ivJobIds = Array.from(new Set(dbInterviews.map((iv) => iv.job_id).filter(Boolean)))
+          const appJobMap = new Map(applicationsList.map((a) => [a.id, a.job_id]))
+          const ivCompanyIds = Array.from(
+            new Set(dbInterviews.map((iv) => iv.company_id).filter((id): id is string => Boolean(id)))
+          )
+          const ivJobIds = Array.from(
+            new Set(
+              dbInterviews
+                .map((iv) => (iv.job_application_id ? appJobMap.get(iv.job_application_id) : undefined))
+                .filter((id): id is string => Boolean(id))
+            )
+          )
+
+          const [{ data: ivComps }, { data: ivJobs }] = await Promise.all([
+            ivCompanyIds.length > 0
+              ? supabase.from('companies').select('id, name').in('id', ivCompanyIds)
+              : Promise.resolve({ data: null }),
+            ivJobIds.length > 0
+              ? supabase.from('create_job_post').select('id, title').in('id', ivJobIds)
+              : Promise.resolve({ data: null }),
+          ])
 
           const ivCompaniesMap: Record<string, string> = {}
-          if (ivCompanyIds.length > 0) {
-            const { data: ivComps } = await supabase
-              .from('companies')
-              .select('id, name')
-              .in('id', ivCompanyIds)
-            if (ivComps) {
-              ivComps.forEach((c) => {
-                ivCompaniesMap[c.id] = c.name
-              })
-            }
+          if (ivComps) {
+            ivComps.forEach((c) => {
+              ivCompaniesMap[c.id] = c.name
+            })
           }
 
           const ivJobsMap: Record<string, string> = {}
-          if (ivJobIds.length > 0) {
-            const { data: ivJobs } = await supabase
-              .from('create_job_post')
-              .select('id, title')
-              .in('id', ivJobIds)
-            if (ivJobs) {
-              ivJobs.forEach((j) => {
-                ivJobsMap[j.id] = j.title
-              })
-            }
+          if (ivJobs) {
+            ivJobs.forEach((j) => {
+              ivJobsMap[j.id] = j.title
+            })
           }
 
           realUpcomingEvents = dbInterviews.map((iv) => {
@@ -673,15 +688,12 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
             const isVirtual = (iv.interview_type || iv.location_type || '').toLowerCase().includes('virtual')
 
             const companyName =
-              ivCompaniesMap[iv.company_id] ||
-              companiesMap[iv.company_id]?.name ||
-              iv.company_name ||
+              (iv.company_id ? ivCompaniesMap[iv.company_id] || companiesMap[iv.company_id]?.name : undefined) ||
               'AEC Partner Practice'
 
+            const mappedJobId = iv.job_application_id ? appJobMap.get(iv.job_application_id) : undefined
             const roleTitle =
-              ivJobsMap[iv.job_id] ||
-              iv.role_title ||
-              iv.job_title ||
+              (mappedJobId ? ivJobsMap[mappedJobId] : undefined) ||
               currentDiscipline ||
               'AEC Specialist'
 
@@ -691,7 +703,7 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
 
             return {
               id: iv.id,
-              title: iv.interview_title || iv.round_title || 'Technical Interview',
+              title: iv.interview_type || 'Technical Interview',
               company: companyName,
               role: roleTitle,
               month: monthStr,

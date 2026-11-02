@@ -101,118 +101,109 @@ export function useEmployerStats(): UseEmployerStatsReturn {
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
       const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString()
 
-      // 2. Query Active Jobs count
-      // Include jobs matching company_id OR posted_by = user.id
+      // 2. Query Active Jobs & Weekly Jobs counts in parallel
       let activeJobsQuery = supabase
         .from('create_job_post')
         .select('id', { count: 'exact', head: true })
         .eq('status', 'active')
 
-      if (companyId) {
-        activeJobsQuery = activeJobsQuery.or(`company_id.eq.${companyId},posted_by.eq.${user.id}`)
-      } else {
-        activeJobsQuery = activeJobsQuery.eq('posted_by', user.id)
-      }
-
-      const { count: activeJobsCount, error: activeJobsErr } = await activeJobsQuery
-      if (activeJobsErr) console.warn('Active jobs count query error:', activeJobsErr.message)
-
-      // Query jobs posted this week
       let weekJobsQuery = supabase
         .from('create_job_post')
         .select('id', { count: 'exact', head: true })
         .gte('created_at', oneWeekAgo)
 
       if (companyId) {
+        activeJobsQuery = activeJobsQuery.or(`company_id.eq.${companyId},posted_by.eq.${user.id}`)
         weekJobsQuery = weekJobsQuery.or(`company_id.eq.${companyId},posted_by.eq.${user.id}`)
       } else {
+        activeJobsQuery = activeJobsQuery.eq('posted_by', user.id)
         weekJobsQuery = weekJobsQuery.eq('posted_by', user.id)
       }
 
-      const { count: jobsThisWeekCount } = await weekJobsQuery
+      const [
+        { count: activeJobsCount, error: activeJobsErr },
+        { count: jobsThisWeekCount },
+      ] = await Promise.all([activeJobsQuery, weekJobsQuery])
 
-      // 3. Query Total Applicants count
+      if (activeJobsErr) console.warn('Active jobs count query error:', activeJobsErr.message)
+
+      // 3. Query Applicant counts & Recent Applicants in parallel
       let totalApplicantsCount = 0
       let applicantsThisMonthCount = 0
       let hiresThisMonthCount = 0
       let previousMonthHiresCount = 0
 
       if (companyId) {
-        // Total applications for this company
-        const { count: appCount, error: appErr } = await supabase
-          .from('job_applications')
-          .select('id', { count: 'exact', head: true })
-          .eq('company_id', companyId)
+        const [
+          { count: appCount, error: appErr },
+          { count: appMonthCount },
+          { count: hireMonthCount },
+          { count: prevHireCount },
+          rpcResult,
+        ] = await Promise.all([
+          supabase
+            .from('job_applications')
+            .select('id', { count: 'exact', head: true })
+            .eq('company_id', companyId),
+          supabase
+            .from('job_applications')
+            .select('id', { count: 'exact', head: true })
+            .eq('company_id', companyId)
+            .gte('applied_at', startOfMonth),
+          supabase
+            .from('job_applications')
+            .select('id', { count: 'exact', head: true })
+            .eq('company_id', companyId)
+            .eq('status', 'hired')
+            .gte('updated_at', startOfMonth),
+          supabase
+            .from('job_applications')
+            .select('id', { count: 'exact', head: true })
+            .eq('company_id', companyId)
+            .eq('status', 'hired')
+            .gte('updated_at', startOfLastMonth)
+            .lt('updated_at', startOfMonth),
+          supabase
+            .rpc('web_get_company_applicants', { p_company_id: companyId })
+            .then((res) => res, (err) => ({ data: null, error: err })),
+        ])
 
         if (!appErr && typeof appCount === 'number') {
           totalApplicantsCount = appCount
         }
-
-        // Applicants this month
-        const { count: appMonthCount } = await supabase
-          .from('job_applications')
-          .select('id', { count: 'exact', head: true })
-          .eq('company_id', companyId)
-          .gte('applied_at', startOfMonth)
-
         if (typeof appMonthCount === 'number') {
           applicantsThisMonthCount = appMonthCount
         }
-
-        // Hires this month (status = 'hired' and updated in current month)
-        const { count: hireMonthCount } = await supabase
-          .from('job_applications')
-          .select('id', { count: 'exact', head: true })
-          .eq('company_id', companyId)
-          .eq('status', 'hired')
-          .gte('updated_at', startOfMonth)
-
         if (typeof hireMonthCount === 'number') {
           hiresThisMonthCount = hireMonthCount
         }
-
-        // Hires last month (for comparison trend)
-        const { count: prevHireCount } = await supabase
-          .from('job_applications')
-          .select('id', { count: 'exact', head: true })
-          .eq('company_id', companyId)
-          .eq('status', 'hired')
-          .gte('updated_at', startOfLastMonth)
-          .lt('updated_at', startOfMonth)
-
         if (typeof prevHireCount === 'number') {
           previousMonthHiresCount = prevHireCount
         }
-        // 4. Query Recent Applicants from remote database
-        let recentAppsList: RecentApplicantItem[] = []
-        try {
-          const { data: rpcData, error: rpcErr } = await supabase.rpc('web_get_company_applicants', {
-            p_company_id: companyId,
-          })
 
-          if (!rpcErr && rpcData?.applicants && Array.isArray(rpcData.applicants) && rpcData.applicants.length > 0) {
-            recentAppsList = (rpcData.applicants as RpcApplicant[]).slice(0, 6).map((app: RpcApplicant) => {
-              const skills: string[] = []
-              if (Array.isArray(app.candidate?.skills)) {
-                for (const s of app.candidate.skills) {
-                  if (typeof s === 'string') skills.push(s)
-                  else if (s && typeof s === 'object' && s.skill_name) skills.push(s.skill_name)
-                }
+        // 4. Process Recent Applicants from remote database
+        let recentAppsList: RecentApplicantItem[] = []
+        const { data: rpcData, error: rpcErr } = rpcResult
+        if (!rpcErr && rpcData?.applicants && Array.isArray(rpcData.applicants) && rpcData.applicants.length > 0) {
+          recentAppsList = (rpcData.applicants as RpcApplicant[]).slice(0, 6).map((app: RpcApplicant) => {
+            const skills: string[] = []
+            if (Array.isArray(app.candidate?.skills)) {
+              for (const s of app.candidate.skills) {
+                if (typeof s === 'string') skills.push(s)
+                else if (s && typeof s === 'object' && s.skill_name) skills.push(s.skill_name)
               }
-              return {
-                id: app.id,
-                name: app.candidate?.full_name || 'Anonymous Candidate',
-                role: app.candidate?.discipline || 'AEC Specialist',
-                fitScore: 88,
-                appliedFor: app.job?.title || 'General Position',
-                skills: skills.length > 0 ? skills.slice(0, 4) : ['Revit', 'BIM', 'AutoCAD'],
-                avatar: app.candidate?.profile_image_url || null,
-                appliedAt: app.applied_at || new Date().toISOString(),
-              }
-            })
-          }
-        } catch (rpcErr) {
-          console.warn('web_get_company_applicants notice in useEmployerStats:', rpcErr)
+            }
+            return {
+              id: app.id,
+              name: app.candidate?.full_name || 'Anonymous Candidate',
+              role: app.candidate?.discipline || 'AEC Specialist',
+              fitScore: 88,
+              appliedFor: app.job?.title || 'General Position',
+              skills: skills.length > 0 ? skills.slice(0, 4) : ['Revit', 'BIM', 'AutoCAD'],
+              avatar: app.candidate?.profile_image_url || null,
+              appliedAt: app.applied_at || new Date().toISOString(),
+            }
+          })
         }
 
         // Direct fallback query if RPC did not return list
@@ -229,15 +220,20 @@ export function useEmployerStats(): UseEmployerStatsReturn {
               const cIds = rawApps.map((a) => a.candidate_id).filter(Boolean)
               const jIds = rawApps.map((a) => a.job_id).filter(Boolean)
 
-              const { data: students } = await supabase
-                .from('student_profile')
-                .select('id, user_id, full_name, discipline, profile_image_url')
-                .or(`user_id.in.(${cIds.join(',')}),id.in.(${cIds.join(',')})`)
-
-              const { data: jobs } = await supabase
-                .from('create_job_post')
-                .select('id, title')
-                .in('id', jIds)
+              const [{ data: students }, { data: jobs }] = await Promise.all([
+                cIds.length > 0
+                  ? supabase
+                      .from('student_profile')
+                      .select('id, user_id, full_name, discipline, profile_image_url')
+                      .or(`user_id.in.(${cIds.join(',')}),id.in.(${cIds.join(',')})`)
+                  : Promise.resolve({ data: [] }),
+                jIds.length > 0
+                  ? supabase
+                      .from('create_job_post')
+                      .select('id, title')
+                      .in('id', jIds)
+                  : Promise.resolve({ data: [] }),
+              ])
 
               const cMap = new Map((students || []).map((s) => [s.user_id || s.id, s]))
               const jMap = new Map((jobs || []).map((j) => [j.id, j.title]))

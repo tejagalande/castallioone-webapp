@@ -562,7 +562,7 @@ export const CompanyProfile: FC<CompanyProfileProps> = () => {
             <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
               visibility
             </span>
-            <span>Candidate Profile View</span>
+            <span>Company Profile View</span>
           </button>
         </nav>
 

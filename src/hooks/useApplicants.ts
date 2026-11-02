@@ -385,7 +385,7 @@ export function useApplicants(initialJobFilter?: { id?: string; title?: string }
       setCompanyId(cId)
       setCompanyName(cName)
 
-      // 2. Fetch jobs posted by this company or user
+      // 2. Fetch jobs posted by this company/user AND query RPC web_get_company_applicants in parallel
       let jobsQuery = supabase
         .from('create_job_post')
         .select('id, title, location, category, employment_type')
@@ -397,7 +397,16 @@ export function useApplicants(initialJobFilter?: { id?: string; title?: string }
         jobsQuery = jobsQuery.eq('posted_by', user.id)
       }
 
-      const { data: rawJobs } = await jobsQuery
+      let rawApplicantRows: RawApplicantRow[] = []
+      let rpcSucceeded = false
+
+      const [{ data: rawJobs }, rpcOutcome] = await Promise.all([
+        jobsQuery,
+        supabase
+          .rpc('web_get_company_applicants', { p_company_id: cId || null })
+          .then((res) => res, (err) => ({ data: null, error: err })),
+      ])
+
       const jobsList = rawJobs || []
       const jobIds = jobsList.map((j) => j.id)
 
@@ -405,33 +414,25 @@ export function useApplicants(initialJobFilter?: { id?: string; title?: string }
         setCompanyJobs(jobsList.map((j) => ({ id: j.id, title: j.title })))
       }
 
-      // 3. First attempt: Query via remote RPC function web_get_company_applicants
-      let rawApplicantRows: RawApplicantRow[] = []
-      let rpcSucceeded = false
-
-      try {
-        const { data: rpcData, error: rpcError } = await supabase.rpc('web_get_company_applicants', {
-          p_company_id: cId || null,
-        })
-
-        if (!rpcError && rpcData && Array.isArray((rpcData as { applicants?: RawApplicantRow[] }).applicants)) {
-          const rpcApps = (rpcData as { applicants: RawApplicantRow[] }).applicants
-          if (rpcApps.length > 0) {
-            rawApplicantRows = rpcApps
-            rpcSucceeded = true
-          }
-        } else if (rpcError) {
-          console.warn('RPC web_get_company_applicants notice:', rpcError.message)
+      if (
+        !rpcOutcome.error &&
+        rpcOutcome.data &&
+        Array.isArray((rpcOutcome.data as { applicants?: RawApplicantRow[] }).applicants)
+      ) {
+        const rpcApps = (rpcOutcome.data as { applicants: RawApplicantRow[] }).applicants
+        if (rpcApps.length > 0) {
+          rawApplicantRows = rpcApps
+          rpcSucceeded = true
         }
-      } catch (rpcErr) {
-        console.warn('RPC web_get_company_applicants execution failed, switching to direct SQL tables query:', rpcErr)
+      } else if (rpcOutcome.error) {
+        console.warn('RPC web_get_company_applicants notice:', rpcOutcome.error.message || rpcOutcome.error)
       }
 
-      // 4. Second attempt: Direct SQL Query against job_applications and relational tables
+      // 3. Second attempt: Direct SQL Query against job_applications and relational tables
       if (!rpcSucceeded || rawApplicantRows.length === 0) {
         let appsQuery = supabase
           .from('job_applications')
-          .select('*')
+          .select('id, job_id, company_id, candidate_id, status, is_starred, applied_at, updated_at, rejection_reason')
           .order('applied_at', { ascending: false })
 
         if (cId && jobIds.length > 0) {
@@ -446,6 +447,7 @@ export function useApplicants(initialJobFilter?: { id?: string; title?: string }
 
         if (!dbAppsErr && dbApps && Array.isArray(dbApps) && dbApps.length > 0) {
           const candidateIds = Array.from(new Set(dbApps.map((a) => a.candidate_id).filter(Boolean)))
+          const appIds = dbApps.map((a) => a.id)
           const candidatesMap: Record<string, RawApplicantCandidate> = {}
           const skillsMap: Record<string, Array<string | { skill_name?: string }>> = {}
           const expsMap: Record<string, Array<{
@@ -456,71 +458,72 @@ export function useApplicants(initialJobFilter?: { id?: string; title?: string }
             start_date?: string | null
             end_date?: string | null
           }>> = {}
+          const ivsMap: Record<string, RawApplicantInterview[]> = {}
 
-          if (candidateIds.length > 0) {
-            // Query student_profile
-            const { data: students } = await supabase
-              .from('student_profile')
-              .select('*')
-              .or(`user_id.in.(${candidateIds.join(',')}),id.in.(${candidateIds.join(',')})`)
+          const [{ data: students }, { data: ivsData }] = await Promise.all([
+            candidateIds.length > 0
+              ? supabase
+                  .from('student_profile')
+                  .select(
+                    'id, user_id, full_name, bio, email, phone, location, institution, discipline, graduation_year, portfolio_url, profile_image_url, resume_file_url, work_mode, expected_ctc, notice_period, linkedin_url'
+                  )
+                  .or(`user_id.in.(${candidateIds.join(',')}),id.in.(${candidateIds.join(',')})`)
+              : Promise.resolve({ data: null }),
+            appIds.length > 0
+              ? supabase
+                  .from('interviews')
+                  .select(
+                    'id, job_application_id, interview_date, interview_time, interview_type, location_type, location_value, status'
+                  )
+                  .in('job_application_id', appIds)
+              : Promise.resolve({ data: null }),
+          ])
 
-            if (students && Array.isArray(students)) {
-              const studentProfileIds: string[] = []
-              students.forEach((st) => {
-                if (st.user_id) candidatesMap[st.user_id] = st
-                if (st.id) {
-                  candidatesMap[st.id] = st
-                  studentProfileIds.push(st.id)
-                }
-              })
+          if (students && Array.isArray(students)) {
+            const studentProfileIds: string[] = []
+            students.forEach((st) => {
+              if (st.user_id) candidatesMap[st.user_id] = st
+              if (st.id) {
+                candidatesMap[st.id] = st
+                studentProfileIds.push(st.id)
+              }
+            })
 
-              const profileIds = Array.from(new Set([...studentProfileIds, ...candidateIds]))
+            const profileIds = Array.from(new Set([...studentProfileIds, ...candidateIds]))
 
-              // Query skills
-              if (profileIds.length > 0) {
-                const { data: skillsData } = await supabase
+            if (profileIds.length > 0) {
+              const [{ data: skillsData }, { data: expsData }] = await Promise.all([
+                supabase
                   .from('student_skills')
-                  .select('*')
-                  .in('student_id', profileIds)
-
-                if (skillsData && Array.isArray(skillsData)) {
-                  skillsData.forEach((sk) => {
-                    skillsMap[sk.student_id] = sk.skills || []
-                  })
-                }
-
-                // Query experiences
-                const { data: expsData } = await supabase
+                  .select('student_id, skills')
+                  .in('student_id', profileIds),
+                supabase
                   .from('student_experience')
-                  .select('*')
+                  .select('id, student_id, role_title, organization_name, contributions, start_date, end_date')
                   .in('student_id', profileIds)
-                  .order('start_date', { ascending: false })
+                  .order('start_date', { ascending: false }),
+              ])
 
-                if (expsData && Array.isArray(expsData)) {
-                  expsData.forEach((exp) => {
-                    if (!expsMap[exp.student_id]) expsMap[exp.student_id] = []
-                    expsMap[exp.student_id].push(exp)
-                  })
-                }
+              if (skillsData && Array.isArray(skillsData)) {
+                skillsData.forEach((sk) => {
+                  skillsMap[sk.student_id] = sk.skills || []
+                })
+              }
+
+              if (expsData && Array.isArray(expsData)) {
+                expsData.forEach((exp) => {
+                  if (!expsMap[exp.student_id]) expsMap[exp.student_id] = []
+                  expsMap[exp.student_id].push(exp)
+                })
               }
             }
           }
 
-          // Query interviews
-          const appIds = dbApps.map((a) => a.id)
-          const ivsMap: Record<string, RawApplicantInterview[]> = {}
-          if (appIds.length > 0) {
-            const { data: ivsData } = await supabase
-              .from('interviews')
-              .select('*')
-              .in('job_application_id', appIds)
-
-            if (ivsData && Array.isArray(ivsData)) {
-              ivsData.forEach((iv) => {
-                if (!ivsMap[iv.job_application_id]) ivsMap[iv.job_application_id] = []
-                ivsMap[iv.job_application_id].push(iv)
-              })
-            }
+          if (ivsData && Array.isArray(ivsData)) {
+            ivsData.forEach((iv) => {
+              if (!ivsMap[iv.job_application_id]) ivsMap[iv.job_application_id] = []
+              ivsMap[iv.job_application_id].push(iv)
+            })
           }
 
           const jobsMap: Record<string, RawApplicantJob> = {}
@@ -702,7 +705,7 @@ export function useApplicants(initialJobFilter?: { id?: string; title?: string }
             location_value: payload.locationValue,
             status: 'scheduled',
           })
-          .select()
+          .select('id')
           .single()
 
         if (error) {

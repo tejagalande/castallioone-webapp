@@ -46,7 +46,9 @@ export const JobAppFallback: FC = () => {
 
     async function fetchJobDetails() {
       try {
-        let query = supabase.from('create_job_post').select('*')
+        const JOB_DETAIL_COLUMNS =
+          'id, title, category, project_type, experience, work_type, location, salary_min, salary_max, currency, job_description, technical_requirements, responsibilities, company_id, created_at'
+        let query = supabase.from('create_job_post').select(JOB_DETAIL_COLUMNS)
 
         if (resolvedJobId) {
           query = query.eq('id', resolvedJobId)

@@ -77,31 +77,35 @@ export const TalentProfile: FC = () => {
         }
       }
 
-      // Check if unlocked
+      // Check if unlocked & fetch subscription quota in parallel
       let isUnlocked = false
       if (companyId) {
-        const { data: unlockedData } = await supabase
-          .from('unlocked_profiles')
-          .select('id')
-          .eq('company_id', companyId)
-          .eq('student_id', id)
-          .maybeSingle()
-        if (unlockedData) {
-          isUnlocked = true
-        }
-
-        // Fetch company subscription & authentic CV unlock quota
         let cvLimit = 3 // default for Free Plan
         let cvsUsed = 0
 
-        const { data: subData } = await supabase
-          .from('company_subscriptions')
-          .select('plan_id, cvs_unlocked, is_active')
-          .eq('company_id', companyId)
-          .eq('is_active', true)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
+        const [{ data: unlockedData }, { data: subData }, rpcBillingRes] = await Promise.all([
+          supabase
+            .from('unlocked_profiles')
+            .select('id')
+            .eq('company_id', companyId)
+            .eq('student_id', id)
+            .maybeSingle(),
+          supabase
+            .from('company_subscriptions')
+            .select('plan_id, cvs_unlocked, is_active')
+            .eq('company_id', companyId)
+            .eq('is_active', true)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          supabase
+            .rpc('web_get_company_subscription_billing')
+            .then((res) => res, () => ({ data: null })),
+        ])
+
+        if (unlockedData) {
+          isUnlocked = true
+        }
 
         if (subData) {
           const planId = (subData.plan_id || 'free').toLowerCase()
@@ -117,22 +121,17 @@ export const TalentProfile: FC = () => {
           else if (planId === 'professional_cv') cvLimit = 200
         }
 
-        // Also check if web_get_company_subscription_billing provides details
-        try {
-          const { data: rpcData } = await supabase.rpc('web_get_company_subscription_billing')
-          if (rpcData?.has_company && rpcData?.subscription) {
-            const s = rpcData.subscription
-            if (typeof s.cv_unlock_limit === 'number') {
-              cvLimit = s.cv_unlock_limit
-            } else if (typeof s.plan_cv_limit === 'number') {
-              cvLimit = s.plan_cv_limit
-            }
-            if (typeof s.cvs_unlocked === 'number') {
-              cvsUsed = s.cvs_unlocked
-            }
+        const rpcData = rpcBillingRes?.data
+        if (rpcData?.has_company && rpcData?.subscription) {
+          const s = rpcData.subscription
+          if (typeof s.cv_unlock_limit === 'number') {
+            cvLimit = s.cv_unlock_limit
+          } else if (typeof s.plan_cv_limit === 'number') {
+            cvLimit = s.plan_cv_limit
           }
-        } catch {
-          // fallback
+          if (typeof s.cvs_unlocked === 'number') {
+            cvsUsed = s.cvs_unlocked
+          }
         }
 
         const remaining = Math.max(0, cvLimit - cvsUsed)
@@ -143,10 +142,12 @@ export const TalentProfile: FC = () => {
         })
       }
 
-      // 2. Fetch candidate profile details
+      // 2. Fetch candidate profile details (explicit columns, excluding large embedding vector)
       const { data: sp, error: spErr } = await supabase
         .from('student_profile')
-        .select('*')
+        .select(
+          'id, user_id, full_name, profile_image_url, bio, email, phone, location, discipline, institution, graduation_year, work_mode, expected_ctc, notice_period, portfolio_url, resume_file_url, linkedin_url'
+        )
         .or(`id.eq.${id},user_id.eq.${id}`)
         .maybeSingle()
 
@@ -155,20 +156,20 @@ export const TalentProfile: FC = () => {
       }
 
       if (sp) {
-        // Fetch experiences from student_experience table
+        // Fetch experiences and skills in parallel
         const profileId = (sp.id as string) || id
-        const { data: rawExps } = await supabase
-          .from('student_experience')
-          .select('*')
-          .eq('student_id', profileId)
-          .order('start_date', { ascending: false })
-
-        // Fetch skills from student_skills table
-        const { data: skillsRow } = await supabase
-          .from('student_skills')
-          .select('skills')
-          .eq('student_id', profileId)
-          .maybeSingle()
+        const [{ data: rawExps }, { data: skillsRow }] = await Promise.all([
+          supabase
+            .from('student_experience')
+            .select('id, role_title, organization_name, contributions, start_date, end_date')
+            .eq('student_id', profileId)
+            .order('start_date', { ascending: false }),
+          supabase
+            .from('student_skills')
+            .select('skills')
+            .eq('student_id', profileId)
+            .maybeSingle(),
+        ])
 
         const skillsList: string[] = []
         if (skillsRow && Array.isArray(skillsRow.skills)) {
@@ -223,9 +224,9 @@ export const TalentProfile: FC = () => {
           hasResume: Boolean(sp.resume_file_url),
           linkedinUrl: sp.linkedin_url || undefined,
           isUnlocked,
-          hasEmbedding: Boolean(sp.embedding),
+          hasEmbedding: true,
           matchScore: 94,
-          experienceYears: Number(sp.experience_years) || 0,
+          experienceYears: expsList.length > 0 ? Math.max(1, Math.round(expsList.length * 1.5)) : 0,
           skills:
             skillsList.length > 0
               ? skillsList

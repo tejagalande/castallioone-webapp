@@ -79,7 +79,9 @@ export async function syncAstroAndMissingJobEmbeddings(): Promise<JobEmbeddingRe
     const astroIds = (astroCompanies || []).map((c) => c.id)
 
     // 2. Query jobs for Astro or Structural Engineering
-    let jobsQuery = supabase.from('create_job_post').select('*')
+    let jobsQuery = supabase
+      .from('create_job_post')
+      .select('id, title, category, job_description, technical_requirements, location, experience')
 
     if (astroIds.length > 0) {
       jobsQuery = jobsQuery.or(`company_id.in.(${astroIds.join(',')}),title.ilike.%structural%`)

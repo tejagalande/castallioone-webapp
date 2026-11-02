@@ -102,7 +102,10 @@ export function useMessages(options?: UseMessagesOptions) {
       }
 
       // Fetch chatsession rows
-      let chatQuery = supabase.from('chatsession').select('*').eq('is_deleted', false)
+      let chatQuery = supabase
+        .from('chatsession')
+        .select('id, candidate_id, company_id, sender_id, message, is_read, is_deleted, created_at')
+        .eq('is_deleted', false)
       if (isEmployer) {
         chatQuery = chatQuery.eq('company_id', cId)
       } else {
@@ -195,21 +198,20 @@ export function useMessages(options?: UseMessagesOptions) {
       const builtThreads: ConversationThread[] = []
 
       if (isEmployer) {
-        // Query candidate profiles
-        const { data: candidateProfiles } = await supabase
-          .from('student_profile')
-          .select('id, user_id, full_name, profile_image_url, discipline, location')
-          .in('user_id', partnerIds)
+        // Query candidate profiles and active interviews in parallel
+        const [{ data: candidateProfiles }, { data: scheduledInterviews }] = await Promise.all([
+          supabase
+            .from('student_profile')
+            .select('id, user_id, full_name, profile_image_url, discipline, location')
+            .in('user_id', partnerIds),
+          supabase
+            .from('interviews')
+            .select('id, candidate_id, interview_date, interview_time, interview_type, location_type, location_value, status')
+            .eq('company_id', cId)
+            .eq('status', 'scheduled'),
+        ])
 
         const studentMap = new Map(candidateProfiles?.map((s) => [s.user_id, s]) || [])
-
-        // Query active interviews
-        const { data: scheduledInterviews } = await supabase
-          .from('interviews')
-          .select('id, candidate_id, interview_date, interview_time, interview_type, location_type, location_value, status')
-          .eq('company_id', cId)
-          .eq('status', 'scheduled')
-
         const interviewMap = new Map(scheduledInterviews?.map((i) => [i.candidate_id, i]) || [])
 
         for (const [candidateId, msgs] of threadMap.entries()) {
@@ -275,21 +277,20 @@ export function useMessages(options?: UseMessagesOptions) {
           })
         }
       } else {
-        // Talent looking at Companies
-        const { data: companies } = await supabase
-          .from('companies')
-          .select('id, name, logo_url, size, website')
-          .in('id', partnerIds)
+        // Talent looking at Companies — query companies and active interviews in parallel
+        const [{ data: companies }, { data: scheduledInterviews }] = await Promise.all([
+          supabase
+            .from('companies')
+            .select('id, name, logo_url, size, website')
+            .in('id', partnerIds),
+          supabase
+            .from('interviews')
+            .select('id, company_id, interview_date, interview_time, interview_type, location_type, location_value, status')
+            .eq('candidate_id', user.id)
+            .eq('status', 'scheduled'),
+        ])
 
         const companyMap = new Map(companies?.map((c) => [c.id, c]) || [])
-
-        // Query active interviews for this candidate
-        const { data: scheduledInterviews } = await supabase
-          .from('interviews')
-          .select('id, company_id, interview_date, interview_time, interview_type, location_type, location_value, status')
-          .eq('candidate_id', user.id)
-          .eq('status', 'scheduled')
-
         const interviewMap = new Map(scheduledInterviews?.map((i) => [i.company_id, i]) || [])
 
         for (const [companyId, msgs] of threadMap.entries()) {

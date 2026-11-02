@@ -28,25 +28,26 @@ export async function checkTalentProfile(userId?: string): Promise<CheckTalentPr
   }
 
   try {
-    // 1. Check user_profiles for onboarding flag
-    const { data: userProfile, error: upError } = await supabase
-      .from('user_profiles')
-      .select('id, role, onboarding_complete, created_at')
-      .eq('id', userId)
-      .maybeSingle()
+    // 1. Check user_profiles and student_profile in parallel (explicit columns, excluding large embedding vector)
+    const [{ data: userProfile, error: upError }, { data: studentProfile, error: spError }] = await Promise.all([
+      supabase
+        .from('user_profiles')
+        .select('id, role, onboarding_complete, created_at')
+        .eq('id', userId)
+        .maybeSingle(),
+      supabase
+        .from('student_profile')
+        .select(
+          'id, user_id, profile_image_url, full_name, email, phone, location, institution, discipline, graduation_year, bio, work_mode, preferred_location, relocation_preference, availability, employment_type, notice_period, resume_file_url, expected_ctc, linkedin_url, portfolio_url'
+        )
+        .or(`user_id.eq.${userId},id.eq.${userId}`)
+        .limit(1)
+        .maybeSingle(),
+    ])
 
     if (upError) {
       console.warn('user_profiles check notice:', upError.message)
     }
-
-    // 2. Check student_profile
-    const { data: studentProfile, error: spError } = await supabase
-      .from('student_profile')
-      .select('*')
-      .or(`user_id.eq.${userId},id.eq.${userId}`)
-      .limit(1)
-      .maybeSingle()
-
     if (spError) {
       console.warn('student_profile check notice:', spError.message)
     }
@@ -122,7 +123,9 @@ export async function fetchSavedTalentProfile(
 ): Promise<Partial<TalentProfileData> | null> {
   const { data: sp, error } = await supabase
     .from('student_profile')
-    .select('*')
+    .select(
+      'id, user_id, profile_image_url, full_name, bio, email, phone, location, institution, discipline, graduation_year, work_mode, preferred_location, relocation_preference, availability, employment_type, notice_period, expected_ctc, resume_file_url, portfolio_url, linkedin_url'
+    )
     .or(`user_id.eq.${userId},id.eq.${userId}`)
     .limit(1)
     .maybeSingle()
@@ -170,13 +173,19 @@ export async function fetchSavedTalentProfile(
     linkedinLink: str(sp.linkedin_url),
   }
 
-  // Skills
+  // Fetch Skills and Experience in parallel
   const studentId: string = sp.id
-  const { data: skillsRow } = await supabase
-    .from('student_skills')
-    .select('skills')
-    .eq('student_id', studentId)
-    .maybeSingle()
+  const [{ data: skillsRow }, { data: expRows }] = await Promise.all([
+    supabase
+      .from('student_skills')
+      .select('skills')
+      .eq('student_id', studentId)
+      .maybeSingle(),
+    supabase
+      .from('student_experience')
+      .select('id, role_title, organization_name, start_date, end_date, contributions')
+      .eq('student_id', studentId),
+  ])
 
   if (skillsRow && Array.isArray(skillsRow.skills)) {
     const core: string[] = []
@@ -197,12 +206,6 @@ export async function fetchSavedTalentProfile(
     partial.technicalSkills = tech
     partial.softSkills = soft
   }
-
-  // Experience
-  const { data: expRows } = await supabase
-    .from('student_experience')
-    .select('*')
-    .eq('student_id', studentId)
 
   if (expRows && expRows.length > 0) {
     partial.isFresher = false
@@ -451,7 +454,7 @@ export async function saveTalentProfile(
 
     const studentId = upsertedStudent?.id || userId
 
-    // 3. Save Skills (Core Software, Technical, Soft Skills)
+    // 3, 4 & 5. Save Skills, Experiences, and user_profiles onboarding status in parallel
     const combinedSkills = [
       ...data.coreSoftware.map((s) => ({ skill_name: s, category: 'core_software' })),
       ...data.technicalSkills.map((s) => ({ skill_name: s, category: 'technical' })),
@@ -462,44 +465,45 @@ export async function saveTalentProfile(
       combinedSkills.unshift({ skill_name: data.specificSkill.trim(), category: 'primary_specialization' })
     }
 
-    if (combinedSkills.length > 0) {
-      const { error: skillErr } = await supabase
-        .from('student_skills')
-        .upsert(
-          {
+    const saveSkillsPromise =
+      combinedSkills.length > 0
+        ? supabase
+            .from('student_skills')
+            .upsert(
+              {
+                student_id: studentId,
+                skills: combinedSkills,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'student_id' }
+            )
+            .then(({ error: skillErr }) => {
+              if (skillErr) console.warn('Skills upsert notice:', skillErr.message)
+            })
+        : Promise.resolve()
+
+    const saveExperiencesPromise = (async () => {
+      if (!data.isFresher && data.experiences.length > 0) {
+        const expRows = data.experiences
+          .filter((exp) => exp.role.trim() || exp.organisation.trim())
+          .map((exp) => ({
             student_id: studentId,
-            skills: combinedSkills,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'student_id' }
-        )
-      if (skillErr) console.warn('Skills upsert notice:', skillErr.message)
-    }
+            role_title: exp.role.trim() || 'AEC Specialist',
+            organization_name: exp.organisation.trim() || 'Organization',
+            start_date: exp.startDate || null,
+            end_date: exp.currentlyWorking ? null : exp.endDate || null,
+            contributions: exp.contribution.trim(),
+          }))
 
-    // 4. Save Experiences if not fresher
-    if (!data.isFresher && data.experiences.length > 0) {
-      const expRows = data.experiences
-        .filter((exp) => exp.role.trim() || exp.organisation.trim())
-        .map((exp) => ({
-          student_id: studentId,
-          role_title: exp.role.trim() || 'AEC Specialist',
-          organization_name: exp.organisation.trim() || 'Organization',
-          start_date: exp.startDate || null,
-          end_date: exp.currentlyWorking ? null : exp.endDate || null,
-          contributions: exp.contribution.trim(),
-        }))
-
-      if (expRows.length > 0) {
-        await supabase.from('student_experience').delete().eq('student_id', studentId)
-        const { error: expErr } = await supabase
-          .from('student_experience')
-          .insert(expRows)
-        if (expErr) console.warn('Experience insert notice:', expErr.message)
+        if (expRows.length > 0) {
+          await supabase.from('student_experience').delete().eq('student_id', studentId)
+          const { error: expErr } = await supabase.from('student_experience').insert(expRows)
+          if (expErr) console.warn('Experience insert notice:', expErr.message)
+        }
       }
-    }
+    })()
 
-    // 5. Update user_profiles onboarding_complete = true
-    const { error: profErr } = await supabase
+    const saveUserProfilePromise = supabase
       .from('user_profiles')
       .upsert(
         {
@@ -509,7 +513,11 @@ export async function saveTalentProfile(
         },
         { onConflict: 'id' }
       )
-    if (profErr) console.warn('user_profiles update notice:', profErr.message)
+      .then(({ error: profErr }) => {
+        if (profErr) console.warn('user_profiles update notice:', profErr.message)
+      })
+
+    await Promise.all([saveSkillsPromise, saveExperiencesPromise, saveUserProfilePromise])
 
     // 6. Trigger 1536-dim candidate embedding & search_text generation (parity with mobile app)
     const embeddingTargetId = upsertedStudent?.id || studentId

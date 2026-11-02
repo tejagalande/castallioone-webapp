@@ -45,7 +45,9 @@ export const WalkInDriveAppFallback: FC = () => {
       try {
         setLoading(true)
 
-        let query = supabase.from('walk_in_drives').select('*')
+        const DRIVE_DETAIL_COLUMNS =
+          'id, title, primary_role, date_time, location, number_of_openings, required_skills, description, is_urgent, company_id, status, created_at'
+        let query = supabase.from('walk_in_drives').select(DRIVE_DETAIL_COLUMNS)
 
         if (resolvedDriveId) {
           query = query.eq('id', resolvedDriveId)

@@ -179,10 +179,13 @@ export function useMyJobs(onPostNewJob?: () => void) {
       // Fetch active job quota
       void getCompanyJobQuota(cId || '', user.id).then((q) => setJobQuota(q))
 
-      // 2. Fetch jobs
+      // 2. Fetch jobs (explicit columns, excluding embedding vector) & applications in parallel
+      const JOB_COLS =
+        'id, company_id, posted_by, title, category, project_type, project_types, experience, work_type, location, locations, employment_type, salary_min, salary_max, salary_period, number_of_openings, job_description, technical_requirements, responsibilities, about_us, status, created_at, updated_at'
+
       let jobsQuery = supabase
         .from('create_job_post')
-        .select('*')
+        .select(JOB_COLS)
         .order('created_at', { ascending: false })
 
       if (cId) {
@@ -191,14 +194,23 @@ export function useMyJobs(onPostNewJob?: () => void) {
         jobsQuery = jobsQuery.eq('posted_by', user.id)
       }
 
-      const { data: rawJobs, error: jobsError } = await jobsQuery
+      const [{ data: rawJobs, error: jobsError }, { data: appsData }] = await Promise.all([
+        jobsQuery,
+        cId
+          ? supabase
+              .from('job_applications')
+              .select('id, job_id, status')
+              .eq('company_id', cId)
+          : Promise.resolve({ data: null }),
+      ])
+
       if (jobsError) {
         throw new Error(jobsError.message)
       }
 
       const jobsList = (rawJobs as DBJobRow[]) || []
 
-      // 3. Fetch applications for these jobs to aggregate counts
+      // 3. Aggregate application counts per job
       const appCountsMap: Record<
         string,
         {
@@ -211,37 +223,30 @@ export function useMyJobs(onPostNewJob?: () => void) {
         }
       > = {}
 
-      if (cId) {
-        const { data: appsData } = await supabase
-          .from('job_applications')
-          .select('id, job_id, status')
-          .eq('company_id', cId)
-
-        if (appsData && Array.isArray(appsData)) {
-          appsData.forEach((app) => {
-            const jId = app.job_id
-            if (!appCountsMap[jId]) {
-              appCountsMap[jId] = {
-                total: 0,
-                newCount: 0,
-                inReview: 0,
-                shortlisted: 0,
-                scheduled: 0,
-                rejected: 0,
-              }
+      if (appsData && Array.isArray(appsData)) {
+        appsData.forEach((app) => {
+          const jId = app.job_id
+          if (!appCountsMap[jId]) {
+            appCountsMap[jId] = {
+              total: 0,
+              newCount: 0,
+              inReview: 0,
+              shortlisted: 0,
+              scheduled: 0,
+              rejected: 0,
             }
-            appCountsMap[jId].total += 1
-            const st = (app.status || 'new').toLowerCase()
-            if (st === 'new') appCountsMap[jId].newCount += 1
-            else if (st === 'in_review') appCountsMap[jId].inReview += 1
-            else if (st === 'shortlisted') appCountsMap[jId].shortlisted += 1
-            else if (st === 'scheduled') appCountsMap[jId].scheduled += 1
-            else if (st === 'rejected') appCountsMap[jId].rejected += 1
-            else {
-              appCountsMap[jId].inReview += 1
-            }
-          })
-        }
+          }
+          appCountsMap[jId].total += 1
+          const st = (app.status || 'new').toLowerCase()
+          if (st === 'new') appCountsMap[jId].newCount += 1
+          else if (st === 'in_review') appCountsMap[jId].inReview += 1
+          else if (st === 'shortlisted') appCountsMap[jId].shortlisted += 1
+          else if (st === 'scheduled') appCountsMap[jId].scheduled += 1
+          else if (st === 'rejected') appCountsMap[jId].rejected += 1
+          else {
+            appCountsMap[jId].inReview += 1
+          }
+        })
       }
 
       // 4. Map DB rows to RequisitionItem
@@ -483,7 +488,7 @@ export function useMyJobs(onPostNewJob?: () => void) {
         const { data: inserted, error } = await supabase
           .from('create_job_post')
           .insert(duplicatePayload)
-          .select()
+          .select('id')
           .single()
 
         if (error) throw error
