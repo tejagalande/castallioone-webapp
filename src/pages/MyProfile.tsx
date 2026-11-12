@@ -1,5 +1,7 @@
 import { useState, useMemo, useRef, type FC, type ChangeEvent } from 'react'
 import './MyProfile.css'
+import { DeleteAccountModal } from '../components/DeleteAccountModal'
+import { deleteUserAccount } from '../lib/accountService'
 import {
   useMyProfile,
   PREDEFINED_CORE_SOFTWARE,
@@ -78,6 +80,16 @@ const MyProfile: FC<MyProfileProps> = () => {
   const [customTechSkillInput, setCustomTechSkillInput] = useState('')
   const [customSoftSkillInput, setCustomSoftSkillInput] = useState('')
   const [customLocationInput, setCustomLocationInput] = useState('')
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+
+  const handleDeleteAccount = async () => {
+    const targetUserId = profile.userId || profile.id
+    if (!targetUserId) {
+      throw new Error('Unable to identify candidate user ID.')
+    }
+    await deleteUserAccount(targetUserId, 'talent')
+    window.location.replace('/signin?accountDeleted=true')
+  }
 
   // Clean formatted locations (e.g. "Pune · Mumbai")
   const cleanLocations = useMemo(() => {
@@ -1076,6 +1088,30 @@ const MyProfile: FC<MyProfileProps> = () => {
               </div>
             </div> */}
           </div>
+
+          {/* 5. Danger Zone / Account Deletion */}
+          <div className="profile-card danger-zone-card">
+            <div className="category-label-row">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#dc2626" strokeWidth="2" aria-hidden="true">
+                  <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <h3 className="section-card-title" style={{ fontSize: '15px', color: '#dc2626' }}>
+                  Danger Zone
+                </h3>
+              </div>
+            </div>
+            <p style={{ margin: '8px 0 14px', fontSize: '12.5px', color: '#64748b', lineHeight: 1.45 }}>
+              Permanently delete your candidate profile, resume, applications, credentials, and account data.
+            </p>
+            <button
+              type="button"
+              className="btn-danger-outline"
+              onClick={() => setIsDeleteModalOpen(true)}
+            >
+              Delete Account
+            </button>
+          </div>
         </aside>
       </main>
 
@@ -1962,6 +1998,14 @@ const MyProfile: FC<MyProfileProps> = () => {
           </div>
         </div>
       )}
+      {/* ── MODAL 5: Delete Account Permanently ── */}
+      <DeleteAccountModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDeleteAccount}
+        role="talent"
+        entityName={profile.fullName || profile.email}
+      />
     </div>
   )
 }

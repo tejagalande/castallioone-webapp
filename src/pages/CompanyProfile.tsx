@@ -1,5 +1,7 @@
 import { useState, useRef, type FC, type ChangeEvent } from 'react'
 import { useCompanyProfile, type CompanySize, type CertificateType } from './useCompanyProfile'
+import { DeleteAccountModal } from '../components/DeleteAccountModal'
+import { deleteUserAccount } from '../lib/accountService'
 import './CompanyProfile.css'
 
 export interface CompanyProfileProps {
@@ -8,6 +10,7 @@ export interface CompanyProfileProps {
 
 export const CompanyProfile: FC<CompanyProfileProps> = () => {
   const {
+    userId,
     profile,
     errors,
     touched,
@@ -33,6 +36,16 @@ export const CompanyProfile: FC<CompanyProfileProps> = () => {
   } = useCompanyProfile()
 
   const [previewDoc, setPreviewDoc] = useState<{ title: string; url: string } | null>(null)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false)
+
+  const handleDeleteAccount = async () => {
+    const targetUserId = userId || profile.owner_id
+    if (!targetUserId) {
+      throw new Error('Unable to identify company owner ID.')
+    }
+    await deleteUserAccount(targetUserId, 'company')
+    window.location.replace('/signin?accountDeleted=true')
+  }
 
   const logoInputRef = useRef<HTMLInputElement>(null)
   const certInputRef = useRef<HTMLInputElement>(null)
@@ -1199,6 +1212,28 @@ export const CompanyProfile: FC<CompanyProfileProps> = () => {
                 </button>
               </div>
             </div>
+
+            {/* Widget 3: Account & Danger Zone */}
+            <div className="cp-danger-card">
+              <div className="cp-danger-header">
+                <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#dc2626' }}>
+                  warning
+                </span>
+                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#dc2626', fontWeight: 700, textTransform: 'uppercase' }}>
+                  DANGER ZONE
+                </span>
+              </div>
+              <p style={{ margin: '6px 0 10px', fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
+                Permanently delete this company account, active jobs, walk-ins, candidate records, and subscriptions.
+              </p>
+              <button
+                type="button"
+                className="btn-cp-delete-account"
+                onClick={() => setIsDeleteModalOpen(true)}
+              >
+                Delete Company Account
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1395,6 +1430,15 @@ export const CompanyProfile: FC<CompanyProfileProps> = () => {
           </div>
         </div>
       )}
+
+      {/* MODAL: Delete Company Account */}
+      <DeleteAccountModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDeleteAccount}
+        role="company"
+        entityName={profile.name || profile.email}
+      />
     </main>
   )
 }

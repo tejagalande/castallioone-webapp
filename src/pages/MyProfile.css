@@ -2521,3 +2521,38 @@
     justify-content: center;
   }
 }
+
+/* Danger Zone / Account Deletion */
+.profile-card.danger-zone-card {
+  border: 1px solid #fee2e2;
+  background: #fffcfc;
+}
+
+.profile-card.danger-zone-card:hover {
+  border-color: #fca5a5;
+}
+
+.btn-danger-outline {
+  width: 100%;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 1.5px solid #f87171;
+  color: #dc2626;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-danger-outline:hover {
+  background: #fee2e2;
+  border-color: #dc2626;
+  color: #b91c1c;
+}
+
