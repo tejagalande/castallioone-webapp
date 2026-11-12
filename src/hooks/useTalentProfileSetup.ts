@@ -208,7 +208,11 @@ export function getIndianCurrencyWords(numStr: string): string {
   const digits = numStr.replace(/\D/g, '')
   if (!digits) return ''
   const val = parseInt(digits, 10)
-  if (isNaN(val) || val === 0) return ''
+  if (isNaN(val)) return ''
+  if (val === 0) return 'Negotiable / As per industry standard'
+  if (val > 0 && val < 100) {
+    return `₹${val} Lakhs / yr (LPA)`
+  }
   if (val >= 10000000) {
     const cr = (val / 10000000).toFixed(2).replace(/\.00$/, '')
     return `₹${cr} Crore / yr`
@@ -346,17 +350,17 @@ export const validateSingleTalentField = (
       return ''
 
     case 'expectedCtc': {
-      if (!strVal) return 'Expected annual CTC is required.'
+      if (!strVal) return 'Expected annual CTC is required (enter 0 if negotiable).'
       const rawDigits = strVal.replace(/\D/g, '')
-      if (!rawDigits || rawDigits.length < 4) {
-        return 'Please enter a valid annual CTC in Indian number format (e.g. 12,00,000).'
+      if (!rawDigits) {
+        return 'Please enter a valid expected annual CTC (e.g. 3,60,000 or 0 for negotiable).'
       }
       return ''
     }
 
     case 'resumeFile':
     case 'resumeFileName': {
-      if (!allData.resumeFile && !allData.resumeFileName && !allData.resumeFileUrl) {
+      if (!allData.resumeFile && !allData.resumeFileUrl) {
         return 'Resume document (PDF) is mandatory. Please upload your resume.'
       }
       if (allData.resumeFile) {
@@ -447,86 +451,40 @@ export function useTalentProfileSetup({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [touched, setTouched] = useState<Record<string, boolean>>({})
 
-  // Form State
-  const [formData, setFormData] = useState<TalentProfileData>(() => {
-    // Check cached data if user previously completed their profile
-    const isProfileCompleted = localStorage.getItem('castallio_talent_profile_completed') === 'true'
-    const cached = localStorage.getItem('castallio_talent_profile_data')
-    if (isProfileCompleted && cached) {
-      try {
-        const parsed = JSON.parse(cached)
-        return {
-          profileImage: null,
-          profileImagePreview: parsed.profileImagePreview || '',
-          fullName: parsed.fullName || userName || '',
-          bio: parsed.bio || '',
-          email: parsed.email || userEmail || '',
-          contactNumber: parsed.contactNumber || '',
-          city: parsed.city || '',
-          instituteName: parsed.instituteName || '',
-          discipline: parsed.discipline || '',
-          graduationYear: parsed.graduationYear || '',
-          workMode: parsed.workMode || '',
-          preferredLocations: parsed.preferredLocations || [],
-          willingToRelocate: parsed.willingToRelocate || '',
-          availability: parsed.availability || '',
-          employmentType: parsed.employmentType || '',
-          noticePeriod: parsed.noticePeriod || '',
-          expectedCtc: parsed.expectedCtc || '',
-          resumeFile: null,
-          resumeFileName: parsed.resumeFileName || '',
-          resumeFileSize: parsed.resumeFileSize || '',
-          resumeFileUrl: parsed.resumeFileUrl || '',
-          portfolioLink: parsed.portfolioLink || '',
-          linkedinLink: parsed.linkedinLink || '',
-          specificSkill: parsed.specificSkill || '',
-          coreSoftware: parsed.coreSoftware || [],
-          technicalSkills: parsed.technicalSkills || [],
-          softSkills: parsed.softSkills || [],
-          isFresher: parsed.isFresher ?? false,
-          experiences: parsed.experiences?.length ? parsed.experiences : [createEmptyExperience()],
-          hasNoCertificate: parsed.hasNoCertificate ?? false,
-          certificates: parsed.certificates?.length ? parsed.certificates : [createEmptyCertificate()],
-        }
-      } catch {
-        // ignore
-      }
-    }
-
-    return {
-      profileImage: null,
-      profileImagePreview: '',
-      fullName: userName || '',
-      bio: '',
-      email: userEmail || '',
-      contactNumber: '',
-      city: '',
-      instituteName: '',
-      discipline: '',
-      graduationYear: '',
-      workMode: '',
-      preferredLocations: [],
-      willingToRelocate: '',
-      availability: '',
-      employmentType: '',
-      noticePeriod: '',
-      expectedCtc: '',
-      resumeFile: null,
-      resumeFileName: '',
-      resumeFileSize: '',
-      resumeFileUrl: '',
-      portfolioLink: '',
-      linkedinLink: '',
-      specificSkill: '',
-      coreSoftware: [],
-      technicalSkills: [],
-      softSkills: [],
-      isFresher: false,
-      experiences: [createEmptyExperience()],
-      hasNoCertificate: false,
-      certificates: [createEmptyCertificate()],
-    }
-  })
+  // Form State (initialized cleanly; hydrated from Supabase via fetchSavedTalentProfile)
+  const [formData, setFormData] = useState<TalentProfileData>(() => ({
+    profileImage: null,
+    profileImagePreview: '',
+    fullName: userName || '',
+    bio: '',
+    email: userEmail || '',
+    contactNumber: '',
+    city: '',
+    instituteName: '',
+    discipline: '',
+    graduationYear: '',
+    workMode: '',
+    preferredLocations: [],
+    willingToRelocate: '',
+    availability: '',
+    employmentType: '',
+    noticePeriod: '',
+    expectedCtc: '',
+    resumeFile: null,
+    resumeFileName: '',
+    resumeFileSize: '',
+    resumeFileUrl: '',
+    portfolioLink: '',
+    linkedinLink: '',
+    specificSkill: '',
+    coreSoftware: [],
+    technicalSkills: [],
+    softSkills: [],
+    isFresher: false,
+    experiences: [createEmptyExperience()],
+    hasNoCertificate: false,
+    certificates: [createEmptyCertificate()],
+  }))
 
   // Predefined custom chips management
   const [customSoftwareInput, setCustomSoftwareInput] = useState('')
@@ -560,8 +518,16 @@ export function useTalentProfileSetup({
             const val = saved[key]
             const isEmptyArr = Array.isArray(val) && val.length === 0
             if (val === undefined || val === '' || isEmptyArr) return
+            // Do not overwrite an actively selected local file during onboarding
+            if ((key === 'resumeFileName' || key === 'resumeFileUrl') && prev.resumeFile) return
+            if (key === 'profileImagePreview' && prev.profileImage) return
             ;(next as Record<string, unknown>)[key] = val
           })
+          // Ensure resumeFileName is cleared if neither a File nor a resolved URL exists
+          if (!next.resumeFile && !next.resumeFileUrl) {
+            next.resumeFileName = ''
+            next.resumeFileSize = ''
+          }
           return next
         })
       })
@@ -690,14 +656,14 @@ export function useTalentProfileSetup({
         id: 'resumeFile',
         label: 'Resume PDF document',
         weight: 7,
-        isDone: Boolean(formData.resumeFile || formData.resumeFileName || formData.resumeFileUrl),
+        isDone: Boolean(formData.resumeFile || formData.resumeFileUrl),
         category: 'docs',
       },
       {
         id: 'expectedCtc',
         label: 'Expected CTC',
         weight: 4,
-        isDone: formData.expectedCtc.replace(/\D/g, '').length >= 4,
+        isDone: formData.expectedCtc.replace(/\D/g, '').length >= 1,
         category: 'docs',
       },
       {
@@ -779,14 +745,29 @@ export function useTalentProfileSetup({
     <K extends keyof TalentProfileData>(field: K, value: TalentProfileData[K]) => {
       setFormData((prev) => {
         const next = { ...prev, [field]: value }
+        // Automatically enable Fresher track when a recent or upcoming graduation year is selected and no experience is entered
+        if (field === 'graduationYear' && typeof value === 'string') {
+          const gradYr = parseInt(value, 10)
+          const currentYr = new Date().getFullYear()
+          const hasEnteredExp = prev.experiences.some(
+            (exp) => exp.role.trim().length > 0 || exp.organisation.trim().length > 0
+          )
+          if (!isNaN(gradYr) && gradYr >= currentYr - 1 && !hasEnteredExp) {
+            next.isFresher = true
+          }
+        }
         // Run instant single field validation
         const err = validateSingleTalentField(field, value, next)
         setErrors((prevErr) => {
-          if (err) {
-            return { ...prevErr, [field as string]: err }
-          }
           const copy = { ...prevErr }
-          delete copy[field as string]
+          if (field === 'isFresher' && value === true) {
+            delete copy.experience
+          }
+          if (err) {
+            copy[field as string] = err
+          } else {
+            delete copy[field as string]
+          }
           return copy
         })
         return next
@@ -1244,8 +1225,20 @@ export function useTalentProfileSetup({
       const hasValidExp = formData.experiences.some(
         (exp) => exp.role.trim() && exp.organisation.trim()
       )
+      const hasPartialExp = formData.experiences.some(
+        (exp) => exp.role.trim() || exp.organisation.trim() || exp.contribution.trim()
+      )
+      const gradYr = parseInt(formData.graduationYear, 10)
+      const currentYr = new Date().getFullYear()
+
       if (!hasValidExp) {
-        errs.experience = 'Please add at least one professional experience, or toggle "I am a fresher".'
+        if (!hasPartialExp && !isNaN(gradYr) && gradYr >= currentYr - 1) {
+          // Recent or upcoming graduate who left experience blank -> automatically mark as fresher
+          setFormData((prev) => ({ ...prev, isFresher: true }))
+        } else {
+          errs.experience =
+            'Please add at least one professional experience, or toggle "I am a Fresher / Recent Graduate" above.'
+        }
       }
     }
 
@@ -1289,7 +1282,7 @@ export function useTalentProfileSetup({
         return
       }
 
-      if (!formData.resumeFile && !formData.resumeFileName && !formData.resumeFileUrl) {
+      if (!formData.resumeFile && !formData.resumeFileUrl) {
         setCurrentStep(1)
         setTouched((prev) => ({ ...prev, resumeFile: true }))
         setErrors((prev) => ({
@@ -1308,6 +1301,15 @@ export function useTalentProfileSetup({
         onSuccess()
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Failed to save profile'
+        if (/resume/i.test(msg)) {
+          setCurrentStep(1)
+          setTouched((prev) => ({ ...prev, resumeFile: true }))
+          setErrors((prev) => ({
+            ...prev,
+            resumeFile: msg,
+          }))
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+        }
         showToast(msg, 'error', 'Setup Error')
       } finally {
         setIsSubmitting(false)

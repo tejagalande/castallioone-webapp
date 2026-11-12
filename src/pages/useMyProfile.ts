@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import { uploadTalentResume, uploadTalentAvatar } from '../lib/talentService'
+import { uploadTalentResume, uploadTalentAvatar, resolveValidResumeUrl, recoverResumeUrlFromStorage } from '../lib/talentService'
 import { generateCandidateEmbedding } from '../lib/candidateEmbeddingService'
 import {
   PREDEFINED_CORE_SOFTWARE,
@@ -683,19 +683,22 @@ export function useMyProfile() {
 
       // 2. Query Supabase student_profile directly (explicit columns, excluding large embedding vector)
       if (resolvedUserId) {
-        const { data: userSp, error: spErr } = await supabase
+        const { data: userSpRows, error: spErr } = await supabase
           .from('student_profile')
           .select(STUDENT_PROFILE_COLUMNS)
           .or(`user_id.eq.${resolvedUserId},id.eq.${resolvedUserId}`)
-          .maybeSingle()
+          .order('updated_at', { ascending: false })
+          .limit(5)
 
-        if (!spErr && userSp) {
-          spData = userSp
+        if (!spErr && userSpRows && userSpRows.length > 0) {
+          spData =
+            userSpRows.find((r) => Boolean(r.resume_file_url && String(r.resume_file_url).trim())) ||
+            userSpRows[0]
         }
       }
 
-      // If no profile found for current user session, query the latest active talent profile from Supabase
-      if (!spData) {
+      // If no profile found for unauthenticated/demo session, query latest profile
+      if (!spData && !resolvedUserId) {
         const { data: latestSp, error: latestErr } = await supabase
           .from('student_profile')
           .select(STUDENT_PROFILE_COLUMNS)
@@ -710,14 +713,35 @@ export function useMyProfile() {
 
       let workingProfile: ProfileData = {
         ...EMPTY_PROFILE,
-        fullName: user?.user_metadata?.full_name || user?.user_metadata?.name || '',
+        fullName:
+          user?.user_metadata?.full_name ||
+          user?.user_metadata?.name ||
+          '',
         email: user?.email || '',
-        profileImageUrl: user?.user_metadata?.avatar_url || user?.user_metadata?.picture || '',
+        profileImageUrl:
+          user?.user_metadata?.avatar_url ||
+          user?.user_metadata?.picture ||
+          '',
+        resumeFileUrl: '',
       }
 
       if (spData) {
         studentProfileId = spData.id
         const shortTalentId = spData.id ? `CAST-${spData.id.slice(0, 6).toUpperCase()}` : ''
+        let resolvedResumeUrl =
+          resolveValidResumeUrl(spData.resume_file_url, spData.user_id || spData.id || resolvedUserId || undefined) ||
+          (spData.resume_file_url ? String(spData.resume_file_url).trim() : '')
+
+        if (!resolvedResumeUrl && (spData.user_id || resolvedUserId)) {
+          const recovered = await recoverResumeUrlFromStorage(spData.user_id || resolvedUserId || '')
+          if (recovered) {
+            resolvedResumeUrl = recovered
+            void supabase
+              .from('student_profile')
+              .update({ resume_file_url: recovered, updated_at: new Date().toISOString() })
+              .eq('id', spData.id)
+          }
+        }
 
         // Calculate profile completeness dynamically based on real populated columns
         const populatedCount = [
@@ -732,7 +756,7 @@ export function useMyProfile() {
           Array.isArray(spData.preferred_location) && spData.preferred_location.length > 0,
           spData.availability,
           spData.expected_ctc,
-          spData.resume_file_url,
+          resolvedResumeUrl,
           spData.bio,
         ].filter(Boolean).length
 
@@ -769,7 +793,7 @@ export function useMyProfile() {
           portfolioUrl: spData.portfolio_url || '',
           linkedinUrl: spData.linkedin_url || '',
           profileImageUrl: spData.profile_image_url || workingProfile.profileImageUrl,
-          resumeFileUrl: spData.resume_file_url || '',
+          resumeFileUrl: resolvedResumeUrl,
           profileStrength: dynamicStrength,
           roleTitle: spData.discipline
             ? `${spData.discipline} Specialist`
@@ -890,6 +914,9 @@ export function useMyProfile() {
           // Calculate total active years
           const yearsCount = Math.max(1, expRows.length * 2)
           workingProfile.experienceYears = `${yearsCount}+ Years Industry Experience`
+        } else {
+          setExperiences([])
+          workingProfile.experienceYears = 'Fresher / Recent Graduate'
         }
 
         if (certRows && certRows.length > 0) {
@@ -1106,38 +1133,6 @@ export function useMyProfile() {
         }
       }
 
-      // Update cached localStorage
-      const cachedRaw = localStorage.getItem('castallio_talent_profile_data')
-      if (cachedRaw) {
-        try {
-          const parsed = JSON.parse(cachedRaw)
-          localStorage.setItem(
-            'castallio_talent_profile_data',
-            JSON.stringify({
-              ...parsed,
-              fullName: editForm.fullName,
-              bio: editForm.bio,
-              discipline: editForm.discipline,
-              city: editForm.location,
-              instituteName: editForm.institution,
-              graduationYear: editForm.graduationYear,
-              workMode: editForm.workMode,
-              preferredLocations: editForm.preferredLocations,
-              willingToRelocate: editForm.relocationPreference,
-              availability: editForm.availability,
-              employmentType: editForm.employmentType,
-              noticePeriod: editForm.noticePeriod,
-              expectedCtc: editForm.expectedCtc,
-              portfolioLink: editForm.portfolioUrl,
-              linkedinLink: editForm.linkedinUrl,
-              contactNumber: editForm.phone,
-            })
-          )
-        } catch {
-          // ignore
-        }
-      }
-
       setProfile(editForm)
       setIsEditingProfile(false)
       showToast('Profile & AEC credentials saved to database!')
@@ -1322,27 +1317,6 @@ export function useMyProfile() {
       })
 
       setSkills(nextSkills)
-
-      // Update localStorage cache
-      const cachedRaw = localStorage.getItem('castallio_talent_profile_data')
-      if (cachedRaw) {
-        try {
-          const parsed = JSON.parse(cachedRaw)
-          localStorage.setItem(
-            'castallio_talent_profile_data',
-            JSON.stringify({
-              ...parsed,
-              specificSkill: manageSkillsDraft.specificSkill,
-              coreSoftware: manageSkillsDraft.coreSoftware,
-              technicalSkills: manageSkillsDraft.technicalSkills,
-              softSkills: manageSkillsDraft.softSkills,
-            })
-          )
-        } catch {
-          // ignore
-        }
-      }
-
       setIsManageSkillsOpen(false)
       showToast('Technical software stack & capabilities updated!')
 
@@ -1389,12 +1363,25 @@ export function useMyProfile() {
           if (targetProfileId) {
             updateResumeQuery = updateResumeQuery.eq('id', targetProfileId)
           } else if (targetUserId) {
-            updateResumeQuery = updateResumeQuery.eq('user_id', targetUserId)
+            updateResumeQuery = updateResumeQuery.or(`user_id.eq.${targetUserId},id.eq.${targetUserId}`)
           }
 
-          const { error: resumeErr } = await updateResumeQuery
+          const { data: updatedResumeRows, error: resumeErr } = await updateResumeQuery.select('id')
           if (resumeErr) {
             console.error('Resume DB update error:', resumeErr.message)
+          } else if ((!updatedResumeRows || updatedResumeRows.length === 0) && targetUserId) {
+            await supabase
+              .from('student_profile')
+              .update({ resume_file_url: publicUrl, updated_at: new Date().toISOString() })
+              .or(`user_id.eq.${targetUserId},id.eq.${targetUserId}`)
+          }
+
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(
+              new CustomEvent('castallio-profile-updated', {
+                detail: { resumeFileUrl: publicUrl, hasResume: true },
+              })
+            )
           }
         }
 
@@ -1410,6 +1397,7 @@ export function useMyProfile() {
 
         setDocuments((prev) => [newDoc, ...prev.filter((d) => d.type !== 'resume')])
         setProfile((prev) => ({ ...prev, resumeFileUrl: publicUrl }))
+        setEditForm((prev) => ({ ...prev, resumeFileUrl: publicUrl }))
         showToast(`Uploaded and verified "${file.name}"!`)
       } catch (err) {
         console.error('Resume upload error:', err)
@@ -1460,20 +1448,6 @@ export function useMyProfile() {
             ...prev,
             profileImageUrl: publicUrl,
           }))
-
-          // Update cached localStorage
-          const cachedRaw = localStorage.getItem('castallio_talent_profile_data')
-          if (cachedRaw) {
-            try {
-              const parsed = JSON.parse(cachedRaw)
-              localStorage.setItem(
-                'castallio_talent_profile_data',
-                JSON.stringify({ ...parsed, profileImagePreview: publicUrl })
-              )
-            } catch {
-              // ignore
-            }
-          }
 
           showToast('Profile photo saved to Supabase!')
         }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { notifyEvent } from '../lib/webPush'
-import { computeStudentRowCompleteness, resolveValidResumeUrl } from '../lib/talentService'
+import { computeStudentRowCompleteness, resolveValidResumeUrl, recoverResumeUrlFromStorage } from '../lib/talentService'
 
 export interface RecommendedJob {
   id: string
@@ -283,66 +283,25 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
   const [loading, setLoading] = useState(true)
   const [applyingJobId, setApplyingJobId] = useState<string | null>(null)
 
-  // Local storage cache keys
-  const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(() => {
-    try {
-      const raw = localStorage.getItem('castallio_applied_jobs')
-      return raw ? new Set(JSON.parse(raw)) : new Set()
-    } catch {
-      return new Set()
-    }
-  })
+  const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(() => new Set())
 
-  const [savedJobIds, setSavedJobIds] = useState<Set<string>>(() => {
-    try {
-      const raw = localStorage.getItem('castallio_saved_jobs')
-      return raw ? new Set(JSON.parse(raw)) : new Set()
-    } catch {
-      return new Set()
-    }
-  })
+  const [savedJobIds, setSavedJobIds] = useState<Set<string>>(() => new Set())
 
-  // Talent identity & profile state
-  const [profile, setProfile] = useState<TalentProfileInfo>(() => {
-    try {
-      const raw = localStorage.getItem('castallio_talent_profile_data')
-      const parsed = raw ? JSON.parse(raw) : null
-      const savedCompleteness = parseInt(localStorage.getItem('castallio_talent_profile_completeness') || '0', 10)
-
-      return {
-        id: parsed?.userId || '',
-        fullName: parsed?.fullName || '',
-        discipline: parsed?.discipline || '',
-        specificSkill: parsed?.specificSkill || '',
-        location: parsed?.city || '',
-        workMode: parsed?.workMode || '',
-        skills: Array.isArray(parsed?.coreSoftware) ? parsed.coreSoftware : [],
-        profileStrength: savedCompleteness || (parsed ? 92 : 0),
-        avatarUrl: parsed?.profileImagePreview || undefined,
-      }
-    } catch {
-      return {
-        id: '',
-        fullName: '',
-        discipline: '',
-        specificSkill: '',
-        location: '',
-        workMode: '',
-        skills: [],
-        profileStrength: 0,
-      }
-    }
+  // Talent identity & profile state (populated directly from Supabase)
+  const [profile, setProfile] = useState<TalentProfileInfo>({
+    id: '',
+    fullName: '',
+    discipline: '',
+    specificSkill: '',
+    location: '',
+    workMode: '',
+    skills: [],
+    profileStrength: 0,
+    hasResume: false,
   })
 
   // Metrics
-  const [activeAppsCount, setActiveAppsCount] = useState<number>(() => {
-    const raw = localStorage.getItem('castallio_applied_jobs')
-    try {
-      return raw ? JSON.parse(raw).length : 0
-    } catch {
-      return 0
-    }
-  })
+  const [activeAppsCount, setActiveAppsCount] = useState<number>(0)
 
   const [profileViewsCount] = useState<number>(0)
 
@@ -390,31 +349,63 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
       let fullName = profileRef.current.fullName
       let profileAvatar = profileRef.current.avatarUrl
       let studentRecordId: string | null = null
-      let resumeUrl: string | undefined = undefined
+      let resumeUrl: string | undefined = profileRef.current.resumeFileUrl
+      let hasValidResume: boolean = Boolean(profileRef.current.hasResume || resumeUrl)
 
       // 2. Query student_profile from Supabase if user exists (explicit columns, excluding large embedding vector)
       if (resolvedUserId) {
-        const { data: studentData } = await supabase
+        const { data: studentRows, error: spQueryErr } = await supabase
           .from('student_profile')
           .select(
-            'id, user_id, full_name, discipline, work_mode, profile_image_url, resume_file_url, completeness_percentage, email, phone, location, institution, graduation_year, bio, preferred_location, availability, employment_type, notice_period, expected_ctc, linkedin_url, portfolio_url'
+            'id, user_id, full_name, discipline, work_mode, profile_image_url, resume_file_url, email, phone, location, institution, graduation_year, bio, preferred_location, availability, employment_type, notice_period, expected_ctc, linkedin_url, portfolio_url'
           )
           .or(`user_id.eq.${resolvedUserId},id.eq.${resolvedUserId}`)
-          .limit(1)
-          .maybeSingle()
+          .order('updated_at', { ascending: false })
+          .limit(5)
+
+        if (spQueryErr) {
+          console.warn('student_profile dashboard query notice:', spQueryErr.message)
+        }
+
+        const studentData =
+          studentRows && studentRows.length > 0
+            ? studentRows.find((r) => Boolean(r.resume_file_url && String(r.resume_file_url).trim())) ||
+              studentRows[0]
+            : null
 
         if (studentData) {
           studentRecordId = studentData.id || null
-          resumeUrl = resolveValidResumeUrl(studentData.resume_file_url, studentData.user_id || studentData.id || resolvedUserId)
+          const rawDbResume = studentData.resume_file_url ? String(studentData.resume_file_url).trim() : ''
+          const resolvedDbResume = resolveValidResumeUrl(
+            rawDbResume,
+            studentData.user_id || studentData.id || resolvedUserId
+          )
+          if (resolvedDbResume) {
+            resumeUrl = resolvedDbResume
+            hasValidResume = true
+          } else if (rawDbResume) {
+            resumeUrl = rawDbResume
+            hasValidResume = true
+          } else {
+            const recovered = await recoverResumeUrlFromStorage(studentData.user_id || resolvedUserId)
+            if (recovered) {
+              resumeUrl = recovered
+              hasValidResume = true
+              void supabase
+                .from('student_profile')
+                .update({ resume_file_url: recovered, updated_at: new Date().toISOString() })
+                .eq('id', studentData.id)
+            }
+          }
+
           if (studentData.full_name) fullName = studentData.full_name
           if (studentData.discipline) currentDiscipline = studentData.discipline
           if (studentData.work_mode) currentWorkMode = studentData.work_mode
           if (studentData.profile_image_url) profileAvatar = studentData.profile_image_url
-          if (typeof studentData.completeness_percentage === 'number' && studentData.completeness_percentage > 0) {
-            completeness = studentData.completeness_percentage
-          } else {
-            completeness = computeStudentRowCompleteness(studentData)
-          }
+          completeness = computeStudentRowCompleteness({
+            ...studentData,
+            resume_file_url: studentData.resume_file_url || resumeUrl || null,
+          })
 
           // Query skills from student_skills (jsonb `skills` array keyed by student_id)
           const { data: skillsRow } = await supabase
@@ -457,7 +448,7 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
           prev.profileStrength === completeness &&
           prev.avatarUrl === profileAvatar &&
           prev.resumeFileUrl === resumeUrl &&
-          prev.hasResume === Boolean(resumeUrl) &&
+          prev.hasResume === hasValidResume &&
           isSkillsEqual
         ) {
           return prev
@@ -473,7 +464,7 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
           profileStrength: completeness,
           avatarUrl: profileAvatar,
           resumeFileUrl: resumeUrl,
-          hasResume: Boolean(resumeUrl),
+          hasResume: hasValidResume,
         }
       })
 
@@ -562,17 +553,8 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
         })
       }
 
-      // 4. Process Applications count and applied jobs for current user
+      // 4. Process Applications count and applied jobs for current user from Supabase
       const userAppliedSet = new Set<string>()
-      try {
-        const raw = localStorage.getItem('castallio_applied_jobs')
-        if (raw) {
-          const parsed = JSON.parse(raw)
-          if (Array.isArray(parsed)) parsed.forEach((id: string) => userAppliedSet.add(id))
-        }
-      } catch {
-        // fallback
-      }
       let dbAppliedCount = 0
       const applicationsList: Array<{
         id: string
@@ -582,15 +564,6 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
       }> = []
 
       const loadedSaved = new Set<string>()
-      try {
-        const raw = localStorage.getItem('castallio_saved_jobs')
-        if (raw) {
-          const parsed = JSON.parse(raw)
-          if (Array.isArray(parsed)) parsed.forEach((id: string) => loadedSaved.add(id))
-        }
-      } catch {
-        // fallback
-      }
 
       if (resolvedUserId) {
         const dbApps = appsRes.data
@@ -600,9 +573,8 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
             applicationsList.push(a)
           })
           dbAppliedCount = dbApps.length
-          setAppliedJobIds(new Set(userAppliedSet))
-          localStorage.setItem('castallio_applied_jobs', JSON.stringify(Array.from(userAppliedSet)))
         }
+        setAppliedJobIds(new Set(userAppliedSet))
 
         const dbSavedJobs = savedRes.data
         if (dbSavedJobs && dbSavedJobs.length > 0) {
@@ -611,14 +583,13 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
           })
         }
         setSavedJobIds(new Set(loadedSaved))
-        localStorage.setItem('castallio_saved_jobs', JSON.stringify(Array.from(loadedSaved)))
       } else {
-        setSavedJobIds(new Set(loadedSaved))
+        setAppliedJobIds(new Set())
+        setSavedJobIds(new Set())
       }
 
       // Update active apps count
-      const finalAppsCount = Math.max(dbAppliedCount, userAppliedSet.size)
-      setActiveAppsCount(finalAppsCount)
+      setActiveAppsCount(dbAppliedCount)
 
       // 5. Query REAL Interviews for Upcoming Events Section
       let realUpcomingEvents: DashboardUpcomingEvent[] = []
@@ -877,6 +848,25 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
     }
   }, [loadDashboardData])
 
+  // Sync profile state immediately when resume/profile is updated in MyProfile or Setup
+  useEffect(() => {
+    const handleProfileUpdated = (e: Event) => {
+      const custom = e as CustomEvent<{ resumeFileUrl?: string; hasResume?: boolean }>
+      if (custom.detail) {
+        setProfile((prev) => ({
+          ...prev,
+          resumeFileUrl: custom.detail.resumeFileUrl || prev.resumeFileUrl,
+          hasResume: custom.detail.hasResume ?? Boolean(custom.detail.resumeFileUrl || prev.hasResume),
+        }))
+      }
+      void loadDashboardData(true)
+    }
+    window.addEventListener('castallio-profile-updated', handleProfileUpdated)
+    return () => {
+      window.removeEventListener('castallio-profile-updated', handleProfileUpdated)
+    }
+  }, [loadDashboardData])
+
   /**
    * Applies for a recommended job:
    * Inserts into Supabase `job_applications` if authenticated,
@@ -895,15 +885,26 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
 
         // Pre-application gatekeeper: verified resume PDF is strictly mandatory
         if (!profile.hasResume) {
-          const { data: currentSp } = await supabase
+          const { data: spRows } = await supabase
             .from('student_profile')
             .select('id, user_id, resume_file_url')
             .or(`user_id.eq.${candidateId},id.eq.${candidateId}`)
-            .limit(1)
-            .maybeSingle()
+            .order('updated_at', { ascending: false })
+            .limit(5)
 
-          const validResume = resolveValidResumeUrl(currentSp?.resume_file_url, candidateId)
-          if (!validResume) {
+          const currentSp =
+            spRows && spRows.length > 0
+              ? spRows.find((r) => Boolean(r.resume_file_url && String(r.resume_file_url).trim())) || spRows[0]
+              : null
+
+          const rawResume = currentSp?.resume_file_url ? String(currentSp.resume_file_url).trim() : ''
+          const validResume =
+            resolveValidResumeUrl(rawResume, currentSp?.user_id || currentSp?.id || candidateId) ||
+            (rawResume ? rawResume : undefined)
+
+          if (validResume) {
+            setProfile((prev) => ({ ...prev, resumeFileUrl: validResume, hasResume: true }))
+          } else {
             setApplyingJobId(null)
             return false
           }
@@ -930,11 +931,10 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
           }
         }
 
-        // 2. Update local tracking
+        // 2. Update local state
         const updatedApplied = new Set(appliedJobIds)
         updatedApplied.add(job.id)
         setAppliedJobIds(updatedApplied)
-        localStorage.setItem('castallio_applied_jobs', JSON.stringify(Array.from(updatedApplied)))
 
         // 3. Update rawJobs state
         setRawJobs((prev) =>
@@ -963,7 +963,7 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
         setApplyingJobId(null)
       }
     },
-    [appliedJobIds, profile.id]
+    [appliedJobIds, profile.id, profile.hasResume]
   )
 
   /**
@@ -982,7 +982,6 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
       }
 
       setSavedJobIds(nextSaved)
-      localStorage.setItem('castallio_saved_jobs', JSON.stringify(Array.from(nextSaved)))
 
       setRawJobs((prev) =>
         prev.map((item) => (item.id === job.id ? { ...item, isSaved: shouldSave } : item))

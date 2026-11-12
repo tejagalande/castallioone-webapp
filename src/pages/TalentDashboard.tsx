@@ -215,14 +215,12 @@ export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
   const [gatekeeperJob, setGatekeeperJob] = useState<RecommendedJob | null>(null)
 
   const handleApply = async (job: RecommendedJob) => {
-    if (!profile.hasResume) {
-      setGatekeeperJob(job)
-      setGatekeeperModalOpen(true)
-      return
-    }
     const success = await applyForJob(job)
     if (success) {
       showSuccess(`Application submitted to ${job.company}! Recruiter will review your credentials.`, 'Application Sent')
+    } else if (!profile.hasResume) {
+      setGatekeeperJob(job)
+      setGatekeeperModalOpen(true)
     }
   }
 
@@ -305,7 +303,7 @@ export const TalentDashboard: FC<TalentDashboardProps> = ({ onLogout }) => {
       </aside>
 
       <main className="talent-main">
-        {!loading && !profile.hasResume && (
+        {!loading && !profile.hasResume && activeMenu !== 'my-profile' && (
           <aside className="talent-resume-alert-banner" role="alert">
             <div className="talent-resume-alert-content">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="talent-resume-alert-icon" aria-hidden="true">

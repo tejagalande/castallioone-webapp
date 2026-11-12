@@ -23,6 +23,7 @@ interface MyProfileProps {
 
 const MyProfile: FC<MyProfileProps> = () => {
   const {
+    loading,
     profile,
     editForm,
     setEditForm,
@@ -127,9 +128,11 @@ const MyProfile: FC<MyProfileProps> = () => {
     if (file) {
       if (!file.name.toLowerCase().endsWith('.pdf')) {
         showToast('Please upload a PDF document format.')
+        e.target.value = ''
         return
       }
       handleUploadResumeFile(file)
+      e.target.value = ''
     }
   }
 
@@ -210,7 +213,7 @@ const MyProfile: FC<MyProfileProps> = () => {
         </div>
       </header>
 
-      {!profile.resumeFileUrl && (
+      {!loading && !profile.resumeFileUrl && (
         <aside className="talent-resume-alert-banner" role="alert" style={{ marginBottom: '24px' }}>
           <div className="talent-resume-alert-content">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="talent-resume-alert-icon" aria-hidden="true">

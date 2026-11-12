@@ -12,18 +12,15 @@ export interface CheckTalentProfileResult {
 
 /**
  * Checks whether user has completed talent onboarding.
- * Checks user_profiles table, student_profile table, and local storage fallback.
+ * Queries user_profiles and student_profile tables directly in Supabase.
  */
 export async function checkTalentProfile(userId?: string): Promise<CheckTalentProfileResult> {
-  const localCompleted = localStorage.getItem('castallio_talent_profile_completed') === 'true'
-  const localCompleteness = parseInt(localStorage.getItem('castallio_talent_profile_completeness') || '0', 10)
-
   if (!userId) {
     return {
-      exists: localCompleted,
+      exists: false,
       profile: null,
-      needsOnboarding: !localCompleted,
-      completeness: localCompleteness || (localCompleted ? 100 : 0),
+      needsOnboarding: true,
+      completeness: 0,
     }
   }
 
@@ -41,6 +38,7 @@ export async function checkTalentProfile(userId?: string): Promise<CheckTalentPr
           'id, user_id, profile_image_url, full_name, email, phone, location, institution, discipline, graduation_year, bio, work_mode, preferred_location, relocation_preference, availability, employment_type, notice_period, resume_file_url, expected_ctc, linkedin_url, portfolio_url'
         )
         .or(`user_id.eq.${userId},id.eq.${userId}`)
+        .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle(),
     ])
@@ -53,32 +51,31 @@ export async function checkTalentProfile(userId?: string): Promise<CheckTalentPr
     }
 
     const isProfessional = userProfile?.role === 'professional'
-    const hasCompletedFlag =
-      (isProfessional && userProfile?.onboarding_complete === true) ||
-      localCompleted
-
+    const hasCompletedFlag = isProfessional && userProfile?.onboarding_complete === true
     const hasBasicProfile = Boolean(studentProfile?.full_name && studentProfile?.discipline)
 
     const needsOnboarding = !hasCompletedFlag && !hasBasicProfile
 
     const completeness = studentProfile
       ? computeStudentRowCompleteness(studentProfile as Record<string, unknown>)
-      : localCompleteness || (hasCompletedFlag ? 100 : 25)
+      : hasCompletedFlag
+      ? 100
+      : 0
 
     return {
-      exists: Boolean((isProfessional && userProfile) || studentProfile || localCompleted),
+      exists: Boolean((isProfessional && userProfile) || studentProfile),
       profile: (studentProfile || (isProfessional ? userProfile : null)) as Record<string, unknown> | null,
       needsOnboarding,
       completeness,
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error'
-    console.warn('checkTalentProfile fallback triggered:', msg)
+    console.warn('checkTalentProfile error:', msg)
     return {
-      exists: localCompleted,
+      exists: false,
       profile: null,
-      needsOnboarding: !localCompleted,
-      completeness: localCompleteness,
+      needsOnboarding: true,
+      completeness: 0,
       error: msg,
     }
   }
@@ -127,6 +124,7 @@ export async function fetchSavedTalentProfile(
       'id, user_id, profile_image_url, full_name, bio, email, phone, location, institution, discipline, graduation_year, work_mode, preferred_location, relocation_preference, availability, employment_type, notice_period, expected_ctc, resume_file_url, portfolio_url, linkedin_url'
     )
     .or(`user_id.eq.${userId},id.eq.${userId}`)
+    .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle()
 
@@ -148,6 +146,18 @@ export async function fetchSavedTalentProfile(
   const relocValue: TalentProfileData['willingToRelocate'] =
     reloc.startsWith('yes') ? 'yes' : reloc.startsWith('open') ? 'open' : reloc.startsWith('no') ? 'no' : ''
 
+  let resolvedResumeUrl = resolveValidResumeUrl(sp.resume_file_url, sp.user_id || sp.id || userId) || ''
+  if (!resolvedResumeUrl) {
+    const recovered = await recoverResumeUrlFromStorage(sp.user_id || userId)
+    if (recovered) {
+      resolvedResumeUrl = recovered
+      void supabase
+        .from('student_profile')
+        .update({ resume_file_url: recovered, updated_at: new Date().toISOString() })
+        .eq('id', sp.id)
+    }
+  }
+
   const partial: Partial<TalentProfileData> = {
     profileImagePreview: str(sp.profile_image_url),
     fullName: str(sp.full_name),
@@ -165,9 +175,15 @@ export async function fetchSavedTalentProfile(
     employmentType: str(sp.employment_type),
     noticePeriod: str(sp.notice_period),
     expectedCtc: str(sp.expected_ctc).replace(/^₹/, ''),
-    resumeFileUrl: resolveValidResumeUrl(sp.resume_file_url, sp.user_id || sp.id) || '',
-    resumeFileName: sp.resume_file_url
-      ? decodeURIComponent(String(sp.resume_file_url).split('/').pop()?.replace(/^resume-+/i, '') || 'resume.pdf')
+    resumeFileUrl: resolvedResumeUrl,
+    resumeFileName: resolvedResumeUrl
+      ? decodeURIComponent(
+          String(sp.resume_file_url)
+            .split('?')[0]
+            .split('/')
+            .pop()
+            ?.replace(/^resume-+/i, '') || 'resume.pdf'
+        )
       : '',
     portfolioLink: str(sp.portfolio_url),
     linkedinLink: str(sp.linkedin_url),
@@ -179,12 +195,13 @@ export async function fetchSavedTalentProfile(
     supabase
       .from('student_skills')
       .select('skills')
-      .eq('student_id', studentId)
+      .or(`student_id.eq.${studentId},student_id.eq.${userId}`)
+      .limit(1)
       .maybeSingle(),
     supabase
       .from('student_experience')
       .select('id, role_title, organization_name, start_date, end_date, contributions')
-      .eq('student_id', studentId),
+      .or(`student_id.eq.${studentId},student_id.eq.${userId}`),
   ])
 
   if (skillsRow && Array.isArray(skillsRow.skills)) {
@@ -218,7 +235,7 @@ export async function fetchSavedTalentProfile(
       currentlyWorking: !r.end_date,
       contribution: str(r.contributions),
     }))
-  } else if (skillsRow) {
+  } else {
     partial.isFresher = true
   }
 
@@ -261,24 +278,75 @@ export async function uploadTalentAvatar(userId: string, file: File): Promise<st
 
 /**
  * Resolves and validates a candidate's resume URL.
- * Automatically recovers full Supabase storage URL if it was stored with a relative "resume-" prefix.
+ * Automatically recovers full Supabase storage URL if it was stored with a relative path or "resume-" prefix.
  */
 export function resolveValidResumeUrl(rawUrl?: string | null, userIdOrProfileId?: string): string | undefined {
   if (!rawUrl) return undefined
   const trimmed = String(rawUrl).trim()
-  if (
-    trimmed.startsWith('https://') ||
-    trimmed.startsWith('http://') ||
-    trimmed.startsWith('data:application/pdf') ||
-    trimmed.startsWith('blob:')
-  ) {
+  if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return undefined
+
+  if (/^https?:\/\//i.test(trimmed) || /^blob:/i.test(trimmed)) {
     return trimmed
   }
 
-  // Recover legacy corrupted entries such as "resume-resume_1792233519566.pdf"
-  const cleanFileName = trimmed.replace(/^resume-+/i, '')
-  if (cleanFileName.endsWith('.pdf') && userIdOrProfileId) {
-    return `https://pmqtsplqnwexxnojeezg.supabase.co/storage/v1/object/public/profile-resume/profiles/${userIdOrProfileId}/${cleanFileName}`
+  if (/^data:/i.test(trimmed)) {
+    if (/^data:(application\/octet-stream|binary\/octet-stream|;base64)/i.test(trimmed)) {
+      return trimmed.replace(/^data:[^,]*,/i, 'data:application/pdf;base64,')
+    }
+    return trimmed
+  }
+
+  const baseStorageUrl = 'https://pmqtsplqnwexxnojeezg.supabase.co/storage/v1/object/public/profile-resume'
+  const cleanRelPath = trimmed.replace(/^\/+/, '').replace(/^profile-resume\/+/i, '')
+
+  // Handle paths already containing directory structure (e.g. "profiles/<uid>/resume.pdf" or "<uid>/resume.pdf")
+  if (cleanRelPath.includes('/')) {
+    return `${baseStorageUrl}/${cleanRelPath}`
+  }
+
+  // Recover legacy entries such as "resume-resume_1792233519566.pdf" or plain filenames
+  const cleanFileName = cleanRelPath.replace(/^resume-+/i, '')
+  if (cleanFileName && userIdOrProfileId) {
+    return `${baseStorageUrl}/profiles/${userIdOrProfileId}/${cleanFileName}`
+  }
+
+  return undefined
+}
+
+/**
+ * Checks the `profile-resume` storage bucket for an uploaded resume PDF belonging to the user.
+ * Used to self-heal `student_profile.resume_file_url` when a previous upload succeeded in Storage
+ * but failed or was skipped during DB row update.
+ */
+export async function recoverResumeUrlFromStorage(userId: string): Promise<string | undefined> {
+  if (!userId) return undefined
+  const foldersToCheck = [`profiles/${userId}`, userId]
+
+  for (const folder of foldersToCheck) {
+    try {
+      const { data: files, error } = await supabase.storage
+        .from('profile-resume')
+        .list(folder, {
+          limit: 10,
+          sortBy: { column: 'created_at', order: 'desc' },
+        })
+
+      if (!error && files && files.length > 0) {
+        const pdfFile = files.find(
+          (f) => f.name && f.name !== '.emptyFolderPlaceholder' && /\.pdf$/i.test(f.name)
+        ) || files.find((f) => f.name && f.name !== '.emptyFolderPlaceholder')
+
+        if (pdfFile?.name) {
+          const fullPath = `${folder}/${pdfFile.name}`
+          const { data } = supabase.storage.from('profile-resume').getPublicUrl(fullPath)
+          if (data?.publicUrl) {
+            return data.publicUrl
+          }
+        }
+      }
+    } catch {
+      // Ignore storage list errors and continue
+    }
   }
 
   return undefined
@@ -286,32 +354,55 @@ export function resolveValidResumeUrl(rawUrl?: string | null, userIdOrProfileId?
 
 /**
  * Uploads talent resume PDF file to storage bucket.
- * Falls back to local object URL or Data URL.
+ * Falls back to normalized PDF Data URL.
  */
 export async function uploadTalentResume(userId: string, file: File): Promise<string> {
-  const fileExt = file.name.split('.').pop() || 'pdf'
+  const rawExt = (file.name.split('.').pop() || 'pdf').toLowerCase()
+  const fileExt = rawExt === 'pdf' ? 'pdf' : rawExt
   const fileName = `resume_${Date.now()}.${fileExt}`
-  const filePath = `profiles/${userId}/${fileName}`
+  const primaryPath = `profiles/${userId}/${fileName}`
+  const fallbackPath = `${userId}/${fileName}`
 
   try {
     const { error: uploadError } = await supabase.storage
       .from('profile-resume')
-      .upload(filePath, file, {
+      .upload(primaryPath, file, {
         upsert: true,
         cacheControl: '3600',
+        contentType: 'application/pdf',
       })
 
     if (!uploadError) {
-      const { data } = supabase.storage.from('profile-resume').getPublicUrl(filePath)
+      const { data } = supabase.storage.from('profile-resume').getPublicUrl(primaryPath)
+      return data.publicUrl
+    }
+
+    const { error: secondError } = await supabase.storage
+      .from('profile-resume')
+      .upload(fallbackPath, file, {
+        upsert: true,
+        cacheControl: '3600',
+        contentType: 'application/pdf',
+      })
+
+    if (!secondError) {
+      const { data } = supabase.storage.from('profile-resume').getPublicUrl(fallbackPath)
       return data.publicUrl
     }
   } catch {
-    // Bucket might not exist
+    // Bucket might not exist or storage temporarily unreachable
   }
 
   return new Promise((resolve) => {
     const reader = new FileReader()
-    reader.onloadend = () => resolve(reader.result as string)
+    reader.onloadend = () => {
+      const res = typeof reader.result === 'string' ? reader.result : ''
+      if (res && !res.startsWith('data:application/pdf')) {
+        resolve(res.replace(/^data:[^,]*,/i, 'data:application/pdf;base64,'))
+      } else {
+        resolve(res)
+      }
+    }
     reader.onerror = () => resolve('')
     reader.readAsDataURL(file)
   })
@@ -321,7 +412,7 @@ export async function uploadTalentResume(userId: string, file: File): Promise<st
  * Uploads certificate PDF document.
  */
 export async function uploadTalentCertificateDoc(userId: string, file: File): Promise<string> {
-  const fileExt = file.name.split('.').pop() || 'pdf'
+  const fileExt = (file.name.split('.').pop() || 'pdf').toLowerCase()
   const fileName = `cert_${Date.now()}.${fileExt}`
   const filePath = `${userId}/${fileName}`
 
@@ -331,6 +422,7 @@ export async function uploadTalentCertificateDoc(userId: string, file: File): Pr
       .upload(filePath, file, {
         upsert: true,
         cacheControl: '3600',
+        contentType: 'application/pdf',
       })
 
     if (!uploadError) {
@@ -351,12 +443,12 @@ export async function uploadTalentCertificateDoc(userId: string, file: File): Pr
 
 /**
  * Saves completed talent onboarding data into Supabase (student_profile,
- * student_skills, student_experience, user_profiles) and mirrors in localStorage.
+ * student_skills, student_experience, user_profiles).
  */
 export async function saveTalentProfile(
   userId: string,
   data: TalentProfileData,
-  completenessScore: number
+  _completenessScore: number
 ): Promise<void> {
   // 1. Upload files if provided
   let avatarUrl = data.profileImagePreview || ''
@@ -376,20 +468,33 @@ export async function saveTalentProfile(
     } catch (e) {
       console.warn('Resume upload fallback used:', e)
     }
-  } else if (data.resumeFileUrl && (data.resumeFileUrl.startsWith('http') || data.resumeFileUrl.startsWith('data:'))) {
-    resumeUrl = data.resumeFileUrl
-  } else {
+  }
+
+  if (!resumeUrl && data.resumeFileUrl) {
+    resumeUrl = resolveValidResumeUrl(data.resumeFileUrl, userId) || ''
+  }
+
+  if (!resumeUrl) {
     // Check if user already has a valid resume in student_profile in DB
     const { data: existingSp } = await supabase
       .from('student_profile')
-      .select('resume_file_url')
+      .select('id, user_id, resume_file_url')
       .or(`user_id.eq.${userId},id.eq.${userId}`)
+      .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle()
 
-    const resolved = resolveValidResumeUrl(existingSp?.resume_file_url, userId)
+    const resolved = resolveValidResumeUrl(
+      existingSp?.resume_file_url,
+      existingSp?.user_id || existingSp?.id || userId
+    )
     if (resolved) {
       resumeUrl = resolved
+    } else {
+      const recovered = await recoverResumeUrlFromStorage(userId)
+      if (recovered) {
+        resumeUrl = recovered
+      }
     }
   }
 
@@ -397,9 +502,9 @@ export async function saveTalentProfile(
     throw new Error('A valid resume PDF document is mandatory. Please attach your resume before completing profile setup.')
   }
 
-  // 2. Prepare payload for student_profile (must match real table columns)
+  // 2. Prepare payload for student_profile (must match real table columns & constraints)
   const relocationLabel =
-    data.willingToRelocate === 'yes' ? 'Yes' : data.willingToRelocate === 'open' ? 'Open to Discuss' : data.willingToRelocate === 'no' ? 'No' : null
+    data.willingToRelocate === 'yes' ? 'Yes' : data.willingToRelocate === 'open' ? 'Open' : data.willingToRelocate === 'no' ? 'No' : null
   const phoneDigits = data.contactNumber.replace(/\D/g, '')
 
   const studentProfilePayload = {
@@ -419,6 +524,7 @@ export async function saveTalentProfile(
     employment_type: data.employmentType.trim(),
     notice_period: data.noticePeriod.trim(),
     expected_ctc: data.expectedCtc.trim(),
+    is_fresher: Boolean(data.isFresher),
     resume_file_url: resumeUrl || null,
     portfolio_url: data.portfolioLink.trim() || null,
     linkedin_url: data.linkedinLink.trim() || null,
@@ -428,14 +534,30 @@ export async function saveTalentProfile(
 
   // Update existing student_profile or insert a new one
   try {
+    // Ensure parent user_profiles row exists first to satisfy student_profile_user_id_fkey
+    const { error: preProfErr } = await supabase
+      .from('user_profiles')
+      .upsert(
+        {
+          id: userId,
+          role: 'professional',
+          onboarding_complete: true,
+        },
+        { onConflict: 'id' }
+      )
+    if (preProfErr) {
+      console.warn('user_profiles pre-upsert notice:', preProfErr.message)
+    }
+
     const { data: existing } = await supabase
       .from('student_profile')
       .select('id')
-      .eq('user_id', userId)
+      .or(`user_id.eq.${userId},id.eq.${userId}`)
+      .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle()
 
-    const { data: upsertedStudent, error: studentError } = existing?.id
+    let { data: upsertedStudent, error: studentError } = existing?.id
       ? await supabase
           .from('student_profile')
           .update(studentProfilePayload)
@@ -449,10 +571,47 @@ export async function saveTalentProfile(
           .maybeSingle()
 
     if (studentError) {
-      console.warn('Save student_profile notice:', studentError.message)
+      console.warn('Save student_profile notice, retrying core payload:', studentError.message)
+      const fallbackPayload = {
+        user_id: userId,
+        full_name: data.fullName.trim(),
+        bio: data.bio.trim(),
+        email: data.email.trim(),
+        location: data.city.trim(),
+        institution: data.instituteName.trim(),
+        discipline: data.discipline.trim(),
+        graduation_year: data.graduationYear.trim(),
+        work_mode: data.workMode.trim(),
+        availability: data.availability.trim(),
+        employment_type: data.employmentType.trim(),
+        notice_period: data.noticePeriod.trim(),
+        expected_ctc: data.expectedCtc.trim(),
+        is_fresher: Boolean(data.isFresher),
+        resume_file_url: resumeUrl || null,
+        portfolio_url: data.portfolioLink.trim() || null,
+        linkedin_url: data.linkedinLink.trim() || null,
+        profile_image_url: avatarUrl || null,
+        updated_at: new Date().toISOString(),
+      }
+      const retryRes = existing?.id
+        ? await supabase
+            .from('student_profile')
+            .update(fallbackPayload)
+            .eq('id', existing.id)
+            .select('id')
+            .maybeSingle()
+        : await supabase
+            .from('student_profile')
+            .insert(fallbackPayload)
+            .select('id')
+            .maybeSingle()
+      if (retryRes.data) {
+        upsertedStudent = retryRes.data
+        studentError = null
+      }
     }
 
-    const studentId = upsertedStudent?.id || userId
+    const studentId = upsertedStudent?.id || existing?.id || userId
 
     // 3, 4 & 5. Save Skills, Experiences, and user_profiles onboarding status in parallel
     const combinedSkills = [
@@ -483,7 +642,9 @@ export async function saveTalentProfile(
         : Promise.resolve()
 
     const saveExperiencesPromise = (async () => {
-      if (!data.isFresher && data.experiences.length > 0) {
+      if (data.isFresher) {
+        await supabase.from('student_experience').delete().eq('student_id', studentId)
+      } else if (data.experiences.length > 0) {
         const expRows = data.experiences
           .filter((exp) => exp.role.trim() || exp.organisation.trim())
           .map((exp) => ({
@@ -527,22 +688,23 @@ export async function saveTalentProfile(
       })
     }
   } catch (err) {
-    console.warn('Supabase profile persistence encountered error, local cache active:', err)
+    console.warn('Supabase profile persistence encountered error:', err)
   }
 
-  // 6. Cache into localStorage for zero-latency instant offline restoration
-  const localCache = {
-    ...data,
-    profileImage: null, // exclude binary file objects from JSON
-    resumeFile: null,
-    certificates: data.certificates.map((c) => ({ ...c, file: null })),
-    profileImagePreview: avatarUrl,
-    resumeFileUrl: resumeUrl,
-    completenessScore,
-    savedAt: new Date().toISOString(),
+  // Clean up any legacy localStorage keys so stale browser data never leaks across sessions
+  try {
+    localStorage.removeItem('castallio_talent_profile_completed')
+    localStorage.removeItem('castallio_talent_profile_completeness')
+    localStorage.removeItem('castallio_talent_profile_data')
+  } catch {
+    // ignore
   }
 
-  localStorage.setItem('castallio_talent_profile_completed', 'true')
-  localStorage.setItem('castallio_talent_profile_completeness', String(completenessScore))
-  localStorage.setItem('castallio_talent_profile_data', JSON.stringify(localCache))
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('castallio-profile-updated', {
+        detail: { resumeFileUrl: resumeUrl, hasResume: true },
+      })
+    )
+  }
 }

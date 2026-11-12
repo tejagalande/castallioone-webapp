@@ -748,7 +748,7 @@ export const TalentProfileSetup: React.FC<TalentProfileSetupProps> = ({
                 <div className={`form-group ${getFieldClass('expectedCtc')}`}>
                   <label className="form-label" htmlFor="expectedCtcInput">
                     <span className="label-title">Expected CTC (Annual Salary) <span className="req-star">*</span></span>
-                    <span className="field-hint">(Indian number format: e.g. 12,00,000)</span>
+                    <span className="field-hint">(Indian number format: e.g. 3,60,000 or 0 if negotiable)</span>
                   </label>
                   <div className="input-with-icon">
                     <span className="input-lead-icon rupee-prefix">₹</span>
@@ -757,12 +757,30 @@ export const TalentProfileSetup: React.FC<TalentProfileSetupProps> = ({
                       type="text"
                       inputMode="numeric"
                       className="form-input"
-                      placeholder="e.g. 12,00,000"
+                      placeholder="e.g. 3,60,000 (or 0 for Negotiable / Fresher)"
                       value={formData.expectedCtc}
                       onChange={(e) => updateField('expectedCtc', formatIndianNumber(e.target.value))}
                       onBlur={() => handleBlur('expectedCtc')}
                       maxLength={15}
                     />
+                  </div>
+                  <div className="tags-interactive-wrap" style={{ marginTop: '8px' }}>
+                    {[
+                      { label: 'Negotiable (Fresher)', val: '0' },
+                      { label: '₹3,00,000 / yr', val: '3,00,000' },
+                      { label: '₹4,50,000 / yr', val: '4,50,000' },
+                      { label: '₹6,00,000 / yr', val: '6,00,000' },
+                      { label: '₹12,00,000 / yr', val: '12,00,000' },
+                    ].map((preset) => (
+                      <button
+                        key={preset.val}
+                        type="button"
+                        className={`tag-chip ${formData.expectedCtc === preset.val ? 'active' : ''}`}
+                        onClick={() => updateField('expectedCtc', preset.val)}
+                      >
+                        <span>{preset.label}</span>
+                      </button>
+                    ))}
                   </div>
                   {errors.expectedCtc && <span className="field-error">{errors.expectedCtc}</span>}
                   {!errors.expectedCtc && touched.expectedCtc && formData.expectedCtc && (
@@ -795,7 +813,7 @@ export const TalentProfileSetup: React.FC<TalentProfileSetupProps> = ({
                   </label>
 
                   <div className="resume-upload-card">
-                    {formData.resumeFileName ? (
+                    {(formData.resumeFile || formData.resumeFileUrl) && formData.resumeFileName ? (
                       <div className="resume-attached-info">
                         <div className="pdf-icon-badge">
                           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -836,7 +854,10 @@ export const TalentProfileSetup: React.FC<TalentProfileSetupProps> = ({
                           type="file"
                           accept=".pdf,application/pdf"
                           style={{ display: 'none' }}
-                          onChange={(e) => handleResumeUpload(e.target.files?.[0] || null)}
+                          onChange={(e) => {
+                            handleResumeUpload(e.target.files?.[0] || null)
+                            e.target.value = ''
+                          }}
                         />
                         <div className="drop-icon">
                           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -1204,7 +1225,7 @@ export const TalentProfileSetup: React.FC<TalentProfileSetupProps> = ({
                       className="talent-toggle-text"
                       onClick={() => updateField('isFresher', !formData.isFresher)}
                     >
-                      I am a Fresher
+                      I am a Fresher / Recent Graduate
                     </span>
                     <button
                       type="button"
@@ -1231,7 +1252,19 @@ export const TalentProfileSetup: React.FC<TalentProfileSetupProps> = ({
                   </div>
                 ) : (
                   <div className="experience-cards-list">
-                    {errors.experience && <span className="field-error mb-2">{errors.experience}</span>}
+                    {errors.experience && (
+                      <div className="fresher-error-callout" style={{ marginBottom: '12px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '10px', padding: '10px 14px', borderRadius: '10px', background: '#fef2f2', border: '1px solid #fecaca' }}>
+                        <span className="field-error" style={{ margin: 0 }}>{errors.experience}</span>
+                        <button
+                          type="button"
+                          className="btn-add-tag"
+                          onClick={() => updateField('isFresher', true)}
+                          style={{ whiteSpace: 'nowrap' }}
+                        >
+                          🎓 I am a Fresher / Recent Graduate
+                        </button>
+                      </div>
+                    )}
 
                     {formData.experiences.map((exp, index) => (
                       <div key={exp.id} className="dynamic-subcard">

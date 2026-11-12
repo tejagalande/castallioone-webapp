@@ -56,11 +56,8 @@ function App() {
           return
         }
       } else {
-        const isCompleted = localStorage.getItem('castallio_talent_profile_completed') === 'true'
-        if (!isCompleted) {
-          navigate('/talent-setup', { replace: true })
-          return
-        }
+        navigate('/talent-setup', { replace: true })
+        return
       }
       showSuccess('Signed in successfully!', 'Welcome Back')
       if (returnTo) {
@@ -94,7 +91,9 @@ function App() {
 
   const handleTalentSetupSuccess = () => {
     setUserRole('talent')
-    localStorage.setItem('castallio_talent_profile_completed', 'true')
+    localStorage.removeItem('castallio_talent_profile_completed')
+    localStorage.removeItem('castallio_talent_profile_completeness')
+    localStorage.removeItem('castallio_talent_profile_data')
     localStorage.removeItem('castallio_oauth_intent')
     localStorage.removeItem('castallio_signup_provider')
     localStorage.removeItem('castallio_signup_role')
