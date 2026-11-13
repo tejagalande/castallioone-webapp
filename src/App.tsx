@@ -138,9 +138,11 @@ function App() {
         />
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* Public Blog (no authentication required) */}
+        {/* Public Blog & Resources (no authentication required) */}
         <Route path="/blog" element={<BlogList />} />
         <Route path="/blog/:slug" element={<BlogPostPage />} />
+        <Route path="/resources" element={<BlogList />} />
+        <Route path="/resources/:slug" element={<BlogPostPage />} />
 
         {/* Public Legal Pages (supports all manual URL entry variations) */}
         <Route path="/terms" element={<TermsConditions />} />

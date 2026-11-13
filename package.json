@@ -9,8 +9,12 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "seo:export": "node scripts/seo-generator/export-jobs.mjs",
+    "seo:export-blogs": "node scripts/seo-generator/export-blogs.mjs",
     "seo:pages": "node scripts/seo-generator/generate-seo-pages.mjs",
-    "seo:generate": "node scripts/seo-generator/run-seo-pipeline.mjs"
+    "seo:blogs": "node scripts/seo-generator/generate-blog-pages.mjs",
+    "seo:docs": "node scripts/seo-generator/generate-seo-docs.mjs",
+    "seo:generate": "node scripts/seo-generator/run-seo-pipeline.mjs",
+    "seo:pipeline": "node scripts/seo-generator/run-seo-pipeline.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
