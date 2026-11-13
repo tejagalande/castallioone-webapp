@@ -2,10 +2,7 @@
 
 > Castallio One is India's dedicated AI-powered AEC (Architecture, Engineering & Construction) job search and career network. It indexes verified opportunities in BIM, Civil, Structural, MEP, Mechanical, Electrical, Architecture, and Construction Management across all 28 Indian states and 8 Union Territories.
 
-## Facts
-- Open jobs listed: 11
-- Last updated: 2026-11-13
-- Coverage: 36 states and union territories, up to 10 cities each
+## Core Facts
 - Website: https://castallioone.com
 - Industry: Architecture, Engineering & Construction (AEC)
 - Published Career & Technical Guides: 33
