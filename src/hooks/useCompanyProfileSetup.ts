@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { saveCompanyProfile } from '../lib/companyService'
 import { validateDomainExtension } from './useWalkInDrives'
+import { trackMetaEvent } from '../lib/metaPixel'
 
 export interface CompanyProfileData {
   companyLogo: File | null
@@ -373,6 +374,11 @@ export function useCompanyProfileSetup({
         'success',
         'Verification Complete'
       )
+
+      trackMetaEvent('CompleteRegistration', {
+        content_name: 'company_onboarding',
+        status: 'completed',
+      })
 
       onSuccess()
     } catch (err: unknown) {

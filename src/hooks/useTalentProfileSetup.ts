@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { saveTalentProfile, fetchSavedTalentProfile } from '../lib/talentService'
+import { trackMetaEvent } from '../lib/metaPixel'
 
 export interface ExperienceItem {
   id: string
@@ -1298,6 +1299,10 @@ export function useTalentProfileSetup({
         const finalUserId = userId || `talent_${Date.now()}`
         await saveTalentProfile(finalUserId, formData, completeness.score)
         showToast('Talent profile setup completed successfully! Welcome to Castallio One.', 'success', 'Profile Activated')
+        trackMetaEvent('CompleteRegistration', {
+          content_name: 'talent_onboarding',
+          status: 'completed',
+        })
         onSuccess()
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Failed to save profile'

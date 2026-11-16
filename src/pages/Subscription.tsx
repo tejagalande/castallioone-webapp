@@ -4,6 +4,7 @@ import {
   type EnterprisePlan,
 } from './useSubscription'
 import { initiateRazorpayCheckout } from '../lib/razorpay'
+import { trackMetaEvent } from '../lib/metaPixel'
 import './Subscription.css'
 
 export interface SubscriptionProps {
@@ -84,6 +85,13 @@ export const Subscription: FC<SubscriptionProps> = ({
       const sgstAmt = Number((baseAmt * 0.09).toFixed(2))
       const totalWithGst = Number((baseAmt + cgstAmt + sgstAmt).toFixed(2))
 
+      trackMetaEvent('InitiateCheckout', {
+        content_name: selectedPlanForGateway.name,
+        content_ids: [selectedPlanForGateway.id],
+        value: totalWithGst,
+        currency: 'INR',
+      })
+
       const checkoutRes = await initiateRazorpayCheckout({
         keyId: activeKeyId,
         planId: selectedPlanForGateway.id,
@@ -108,6 +116,12 @@ export const Subscription: FC<SubscriptionProps> = ({
         )
 
         if (result.success) {
+          trackMetaEvent('Purchase', {
+            content_name: selectedPlanForGateway.name,
+            content_ids: [selectedPlanForGateway.id],
+            value: totalWithGst,
+            currency: 'INR',
+          })
           setConfirmedPlan(selectedPlanForGateway)
           setIsSuccessView(true)
         }
