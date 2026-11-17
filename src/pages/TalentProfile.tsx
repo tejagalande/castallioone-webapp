@@ -114,11 +114,11 @@ export const TalentProfile: FC = () => {
           }
 
           if (planId === 'free') cvLimit = 3
-          else if (planId === 'starter') cvLimit = 0
-          else if (planId === 'professional') cvLimit = 0
-          else if (planId === 'unlimited') cvLimit = 500
-          else if (planId === 'starter_cv') cvLimit = 100
-          else if (planId === 'professional_cv') cvLimit = 200
+          else if (planId === 'starter') cvLimit = 50
+          else if (planId === 'professional') cvLimit = 100
+          else if (planId === 'unlimited') cvLimit = 0
+          else if (planId === 'starter_cv') cvLimit = 150
+          else if (planId === 'professional_cv') cvLimit = 300
         }
 
         const rpcData = rpcBillingRes?.data

@@ -77,8 +77,13 @@ export const ENTERPRISE_JOB_PLANS: EnterprisePlan[] = [
       icon: 'work',
       text: '2 Job Posts',
     },
+    secondaryBadge: {
+      icon: 'group',
+      text: '50 CV Unlocks',
+    },
     features: [
       '2 Job Posts per Month',
+      '50 CV Unlocks per Month',
       'AI-Powered Candidate Search',
       'Candidate Search Filters',
       'Interview Scheduling',
@@ -102,8 +107,13 @@ export const ENTERPRISE_JOB_PLANS: EnterprisePlan[] = [
       icon: 'work',
       text: '5 Job Posts',
     },
+    secondaryBadge: {
+      icon: 'group',
+      text: '100 CV Unlocks',
+    },
     features: [
       '5 Job Posts per Month',
+      '100 CV Unlocks per Month',
       'AI-Powered Candidate Search',
       'Advanced Candidate Filters',
     ],
@@ -119,12 +129,11 @@ export const ENTERPRISE_JOB_PLANS: EnterprisePlan[] = [
     period: '/month',
     subtitle: 'Best for enterprise-scale recruitment.',
     primaryBadge: {
-      icon: 'group',
-      text: '500 CV Unlocks',
+      icon: 'work',
+      text: 'Unlimited Job Posts',
     },
     features: [
       'Unlimited Job Posts',
-      '500 CV Unlocks per Month',
       'AI-Powered Candidate Search',
       'Full ecosystem access',
     ],
@@ -144,10 +153,10 @@ export const ENTERPRISE_CV_ADDONS: EnterprisePlan[] = [
     subtitle: 'Unlock candidate profiles affordably.',
     primaryBadge: {
       icon: 'group',
-      text: '100 CV Unlocks',
+      text: '150 CV Unlocks',
     },
     features: [
-      '100 CV Unlocks per Month',
+      '150 CV Unlocks per Month',
       'AI-Powered Candidate Search',
       'Candidate Search Filters',
     ],
@@ -168,10 +177,10 @@ export const ENTERPRISE_CV_ADDONS: EnterprisePlan[] = [
     },
     primaryBadge: {
       icon: 'group',
-      text: '200 CV Unlocks',
+      text: '300 CV Unlocks',
     },
     features: [
-      '200 CV Unlocks per Month',
+      '300 CV Unlocks per Month',
       'AI-Powered Candidate Search',
       'Advanced Candidate Filters',
     ],
@@ -322,7 +331,7 @@ export function useSubscription() {
   const getUpdatedUsage = useCallback(
     (current: CompanySubscriptionUsage, newPlan: EnterprisePlan): CompanySubscriptionUsage => {
       if (newPlan.type === 'cv_unlock') {
-        const additionalCvs = newPlan.id === 'starter_cv' ? 100 : 200
+        const additionalCvs = newPlan.id === 'starter_cv' ? 150 : 300
         return {
           ...current,
           cvUnlockLimit: (current.cvUnlockLimit || 0) + additionalCvs,
@@ -332,11 +341,14 @@ export function useSubscription() {
 
       let jobLimit: number | null = 1
       let cvLimit = current.cvUnlockLimit || 3
-      if (newPlan.id === 'starter') jobLimit = 2
-      else if (newPlan.id === 'professional') jobLimit = 5
-      else if (newPlan.id === 'unlimited') {
+      if (newPlan.id === 'starter') {
+        jobLimit = 2
+        cvLimit = 50
+      } else if (newPlan.id === 'professional') {
+        jobLimit = 5
+        cvLimit = 100
+      } else if (newPlan.id === 'unlimited') {
         jobLimit = null
-        cvLimit = Math.max(cvLimit, 500)
       }
 
       return {

@@ -179,8 +179,8 @@ export const useBilling = () => {
               starter: 'Starter Plan (Monthly)',
               professional: 'Professional Plan (Monthly)',
               unlimited: 'Unlimited Plan (Monthly)',
-              starter_cv: 'Starter + CV Add-on (100 Unlocks)',
-              professional_cv: 'Professional + CV Add-on (200 Unlocks)',
+              starter_cv: 'Starter + CV Add-on (150 Unlocks)',
+              professional_cv: 'Professional + CV Add-on (300 Unlocks)',
             }
 
             const mappedInvoices: EnterpriseInvoiceItem[] = rpcData.transactions.map((t: RpcTransaction, idx: number) => {
@@ -279,8 +279,8 @@ export const useBilling = () => {
               starter: 'Starter Plan (Monthly)',
               professional: 'Professional Plan (Monthly)',
               unlimited: 'Unlimited Plan (Monthly)',
-              starter_cv: 'Starter + CV Add-on (100 Unlocks)',
-              professional_cv: 'Professional + CV Add-on (200 Unlocks)',
+              starter_cv: 'Starter + CV Add-on (150 Unlocks)',
+              professional_cv: 'Professional + CV Add-on (300 Unlocks)',
             }
 
             const fallbackInvoices: EnterpriseInvoiceItem[] = dbTxns.map((t: TxnRecord, idx: number) => {

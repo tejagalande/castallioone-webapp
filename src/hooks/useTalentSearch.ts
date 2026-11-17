@@ -207,7 +207,7 @@ export function useTalentSearch() {
       }
 
       if (res?.quota) {
-        const limit = res.quota.cv_unlock_limit || 50
+        const limit = res.quota.cv_unlock_limit ?? 0
         const unlocked = res.quota.cvs_unlocked || 0
         const remaining =
           res.quota.remaining_cvs !== undefined && res.quota.remaining_cvs !== null
