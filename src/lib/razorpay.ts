@@ -118,6 +118,7 @@ export interface InitiatePaymentParams {
   planId: string
   planName: string
   amountInr: number // Total payable in INR including GST
+  companyId?: string
   companyName: string
   userEmail?: string
   userContact?: string
@@ -181,6 +182,8 @@ export const initiateRazorpayCheckout = async (
       },
       notes: {
         plan_id: params.planId,
+        castallio_plan_id: params.planId,
+        ...(params.companyId ? { company_id: params.companyId, castallio_company_id: params.companyId } : {}),
         company_name: params.companyName,
         gstin: params.gstin || 'UNREGISTERED',
         platform: 'Castallio One Web App',

@@ -17,6 +17,7 @@ export const Subscription: FC<SubscriptionProps> = ({
   onNavigateToDashboard,
 }) => {
   const {
+    companyId,
     companyName,
     companyEmail,
     companyGstin,
@@ -97,6 +98,7 @@ export const Subscription: FC<SubscriptionProps> = ({
         planId: selectedPlanForGateway.id,
         planName: selectedPlanForGateway.name,
         amountInr: totalWithGst,
+        companyId: companyId || undefined,
         companyName: companyName,
         userEmail: companyEmail || userEmail,
         gstin: gstinNumber,
@@ -124,6 +126,10 @@ export const Subscription: FC<SubscriptionProps> = ({
           })
           setConfirmedPlan(selectedPlanForGateway)
           setIsSuccessView(true)
+        } else {
+          setGatewayError(
+            `Payment captured (ID: ${checkoutRes.paymentId}), but workspace activation failed to sync. Please contact support with your Payment ID.`
+          )
         }
       } else if (checkoutRes.status === 'dismissed') {
         showToast('Payment window closed. No charges were made.')

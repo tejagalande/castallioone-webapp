@@ -425,6 +425,7 @@ export function useSubscription() {
       }
 
       // 3. Direct Table Synchronization (Guarantees database update even if RPC hits unique constraint)
+      let directSubSynced = false
       if (resolvedCompanyId) {
         // A. Update company GSTIN if provided
         if (gstin && gstin.trim()) {
@@ -440,11 +441,15 @@ export function useSubscription() {
 
         // B. Check existing subscription row to do safe UPDATE (satisfies UNIQUE company_id)
         try {
-          const { data: existingSub } = await supabase
+          const { data: existingSub, error: existingSubErr } = await supabase
             .from('company_subscriptions')
             .select('id, plan_id, cvs_unlocked, jobs_posted')
             .eq('company_id', resolvedCompanyId)
             .maybeSingle()
+
+          if (existingSubErr) {
+            throw existingSubErr
+          }
 
           const expiresAt = new Date()
           expiresAt.setMonth(expiresAt.getMonth() + 1)
@@ -468,12 +473,15 @@ export function useSubscription() {
               updatePayload.jobs_posted = 0
             }
 
-            await supabase
+            const { error: subUpdateError } = await supabase
               .from('company_subscriptions')
               .update(updatePayload)
               .eq('id', existingSub.id)
+
+            if (subUpdateError) throw subUpdateError
+            directSubSynced = true
           } else {
-            await supabase
+            const { error: subInsertError } = await supabase
               .from('company_subscriptions')
               .insert({
                 company_id: resolvedCompanyId,
@@ -488,16 +496,19 @@ export function useSubscription() {
                 payment_gateway: 'razorpay',
                 razorpay_payment_id: paymentId || null,
               })
+
+            if (subInsertError) throw subInsertError
+            directSubSynced = true
           }
         } catch (subUpdateErr) {
-          console.warn('Direct company_subscriptions synchronization note:', subUpdateErr)
+          console.error('Direct company_subscriptions synchronization failed:', subUpdateErr)
         }
 
         // C. Record or update transaction in subscription_transactions
         try {
           if (rpcSucceeded && paymentId) {
             // Update the RPC-created transaction with the real Razorpay payment ID
-            await supabase
+            const { error: txnUpdateErr } = await supabase
               .from('subscription_transactions')
               .update({
                 razorpay_payment_id: paymentId,
@@ -506,9 +517,10 @@ export function useSubscription() {
               .eq('company_id', resolvedCompanyId)
               .order('purchased_at', { ascending: false })
               .limit(1)
+            if (txnUpdateErr) console.warn('Could not update transaction payment ID:', txnUpdateErr)
           } else if (!rpcSucceeded) {
             // Direct insert if RPC was bypassed
-            await supabase
+            const { error: txnInsertError } = await supabase
               .from('subscription_transactions')
               .insert({
                 company_id: resolvedCompanyId,
@@ -538,10 +550,18 @@ export function useSubscription() {
                   gateway: 'Razorpay',
                 },
               })
+            if (txnInsertError) console.error('Direct subscription_transactions insert failed:', txnInsertError)
           }
         } catch (txnInsertErr) {
           console.warn('Direct subscription_transactions note:', txnInsertErr)
         }
+      }
+
+      if (!rpcSucceeded && !directSubSynced) {
+        showToast(
+          `Payment received (${txnId}), but we could not activate the subscription in your workspace. Please contact support.`
+        )
+        return { success: false, transactionId: txnId }
       }
 
       // 4. Update UI state
@@ -555,11 +575,10 @@ export function useSubscription() {
       return { success: true, transactionId: txnId }
     } catch (err: unknown) {
       console.error('Checkout confirmation error:', err)
-      setLastTransactionId(txnId)
-      setActivePlanId(plan.id)
-      setUsage((prev) => getUpdatedUsage(prev, plan))
-      showToast('Payment processed. Plan updated successfully.')
-      return { success: true, transactionId: txnId }
+      showToast(
+        `Payment received (${txnId}), but activation encountered an error. Please contact support.`
+      )
+      return { success: false, transactionId: txnId }
     }
   }, [companyId, getUpdatedUsage, showToast, user])
 
