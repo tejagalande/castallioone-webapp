@@ -227,15 +227,13 @@ function SignUp({ onNavigateToSignIn, onSignUpSuccess }: SignUpProps) {
           </div>
 
           <h1 className="sidebar-heading">
-            Join the
-            <br />
-            Precision
-            <br />
-            Network
+            <span className="headline-highlight">Hire</span> the World's Best Architect, Engineering and Construction Talent
           </h1>
 
           <p className="sidebar-description">
-            Connect with the world's leading AEC talent and projects through our data-driven network.
+            Join <strong className="subtitle-metric">50,000+</strong> companies hiring from a pool of{' '}
+            <strong className="subtitle-metric">100,000+</strong> Architects, Civil, Mechanical and Electrical Engineers.{' '}
+            <span className="subtitle-ai">Our AI</span> finds the right match across the globe, faster and smarter.
           </p>
         </div>
 

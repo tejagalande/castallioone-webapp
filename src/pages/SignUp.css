@@ -77,19 +77,41 @@
 
 .sidebar-heading {
   font-family: 'Hanken Grotesk', sans-serif;
-  font-size: 48px;
+  font-size: 34px;
   font-weight: 700;
-  line-height: 56px;
+  line-height: 1.24;
   letter-spacing: -0.02em;
-  margin: 0 0 8px;
+  margin: 0 0 12px;
+}
+
+.sidebar-heading .headline-highlight {
+  display: inline-block;
+  padding: 2px 12px;
+  margin-right: 4px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #0b1f3a;
+  font-weight: 800;
+  box-shadow: 0 6px 18px rgba(251, 191, 36, 0.32);
 }
 
 .sidebar-description {
-  font-size: 16px;
-  line-height: 24px;
-  color: rgba(255, 255, 255, 0.8);
-  max-width: 380px;
+  font-size: 15.5px;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.85);
+  max-width: 400px;
   margin-top: 16px;
+}
+
+.sidebar-description .subtitle-metric {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.sidebar-description .subtitle-ai {
+  color: #fde68a;
+  font-weight: 600;
+  border-bottom: 1.5px solid rgba(253, 230, 138, 0.5);
 }
 
 .sidebar-illustration {

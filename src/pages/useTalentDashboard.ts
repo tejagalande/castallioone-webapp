@@ -469,12 +469,16 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
       })
 
       // 3. Query Real Active Jobs from create_job_post (explicit columns, excluding embedding vector)
+      const nowMs = Date.now()
+      const nowIso = new Date(nowMs).toISOString()
+      const fifteenDaysAgoIso = new Date(nowMs - 15 * 24 * 60 * 60 * 1000).toISOString()
       const { data: dbJobs, error: jobsError } = await supabase
         .from('create_job_post')
         .select(
           'id, company_id, title, category, technical_requirements, job_description, work_type, location, salary_min, salary_max, expires_at, created_at, experience, responsibilities, about_us, employment_type, number_of_openings'
         )
         .eq('status', 'active')
+        .or(`expires_at.gt.${nowIso},and(expires_at.is.null,created_at.gt.${fifteenDaysAgoIso})`)
         .order('created_at', { ascending: false })
         .limit(20)
 
@@ -703,7 +707,16 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
       let compiledRecommendedJobs: RecommendedJob[] = []
 
       if (dbJobs && dbJobs.length > 0) {
-        compiledRecommendedJobs = dbJobs.map((j) => {
+        const activeDbJobs = dbJobs.filter((j) => {
+          const expTime = j.expires_at
+            ? new Date(j.expires_at).getTime()
+            : j.created_at
+            ? new Date(j.created_at).getTime() + 15 * 24 * 60 * 60 * 1000
+            : null
+          return expTime === null || expTime > nowMs
+        })
+
+        compiledRecommendedJobs = activeDbJobs.map((j) => {
           const comp = companiesMap[j.company_id]
           const isAstro =
             j.company_id === '035657ca-04ff-4e96-8ef2-23639ed9c291' ||
@@ -1015,11 +1028,14 @@ export function useTalentDashboard(): UseTalentDashboardReturn {
   )
 
   const recommendedJobs = useMemo(() => {
-    return rawJobs.map((j) => ({
-      ...j,
-      isApplied: appliedJobIds.has(j.id),
-      isSaved: savedJobIds.has(j.id),
-    }))
+    const now = Date.now()
+    return rawJobs
+      .filter((j) => !j.expiresAt || new Date(j.expiresAt).getTime() > now)
+      .map((j) => ({
+        ...j,
+        isApplied: appliedJobIds.has(j.id),
+        isSaved: savedJobIds.has(j.id),
+      }))
   }, [rawJobs, appliedJobIds, savedJobIds])
 
   return {
