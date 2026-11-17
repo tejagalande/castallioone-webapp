@@ -60,10 +60,11 @@ BEGIN
     WHERE (jp.company_id = v_company_id OR jp.posted_by = v_user_id)
       AND COALESCE(lower(trim(jp.status)), 'active') != 'draft'
       AND (
-          COALESCE(v_sub.plan_id, 'free') = 'free'
-          OR v_sub.started_at IS NULL
-          OR jp.created_at IS NULL
-          OR jp.created_at >= v_sub.started_at
+          (COALESCE(v_sub.plan_id, 'free') = 'free' AND (jp.created_at IS NULL OR jp.created_at >= date_trunc('month', now())))
+          OR (
+              COALESCE(v_sub.plan_id, 'free') != 'free'
+              AND (v_sub.started_at IS NULL OR jp.created_at IS NULL OR jp.created_at >= v_sub.started_at)
+          )
       );
 
     v_effective_jobs_posted := GREATEST(COALESCE(v_sub.jobs_posted, 0), COALESCE(v_actual_jobs_count, 0));

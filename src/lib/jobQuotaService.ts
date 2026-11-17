@@ -140,7 +140,16 @@ export async function getCompanyJobQuota(
         return normalizedStatus === 'active'
       }).length
 
-      if (planId !== 'free' && subStartedAt) {
+      if (planId === 'free') {
+        const now = new Date()
+        const monthStartMs = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
+        const monthRows = nonDraftRows.filter((row) => {
+          if (!row.created_at) return true
+          const createdMs = new Date(row.created_at).getTime()
+          return isNaN(createdMs) || createdMs >= monthStartMs
+        })
+        publishedCount = monthRows.length
+      } else if (subStartedAt) {
         const subStartMs = new Date(subStartedAt).getTime()
         if (!isNaN(subStartMs)) {
           const cycleRows = nonDraftRows.filter((row) => {
@@ -160,8 +169,9 @@ export async function getCompanyJobQuota(
     console.warn('Failed to count jobs in create_job_post:', err)
   }
 
-  // Use the maximum of total published jobs from table and tracked jobs_posted on subscription
-  const totalJobsCount = Math.max(publishedCount, trackedJobsPosted)
+  // For free plan, evaluate strictly against current calendar month's published jobs
+  // so old jobs from previous months (or stale RPC lifetime counts) don't block the monthly allowance.
+  const totalJobsCount = planId === 'free' ? publishedCount : Math.max(publishedCount, trackedJobsPosted)
 
   // Evaluation is based on TOTAL jobs posted against plan limit
   const isLimitReached = jobPostLimit !== null && totalJobsCount >= jobPostLimit
