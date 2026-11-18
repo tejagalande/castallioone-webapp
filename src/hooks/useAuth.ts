@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { User, Session, AuthError } from '@supabase/supabase-js'
-import { supabase } from '../lib/supabase'
+import { supabase, checkAuthServerReachable } from '../lib/supabase'
 import { loginOneSignal, logoutOneSignal } from '../lib/onesignal'
+import {
+  setCrashUserId,
+  recordException,
+  logCrashBreadcrumb,
+  logCrashEvent,
+} from '../lib/firebaseCrashlytics'
 
 export type UserRole = 'talent' | 'employers'
 
@@ -57,7 +63,9 @@ export function useAuth(): UseAuthReturn {
         setSession(currentSession)
         setUser(currentSession?.user ?? null)
         if (currentSession?.user) {
-          void loginOneSignal(currentSession.user.id, localStorage.getItem('castallio_user_role'))
+          const role = localStorage.getItem('castallio_user_role')
+          void loginOneSignal(currentSession.user.id, role)
+          void setCrashUserId(currentSession.user.id, role)
         }
       }
       setLoading(false)
@@ -102,9 +110,12 @@ export function useAuth(): UseAuthReturn {
 
       setLoading(false)
       if (event === 'SIGNED_IN' && newSession?.user) {
-        void loginOneSignal(newSession.user.id, localStorage.getItem('castallio_user_role'))
+        const role = localStorage.getItem('castallio_user_role')
+        void loginOneSignal(newSession.user.id, role)
+        void setCrashUserId(newSession.user.id, role)
       } else if (event === 'SIGNED_OUT') {
         void logoutOneSignal()
+        void setCrashUserId(null, null)
       }
     })
 
@@ -134,65 +145,80 @@ export function useAuth(): UseAuthReturn {
     return `${origin}/reset-password`
   }
 
-  const signInWithGoogle = useCallback(async (role: UserRole = 'talent') => {
-    setError(null)
-    localStorage.setItem('castallio_signup_role', role)
-    localStorage.setItem('castallio_user_role', role)
-    try {
-      const { data, error: signInError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: getRedirectUrl(role),
-          skipBrowserRedirect: true,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'select_account',
+  const initiateOAuthSignIn = useCallback(
+    async (
+      provider: 'google' | 'linkedin_oidc',
+      role: UserRole = 'talent',
+      queryParams?: Record<string, string>
+    ) => {
+      setError(null)
+      localStorage.setItem('castallio_signup_role', role)
+      localStorage.setItem('castallio_user_role', role)
+      logCrashBreadcrumb(`Initiating ${provider} OAuth sign-in (${role})`)
+
+      try {
+        const health = await checkAuthServerReachable()
+        if (!health.reachable) {
+          const networkErr =
+            health.error ?? new Error('Supabase auth server unreachable from client network')
+          void recordException(networkErr, {
+            fatal: false,
+            source: 'oauth_reachability_check',
+            extra: { provider, role },
+          })
+          void logCrashEvent('auth_server_unreachable', { provider, role })
+          setError(
+            'Unable to reach the authentication server. Your network, ISP, or firewall may be blocking the login service. Please try switching networks or disabling any proxy/VPN.'
+          )
+          return
+        }
+
+        const { data, error: signInError } = await supabase.auth.signInWithOAuth({
+          provider,
+          options: {
+            redirectTo: getRedirectUrl(role),
+            skipBrowserRedirect: true,
+            ...(queryParams ? { queryParams } : {}),
           },
-        },
-      })
+        })
 
-      if (signInError) {
-        throw signInError
+        if (signInError) {
+          throw signInError
+        }
+
+        if (data?.url) {
+          await logCrashEvent('oauth_redirect_started', { provider, role })
+          window.location.replace(data.url)
+        }
+      } catch (err: unknown) {
+        const authErr = err as AuthError
+        const label = provider === 'google' ? 'Google' : 'LinkedIn'
+        const errorMessage = authErr.message || `Failed to initiate ${label} sign in.`
+        setError(errorMessage)
+        console.error(`${label} Sign-In Error:`, errorMessage)
+        void recordException(err, {
+          fatal: false,
+          source: `oauth_${provider}`,
+          extra: { provider, role },
+        })
       }
+    },
+    []
+  )
 
-      if (data?.url) {
-        window.location.replace(data.url)
-      }
-    } catch (err: unknown) {
-      const authErr = err as AuthError
-      const errorMessage = authErr.message || 'Failed to initiate Google sign in.'
-      setError(errorMessage)
-      console.error('Google Sign-In Error:', errorMessage)
-    }
-  }, [])
+  const signInWithGoogle = useCallback(
+    (role: UserRole = 'talent') =>
+      initiateOAuthSignIn('google', role, {
+        access_type: 'offline',
+        prompt: 'select_account',
+      }),
+    [initiateOAuthSignIn]
+  )
 
-  const signInWithLinkedIn = useCallback(async (role: UserRole = 'talent') => {
-    setError(null)
-    localStorage.setItem('castallio_signup_role', role)
-    localStorage.setItem('castallio_user_role', role)
-    try {
-      const { data, error: signInError } = await supabase.auth.signInWithOAuth({
-        provider: 'linkedin_oidc',
-        options: {
-          redirectTo: getRedirectUrl(role),
-          skipBrowserRedirect: true,
-        },
-      })
-
-      if (signInError) {
-        throw signInError
-      }
-
-      if (data?.url) {
-        window.location.replace(data.url)
-      }
-    } catch (err: unknown) {
-      const authErr = err as AuthError
-      const errorMessage = authErr.message || 'Failed to initiate LinkedIn sign in.'
-      setError(errorMessage)
-      console.error('LinkedIn Sign-In Error:', errorMessage)
-    }
-  }, [])
+  const signInWithLinkedIn = useCallback(
+    (role: UserRole = 'talent') => initiateOAuthSignIn('linkedin_oidc', role),
+    [initiateOAuthSignIn]
+  )
 
   const signUpWithEmail = useCallback(
     async (

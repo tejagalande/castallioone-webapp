@@ -15,3 +15,30 @@ export const supabase = createClient(
   supabaseAnonKey
 )
 
+const HEALTH_CHECK_TIMEOUT_MS = 5000
+
+/**
+ * Verify that the Supabase auth endpoint is reachable from the client's network
+ * before redirecting to OAuth (catches ISP/firewall blocks on *.supabase.co).
+ */
+export async function checkAuthServerReachable(): Promise<{
+  reachable: boolean
+  error?: unknown
+}> {
+  const controller = new AbortController()
+  const timer = window.setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS)
+
+  try {
+    const response = await fetch(`${supabaseUrl}/auth/v1/health`, {
+      method: 'GET',
+      headers: { apikey: supabaseAnonKey },
+      signal: controller.signal,
+    })
+    return { reachable: response.ok }
+  } catch (err: unknown) {
+    return { reachable: false, error: err }
+  } finally {
+    window.clearTimeout(timer)
+  }
+}
+

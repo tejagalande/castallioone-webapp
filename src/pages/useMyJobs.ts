@@ -524,9 +524,11 @@ export function useMyJobs(onPostNewJob?: () => void) {
   const handleReopenRequisition = useCallback(
     async (id: string) => {
       try {
+        let activePlanId = jobQuota?.planId || 'free'
         if (companyId) {
           const quota = await getCompanyJobQuota(companyId)
           setJobQuota(quota)
+          activePlanId = quota.planId || 'free'
           if (quota.isLimitReached) {
             showToast(
               `Cannot re-open: Plan limit of ${quota.jobPostLimit} active jobs reached (${quota.activeJobsCount} live). Please close an active job or upgrade your subscription plan.`
@@ -535,7 +537,8 @@ export function useMyJobs(onPostNewJob?: () => void) {
           }
         }
 
-        const newExpiresAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString()
+        const validityDays = activePlanId === 'free' ? 15 : 30
+        const newExpiresAt = new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000).toISOString()
         const { error } = await supabase
           .from('create_job_post')
           .update({ status: 'active', expires_at: newExpiresAt })
@@ -549,7 +552,7 @@ export function useMyJobs(onPostNewJob?: () => void) {
         setRequisitions((prev) =>
           prev.map((r) => (r.id === id ? { ...r, status: 'active', createdDateText: 'Re-opened today' } : r))
         )
-        showToast('Requisition re-opened on active Talent Radar (15 days validity).')
+        showToast(`Requisition re-opened on active Talent Radar (${validityDays} days validity).`)
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Error re-opening requisition'
         showToast(msg)

@@ -1332,9 +1332,11 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
       }
 
       // 1. Live Quota / Credit Check before creating a new job OR publishing a draft job
+      let activePlanId = quota?.planId || 'free'
       if (requiresJobCredit) {
         const currentQuota = await getCompanyJobQuota(companyId, user.id)
         setQuota(currentQuota)
+        activePlanId = currentQuota.planId || 'free'
 
         if (currentQuota.isLimitReached || (currentQuota.remainingJobs !== null && currentQuota.remainingJobs <= 0)) {
           setIsQuotaExceededModalOpen(true)
@@ -1344,6 +1346,8 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
           return
         }
       }
+
+      const validityDays = activePlanId === 'free' ? 15 : 30
 
       const minClean = salaryMin ? String(salaryMin).replace(/,/g, '').trim() : ''
       const maxClean = salaryMax ? String(salaryMax).replace(/,/g, '').trim() : ''
@@ -1391,6 +1395,9 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
           about_us: whatWeOffer.trim() || null,
           status: newStatus,
           updated_at: new Date().toISOString(),
+          ...(wasDraft
+            ? { expires_at: new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000).toISOString() }
+            : {}),
         }
 
         const { data: updatedJob, error: updateError } = await supabase
@@ -1449,7 +1456,7 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
       }
 
       const now = new Date()
-      const expiresAt = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000)
+      const expiresAt = new Date(now.getTime() + validityDays * 24 * 60 * 60 * 1000)
 
       const finalLocations = locations.length > 0
         ? locations
@@ -1654,7 +1661,9 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
         }
 
         const now = new Date()
-        const expiresAt = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000)
+        const draftPlanId = quota?.planId || 'free'
+        const draftValidityDays = draftPlanId === 'free' ? 15 : 30
+        const expiresAt = new Date(now.getTime() + draftValidityDays * 24 * 60 * 60 * 1000)
 
         const payload = {
           company_id: companyId,
