@@ -2,22 +2,30 @@ import OneSignal from 'react-onesignal'
 
 const APP_ID = import.meta.env.VITE_ONESIGNAL_APP_ID as string | undefined
 
-let initPromise: Promise<void> | null = null
+let initPromise: Promise<boolean> | null = null
+let isInitialized = false
 
 /** Initialize OneSignal once. Safe to call multiple times. No-op if App ID is missing. */
-export function initOneSignal(): Promise<void> {
+export function initOneSignal(): Promise<boolean> {
   if (!APP_ID) {
     console.warn('OneSignal: VITE_ONESIGNAL_APP_ID is not set; push disabled.')
-    return Promise.resolve()
+    return Promise.resolve(false)
   }
   if (!initPromise) {
     initPromise = OneSignal.init({
       appId: APP_ID,
       allowLocalhostAsSecureOrigin: import.meta.env.DEV,
       serviceWorkerPath: '/OneSignalSDKWorker.js',
-    }).catch((err: unknown) => {
-      console.error('OneSignal init failed:', err)
     })
+      .then(() => {
+        isInitialized = true
+        return true
+      })
+      .catch((err: unknown) => {
+        isInitialized = false
+        console.warn('OneSignal init failed (check Site URL in OneSignal dashboard):', err)
+        return false
+      })
   }
   return initPromise
 }
@@ -25,22 +33,26 @@ export function initOneSignal(): Promise<void> {
 /** Link this browser to the app user (same external ID as the mobile app). */
 export async function loginOneSignal(userId: string, role?: string | null): Promise<void> {
   if (!APP_ID) return
-  await initOneSignal()
+  const ready = await initOneSignal()
+  if (!ready || !isInitialized) return
+
   try {
     await OneSignal.login(userId)
     if (role) OneSignal.User.addTag('role', role)
   } catch (err) {
-    console.error('OneSignal login failed:', err)
+    console.warn('OneSignal login skipped/failed:', err)
   }
 }
 
 export async function logoutOneSignal(): Promise<void> {
   if (!APP_ID) return
-  await initOneSignal()
+  const ready = await initOneSignal()
+  if (!ready || !isInitialized) return
+
   try {
     await OneSignal.logout()
   } catch (err) {
-    console.error('OneSignal logout failed:', err)
+    console.warn('OneSignal logout skipped/failed:', err)
   }
 }
 
