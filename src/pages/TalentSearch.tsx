@@ -60,6 +60,7 @@ export const TalentSearch: FC<TalentSearchProps> = ({ onNavigateToSubscription }
     semanticSearching,
     isSemanticMode,
     setIsSemanticMode,
+    talent,
     filteredTalent,
     searchQuery,
     setSearchQuery,
@@ -82,6 +83,7 @@ export const TalentSearch: FC<TalentSearchProps> = ({ onNavigateToSubscription }
     quota,
     metrics,
     toastMessage,
+    loadError,
     loadTalentData,
     performSemanticSearch,
   } = useTalentSearch()
@@ -141,7 +143,7 @@ export const TalentSearch: FC<TalentSearchProps> = ({ onNavigateToSubscription }
     e.preventDefault()
     if (isSemanticMode && searchQuery.trim()) {
       void performSemanticSearch(searchQuery)
-    } else {
+    } else if (filteredTalent.length === 0 && !loading) {
       void loadTalentData()
     }
   }
@@ -465,7 +467,6 @@ export const TalentSearch: FC<TalentSearchProps> = ({ onNavigateToSubscription }
               onClick={() => {
                 setSearchQuery('')
                 setCurrentPage(1)
-                void loadTalentData()
               }}
             >
               <span>Clear Filter: &ldquo;{searchQuery}&rdquo;</span>
@@ -527,6 +528,25 @@ export const TalentSearch: FC<TalentSearchProps> = ({ onNavigateToSubscription }
                 </article>
               ))}
             </div>
+          ) : loadError && filteredTalent.length === 0 ? (
+            <div className="ts-empty-state ts-error-state" role="alert">
+              <span className="material-symbols-outlined" style={{ color: '#ef4444', fontSize: '48px' }} aria-hidden="true">
+                cloud_off
+              </span>
+              <h3>Database Connection Timeout</h3>
+              <p>{loadError}</p>
+              <button
+                type="button"
+                className="btn-ts-primary"
+                onClick={() => void loadTalentData()}
+                style={{ marginTop: '12px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+              >
+                <span className="material-symbols-outlined" aria-hidden="true">
+                  refresh
+                </span>
+                Retry Connection
+              </button>
+            </div>
           ) : filteredTalent.length === 0 ? (
             <div className="ts-empty-state">
               <span className="material-symbols-outlined" aria-hidden="true">
@@ -542,7 +562,10 @@ export const TalentSearch: FC<TalentSearchProps> = ({ onNavigateToSubscription }
                   setSelectedDiscipline('all')
                   setSelectedWorkMode('all')
                   setSelectedExperienceRange('all')
-                  void loadTalentData()
+                  setCurrentPage(1)
+                  if (talent.length === 0) {
+                    void loadTalentData()
+                  }
                 }}
               >
                 Reset Search Filters
@@ -559,6 +582,8 @@ export const TalentSearch: FC<TalentSearchProps> = ({ onNavigateToSubscription }
                         src={cand.profileImageUrl}
                         alt={formatTalentName(cand.name)}
                         className="ts-avatar-img"
+                        loading="lazy"
+                        decoding="async"
                       />
                     ) : (
                       <div className="ts-avatar-initials">{cand.avatarInitials}</div>
@@ -894,6 +919,8 @@ export const TalentSearch: FC<TalentSearchProps> = ({ onNavigateToSubscription }
                       src={selectedCandidate.profileImageUrl}
                       alt={formatTalentName(selectedCandidate.name)}
                       className="dossier-avatar-img"
+                      loading="lazy"
+                      decoding="async"
                     />
                   ) : (
                     <div className="dossier-avatar">{selectedCandidate.avatarInitials}</div>

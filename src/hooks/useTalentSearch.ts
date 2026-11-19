@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { resolveValidResumeUrl } from '../lib/talentService'
 
@@ -124,6 +124,8 @@ export function useTalentSearch() {
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateTalentItem | null>(null)
   const [candidateToUnlock, setCandidateToUnlock] = useState<CandidateTalentItem | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const activeRequestIdRef = useRef<number>(0)
   const [quota, setQuota] = useState<TalentSearchQuota>({
     cvUnlockLimit: 50,
     cvsUnlocked: 0,
@@ -138,20 +140,54 @@ export function useTalentSearch() {
   }, [])
 
   // Standard search & load via PostgreSQL RPC: web_search_talent
-  const loadTalentData = useCallback(async () => {
+  const loadTalentData = useCallback(async (isRetry = false) => {
+    const requestId = ++activeRequestIdRef.current
     try {
       setLoading(true)
       const { data, error } = await supabase.rpc('web_search_talent', {
         p_company_id: null,
-        p_search: searchQuery.trim() ? searchQuery.trim() : null,
-        p_discipline: selectedDiscipline === 'all' || selectedDiscipline === 'unlocked' || selectedDiscipline === 'saved' ? null : selectedDiscipline,
-        p_work_mode: selectedWorkMode === 'all' ? null : selectedWorkMode,
-        p_sort: sortOption,
+        p_search: null,
+        p_discipline: null,
+        p_work_mode: null,
+        p_sort: 'recent',
       })
+
+      // Stale response check
+      if (requestId !== activeRequestIdRef.current) return
 
       if (error) {
         console.warn('RPC web_search_talent warning:', error.message)
+        const isTimeout =
+          error.message?.toLowerCase().includes('timeout') ||
+          error.message?.toLowerCase().includes('canceling statement') ||
+          error.code === '57014'
+
+        if (isTimeout && !isRetry) {
+          console.info('RPC timed out. Scheduling auto-retry in 1.2s...')
+          setTimeout(() => {
+            if (requestId === activeRequestIdRef.current) {
+              void loadTalentData(true)
+            }
+          }, 1200)
+          return
+        }
+
+        setLoadError(
+          isTimeout
+            ? 'Database statement timeout. The server took too long to respond due to high concurrency.'
+            : error.message || 'Failed to fetch candidate records.'
+        )
+        showNotification(
+          isTimeout
+            ? 'Database request timed out. Please click "Refresh" or retry.'
+            : `Database error: ${error.message}`
+        )
+        // If we don't have talent cached yet, empty array
+        setTalent((prev) => (prev.length > 0 ? prev : []))
+        return
       }
+
+      setLoadError(null)
 
       interface CandidateRpcRow {
         id: string
@@ -280,12 +316,16 @@ export function useTalentSearch() {
         setTalent([])
       }
     } catch (err) {
+      if (requestId !== activeRequestIdRef.current) return
       console.error('Error loading talent:', err)
-      setTalent([])
+      setLoadError('An unexpected network error occurred while loading candidates.')
+      setTalent((prev) => (prev.length > 0 ? prev : []))
     } finally {
-      setLoading(false)
+      if (requestId === activeRequestIdRef.current) {
+        setLoading(false)
+      }
     }
-  }, [searchQuery, selectedDiscipline, selectedWorkMode, sortOption])
+  }, [showNotification])
 
   // AI Semantic Search using mobile Edge Function: search-candidates
   const performSemanticSearch = useCallback(async (queryText: string) => {
@@ -302,7 +342,10 @@ export function useTalentSearch() {
 
       if (error) {
         console.warn('Semantic search Edge Function error, falling back to keyword search:', error.message)
-        await loadTalentData()
+        showNotification('AI Semantic search unavailable. Filtered candidates by keyword.')
+        if (talent.length === 0) {
+          await loadTalentData()
+        }
         return
       }
 
@@ -422,16 +465,20 @@ export function useTalentSearch() {
         setTalent(mapped)
         showNotification(`AI Vector Search complete: Found ${mapped.length} matching candidate profiles.`)
       } else {
-        showNotification('No vector similarity matches above threshold. Falling back to keyword search.')
-        await loadTalentData()
+        showNotification('No vector similarity matches above threshold. Showing keyword matches.')
+        if (talent.length === 0) {
+          await loadTalentData()
+        }
       }
     } catch (err) {
       console.error('Fatal in performSemanticSearch:', err)
-      await loadTalentData()
+      if (talent.length === 0) {
+        await loadTalentData()
+      }
     } finally {
       setSemanticSearching(false)
     }
-  }, [companyId, loadTalentData, showNotification])
+  }, [companyId, loadTalentData, showNotification, talent.length])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -594,38 +641,89 @@ export function useTalentSearch() {
     [companyId, showNotification]
   )
 
-  // Client-side filtering across talent
+  // Client-side filtering and sorting across talent
   const filteredTalent = useMemo(() => {
     if (!talent || !Array.isArray(talent)) return []
-    return talent.filter((c) => {
-      if (!c) return false
-      // Discipline Tab
-      if (selectedDiscipline === 'unlocked' && !c.isUnlocked) return false
-      if (selectedDiscipline === 'saved' && (!savedCandidateIds || !savedCandidateIds.has(c.id))) return false
-      if (
-        selectedDiscipline !== 'all' &&
-        selectedDiscipline !== 'unlocked' &&
-        selectedDiscipline !== 'saved' &&
-        c.discipline !== selectedDiscipline
-      ) {
-        return false
-      }
+    const q = searchQuery.trim().toLowerCase()
 
-      // Work mode
-      if (selectedWorkMode !== 'all') {
-        const mode = c.workMode || ''
-        if (!mode.toLowerCase().includes(selectedWorkMode.toLowerCase())) return false
-      }
+    return talent
+      .filter((c) => {
+        if (!c) return false
+        // Discipline Tab
+        if (selectedDiscipline === 'unlocked' && !c.isUnlocked) return false
+        if (selectedDiscipline === 'saved' && (!savedCandidateIds || !savedCandidateIds.has(c.id))) return false
+        if (
+          selectedDiscipline !== 'all' &&
+          selectedDiscipline !== 'unlocked' &&
+          selectedDiscipline !== 'saved' &&
+          c.discipline !== selectedDiscipline
+        ) {
+          return false
+        }
 
-      // Experience level
-      const exp = Number(c.experienceYears) || 0
-      if (selectedExperienceRange === 'fresher' && exp > 1.5) return false
-      if (selectedExperienceRange === 'mid' && (exp < 1.5 || exp > 4.5)) return false
-      if (selectedExperienceRange === 'senior' && exp < 4.5) return false
+        // Work mode
+        if (selectedWorkMode !== 'all') {
+          const mode = c.workMode || ''
+          if (!mode.toLowerCase().includes(selectedWorkMode.toLowerCase())) return false
+        }
 
-      return true
-    })
-  }, [talent, selectedDiscipline, selectedWorkMode, selectedExperienceRange, savedCandidateIds])
+        // Experience level
+        const exp = Number(c.experienceYears) || 0
+        if (selectedExperienceRange === 'fresher' && exp > 1.5) return false
+        if (selectedExperienceRange === 'mid' && (exp < 1.5 || exp > 4.5)) return false
+        if (selectedExperienceRange === 'senior' && exp < 4.5) return false
+
+        // Instant keyword search across all fields
+        if (q) {
+          const matchName = c.name?.toLowerCase().includes(q)
+          const matchBio = c.bio?.toLowerCase().includes(q)
+          const matchDiscipline = c.discipline?.toLowerCase().includes(q)
+          const matchLocation = c.location?.toLowerCase().includes(q)
+          const matchInstitution = c.institution?.toLowerCase().includes(q)
+          const matchSkills = c.skills?.some((s) => s?.toLowerCase().includes(q))
+          const matchExperience = c.experiences?.some(
+            (e) =>
+              e.roleTitle?.toLowerCase().includes(q) ||
+              e.organizationName?.toLowerCase().includes(q) ||
+              e.contributions?.toLowerCase().includes(q)
+          )
+
+          if (
+            !matchName &&
+            !matchBio &&
+            !matchDiscipline &&
+            !matchLocation &&
+            !matchInstitution &&
+            !matchSkills &&
+            !matchExperience
+          ) {
+            return false
+          }
+        }
+
+        return true
+      })
+      .sort((a, b) => {
+        if (sortOption === 'experience') {
+          return (Number(b.experienceYears) || 0) - (Number(a.experienceYears) || 0)
+        }
+        if (sortOption === 'name') {
+          return (a.name || '').localeCompare(b.name || '')
+        }
+        if (sortOption === 'match') {
+          return (b.matchScore || 0) - (a.matchScore || 0)
+        }
+        return 0
+      })
+  }, [
+    talent,
+    selectedDiscipline,
+    selectedWorkMode,
+    selectedExperienceRange,
+    savedCandidateIds,
+    searchQuery,
+    sortOption,
+  ])
 
   // Aggregate Metrics
   const metrics: TalentMetrics = useMemo(() => {
@@ -672,6 +770,7 @@ export function useTalentSearch() {
 
   return {
     loading,
+    loadError,
     semanticSearching,
     isSemanticMode,
     setIsSemanticMode,

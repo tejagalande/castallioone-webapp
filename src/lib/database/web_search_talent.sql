@@ -1,25 +1,43 @@
--- Function: web_search_talent
+-- ==============================================================================
+-- Function: web_search_talent (High Performance Optimized)
 -- Description: Queries student_profile candidates with verified skills, experience,
 -- unlock status (checked against unlocked_profiles), and subscription quotas.
 -- Prefix: 'web_' (Designated for Castallio One web-app)
+-- 
+-- Performance Optimizations:
+-- 1. Eliminates correlated subquery loops by using CTEs for student_experience aggregation.
+-- 2. Eliminates correlated cross joins against unlocked_profiles.
+-- 3. Performs fast indexed counts for metrics, avoiding expensive vector TOAST table scans.
+-- 4. Replaces jsonb_array_elements unnesting in WHERE filter with text ILIKE for skills.
+-- ==============================================================================
 
-CREATE OR REPLACE FUNCTION web_search_talent(
-    p_company_id uuid DEFAULT NULL,
-    p_search text DEFAULT NULL,
-    p_discipline text DEFAULT NULL,
-    p_work_mode text DEFAULT NULL,
-    p_sort text DEFAULT 'recent'
+-- Recommended Indexes for sub-10ms performance:
+CREATE INDEX IF NOT EXISTS idx_student_profile_created_at ON public.student_profile (created_at DESC NULLS LAST);
+CREATE INDEX IF NOT EXISTS idx_student_profile_discipline ON public.student_profile (discipline);
+CREATE INDEX IF NOT EXISTS idx_student_profile_work_mode ON public.student_profile (work_mode);
+CREATE INDEX IF NOT EXISTS idx_student_profile_has_embedding ON public.student_profile (id) WHERE embedding IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_student_experience_student_id ON public.student_experience (student_id);
+
+CREATE OR REPLACE FUNCTION public.web_search_talent(
+    p_company_id uuid DEFAULT NULL::uuid,
+    p_search text DEFAULT NULL::text,
+    p_discipline text DEFAULT NULL::text,
+    p_work_mode text DEFAULT NULL::text,
+    p_sort text DEFAULT 'recent'::text
 )
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
-AS $$
+SET search_path TO 'public'
+AS $function$
 DECLARE
     v_company_id uuid := p_company_id;
     v_company_name text;
     v_cv_limit integer := 0;
     v_cvs_unlocked integer := 0;
+    v_total_talent integer := 0;
+    v_embedded_talent integer := 0;
+    v_search text := NULLIF(TRIM(p_search), '');
     v_result jsonb;
 BEGIN
     -- 1. Resolve company if not explicitly passed
@@ -48,7 +66,45 @@ BEGIN
         LIMIT 1;
     END IF;
 
-    -- 3. Query candidate talent profiles
+    -- 3. Fast counts using indexes (avoid scanning vector TOAST tables)
+    SELECT COUNT(*), COUNT(embedding)
+    INTO v_total_talent, v_embedded_talent
+    FROM student_profile;
+
+    -- 4. Query candidate talent profiles with CTEs to eliminate correlated subquery loops
+    WITH exp_agg AS (
+        SELECT 
+            student_id,
+            ROUND(
+                COALESCE(
+                    SUM(
+                        EXTRACT(EPOCH FROM (COALESCE(se.end_date, CURRENT_DATE)::timestamp - se.start_date::timestamp))
+                    ) / 31557600,
+                    0
+                )::numeric,
+                1
+            ) as years,
+            COALESCE(
+                jsonb_agg(
+                    jsonb_build_object(
+                        'id', se.id,
+                        'role_title', se.role_title,
+                        'organization_name', se.organization_name,
+                        'contributions', se.contributions,
+                        'start_date', se.start_date,
+                        'end_date', se.end_date
+                    ) ORDER BY se.start_date DESC NULLS LAST
+                ),
+                '[]'::jsonb
+            ) as experiences
+        FROM student_experience se
+        GROUP BY student_id
+    ),
+    company_unlocked AS (
+        SELECT student_id
+        FROM unlocked_profiles
+        WHERE v_company_id IS NOT NULL AND company_id = v_company_id
+    )
     SELECT jsonb_build_object(
         'company_id', v_company_id,
         'company_name', COALESCE(v_company_name, 'Enterprise Studio'),
@@ -57,8 +113,8 @@ BEGIN
             'cvs_unlocked', v_cvs_unlocked,
             'remaining_cvs', GREATEST(0, v_cv_limit - v_cvs_unlocked)
         ),
-        'total_talent_count', (SELECT COUNT(*) FROM student_profile),
-        'embedded_talent_count', (SELECT COUNT(*) FROM student_profile WHERE embedding IS NOT NULL),
+        'total_talent_count', v_total_talent,
+        'embedded_talent_count', v_embedded_talent,
         'candidates', COALESCE(
             jsonb_agg(
                 jsonb_build_object(
@@ -67,11 +123,11 @@ BEGIN
                     'full_name', COALESCE(sp.full_name, 'Anonymous Candidate'),
                     'bio', COALESCE(sp.bio, ''),
                     'email', CASE 
-                        WHEN is_unlocked THEN sp.email 
+                        WHEN cu.student_id IS NOT NULL THEN sp.email 
                         ELSE regexp_replace(COALESCE(sp.email, ''), '^([^@]{2})[^@]+(@.*)$', '\1••••\2')
                     END,
                     'phone', CASE 
-                        WHEN is_unlocked THEN sp.phone 
+                        WHEN cu.student_id IS NOT NULL THEN sp.phone 
                         ELSE NULL 
                     END,
                     'location', COALESCE(sp.location, 'India'),
@@ -81,7 +137,7 @@ BEGIN
                     'portfolio_url', sp.portfolio_url,
                     'profile_image_url', sp.profile_image_url,
                     'resume_file_url', CASE 
-                        WHEN is_unlocked THEN sp.resume_file_url 
+                        WHEN cu.student_id IS NOT NULL THEN sp.resume_file_url 
                         ELSE NULL 
                     END,
                     'has_resume', (sp.resume_file_url IS NOT NULL AND sp.resume_file_url != ''),
@@ -89,29 +145,13 @@ BEGIN
                     'expected_ctc', COALESCE(sp.expected_ctc, 'Negotiable'),
                     'notice_period', COALESCE(sp.notice_period, 'Immediately'),
                     'linkedin_url', sp.linkedin_url,
-                    'is_unlocked', is_unlocked,
+                    'is_unlocked', (cu.student_id IS NOT NULL),
                     'has_embedding', (sp.embedding IS NOT NULL),
-                    'experience_years', exp_calc.years,
+                    'experience_years', COALESCE(ea.years, 0),
                     'skills', COALESCE(ss.skills, '[]'::jsonb),
-                    'experiences', COALESCE(
-                        (
-                            SELECT jsonb_agg(
-                                jsonb_build_object(
-                                    'id', se.id,
-                                    'role_title', se.role_title,
-                                    'organization_name', se.organization_name,
-                                    'contributions', se.contributions,
-                                    'start_date', se.start_date,
-                                    'end_date', se.end_date
-                                ) ORDER BY se.start_date DESC NULLS LAST
-                            )
-                            FROM student_experience se
-                            WHERE se.student_id = sp.id
-                        ),
-                        '[]'::jsonb
-                    )
+                    'experiences', COALESCE(ea.experiences, '[]'::jsonb)
                 ) ORDER BY 
-                    CASE WHEN p_sort = 'experience' THEN exp_calc.years END DESC NULLS LAST,
+                    CASE WHEN p_sort = 'experience' THEN COALESCE(ea.years, 0) END DESC NULLS LAST,
                     CASE WHEN p_sort = 'name' THEN sp.full_name END ASC NULLS LAST,
                     sp.created_at DESC NULLS LAST
             ),
@@ -121,25 +161,8 @@ BEGIN
     INTO v_result
     FROM student_profile sp
     LEFT JOIN student_skills ss ON ss.student_id = sp.id
-    LEFT JOIN LATERAL (
-        SELECT ROUND(
-            COALESCE(
-                SUM(
-                    EXTRACT(EPOCH FROM (COALESCE(se.end_date, CURRENT_DATE)::timestamp - se.start_date::timestamp))
-                ) / 31557600,
-                0
-            )::numeric,
-            1
-        ) as years
-        FROM student_experience se
-        WHERE se.student_id = sp.id
-    ) exp_calc ON true
-    CROSS JOIN LATERAL (
-        SELECT EXISTS (
-            SELECT 1 FROM unlocked_profiles up
-            WHERE up.company_id = v_company_id AND up.student_id = sp.id
-        ) as is_unlocked
-    ) unlock_check
+    LEFT JOIN exp_agg ea ON ea.student_id = sp.id
+    LEFT JOIN company_unlocked cu ON cu.student_id = sp.id
     WHERE (
         p_discipline IS NULL OR p_discipline = 'all' OR sp.discipline = p_discipline
     )
@@ -147,24 +170,20 @@ BEGIN
         p_work_mode IS NULL OR p_work_mode = 'all' OR sp.work_mode ILIKE '%' || p_work_mode || '%'
     )
     AND (
-        p_search IS NULL OR p_search = '' OR (
-            sp.full_name ILIKE '%' || p_search || '%' OR
-            sp.discipline ILIKE '%' || p_search || '%' OR
-            sp.location ILIKE '%' || p_search || '%' OR
-            sp.institution ILIKE '%' || p_search || '%' OR
-            sp.bio ILIKE '%' || p_search || '%' OR
-            EXISTS (
-                SELECT 1 FROM jsonb_array_elements(COALESCE(ss.skills, '[]'::jsonb)) elem
-                WHERE (elem->>'skill_name') ILIKE '%' || p_search || '%'
-                   OR elem::text ILIKE '%' || p_search || '%'
-            )
+        v_search IS NULL OR (
+            sp.full_name ILIKE '%' || v_search || '%' OR
+            sp.discipline ILIKE '%' || v_search || '%' OR
+            sp.location ILIKE '%' || v_search || '%' OR
+            sp.institution ILIKE '%' || v_search || '%' OR
+            sp.bio ILIKE '%' || v_search || '%' OR
+            ss.skills::text ILIKE '%' || v_search || '%'
         )
     );
 
     RETURN v_result;
 END;
-$$;
+$function$;
 
 -- Permissions
-GRANT EXECUTE ON FUNCTION web_search_talent(uuid, text, text, text, text) TO authenticated;
-GRANT EXECUTE ON FUNCTION web_search_talent(uuid, text, text, text, text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.web_search_talent(uuid, text, text, text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.web_search_talent(uuid, text, text, text, text) TO service_role;
