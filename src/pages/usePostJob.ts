@@ -1417,27 +1417,17 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
           })
         }
 
-        // If publishing a draft for the first time, increment jobs_posted and refresh quota
+        // If publishing a draft for the first time, update jobs_posted and refresh quota
         if (wasDraft) {
           try {
-            const { data: subData } = await supabase
+            const quotaAfter = await getCompanyJobQuota(companyId, user.id)
+            await supabase
               .from('company_subscriptions')
-              .select('id, jobs_posted')
+              .update({
+                jobs_posted: quotaAfter.totalJobsCount,
+                updated_at: new Date().toISOString(),
+              })
               .eq('company_id', companyId)
-              .eq('is_active', true)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle()
-
-            if (subData?.id) {
-              await supabase
-                .from('company_subscriptions')
-                .update({
-                  jobs_posted: (subData.jobs_posted || 0) + 1,
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('id', subData.id)
-            }
           } catch (subErr) {
             console.warn('Note updating company_subscriptions jobs_posted:', subErr)
           }
@@ -1515,26 +1505,16 @@ export function usePostJob(onSuccess?: () => void, jobIdToEdit?: string | null) 
         })
       }
 
-      // Increment jobs_posted in company_subscriptions if tracked
+      // Synchronize jobs_posted in company_subscriptions with actual cycle count
       try {
-        const { data: subData } = await supabase
+        const quotaAfter = await getCompanyJobQuota(companyId, user.id)
+        await supabase
           .from('company_subscriptions')
-          .select('id, jobs_posted')
+          .update({
+            jobs_posted: quotaAfter.totalJobsCount,
+            updated_at: new Date().toISOString(),
+          })
           .eq('company_id', companyId)
-          .eq('is_active', true)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-
-        if (subData?.id) {
-          await supabase
-            .from('company_subscriptions')
-            .update({
-              jobs_posted: (subData.jobs_posted || 0) + 1,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', subData.id)
-        }
       } catch (subErr) {
         console.warn('Note updating company_subscriptions jobs_posted:', subErr)
       }

@@ -67,8 +67,16 @@ BEGIN
           )
       );
 
-    v_effective_jobs_posted := GREATEST(COALESCE(v_sub.jobs_posted, 0), COALESCE(v_actual_jobs_count, 0));
+    v_effective_jobs_posted := v_actual_jobs_count;
     v_effective_limit := COALESCE(v_sub.plan_job_limit, v_plan.job_post_limit, 1);
+
+    -- Self-heal: synchronize company_subscriptions.jobs_posted if drifted
+    IF v_sub.id IS NOT NULL AND COALESCE(v_sub.jobs_posted, -1) != v_actual_jobs_count THEN
+        UPDATE company_subscriptions
+        SET jobs_posted = v_actual_jobs_count,
+            updated_at = now()
+        WHERE id = v_sub.id;
+    END IF;
 
     -- 3. Fetch Transaction History
     SELECT COALESCE(
@@ -229,21 +237,33 @@ BEGIN
             ) RETURNING id INTO v_new_sub_id;
         END IF;
     ELSE
-        -- Primary Job Posting Plan: Deactivate previous plans and activate new tier
-        UPDATE company_subscriptions
-        SET is_active = false,
-            updated_at = now()
-        WHERE company_id = v_company_id AND is_active = true;
-
+        -- Primary Job Posting Plan: Update existing row or insert if absent (satisfies UNIQUE company_id)
         INSERT INTO company_subscriptions (
             company_id, plan_id, started_at, expires_at, is_active,
             usage_month, cvs_unlocked, jobs_posted, store, auto_renew,
-            payment_gateway, razorpay_payment_id, razorpay_plan_id
+            payment_gateway, razorpay_payment_id, razorpay_plan_id,
+            updated_at
         ) VALUES (
             v_company_id, p_plan_id, now(), v_expires_at, true,
             to_char(now(), 'YYYY-MM'), 0, 0, v_store, true,
-            'razorpay', p_razorpay_payment_id, v_plan.razorpay_plan_id
-        ) RETURNING id INTO v_new_sub_id;
+            'razorpay', p_razorpay_payment_id, v_plan.razorpay_plan_id,
+            now()
+        )
+        ON CONFLICT (company_id) DO UPDATE SET
+            plan_id = EXCLUDED.plan_id,
+            started_at = EXCLUDED.started_at,
+            expires_at = EXCLUDED.expires_at,
+            is_active = true,
+            usage_month = EXCLUDED.usage_month,
+            cvs_unlocked = 0,
+            jobs_posted = 0,
+            store = EXCLUDED.store,
+            auto_renew = EXCLUDED.auto_renew,
+            payment_gateway = EXCLUDED.payment_gateway,
+            razorpay_payment_id = EXCLUDED.razorpay_payment_id,
+            razorpay_plan_id = EXCLUDED.razorpay_plan_id,
+            updated_at = now()
+        RETURNING id INTO v_new_sub_id;
     END IF;
 
     -- 5. Record Transaction in subscription_transactions

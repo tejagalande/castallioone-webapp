@@ -247,17 +247,14 @@ export function useSubscription() {
           if (data.subscription) {
             const liveQuota = await getCompanyJobQuota(data.company.id, user.id)
             if (!isMounted) return
-            const effectiveJobsPosted = Math.max(
-              data.subscription.jobs_posted ?? 0,
-              liveQuota.totalJobsCount
-            )
+            const effectiveJobsPosted = liveQuota.totalJobsCount
             setActivePlanId(data.subscription.plan_id || 'free')
             setUsage({
               planId: data.subscription.plan_id || 'free',
               planName: data.subscription.plan_name || 'Free Plan',
-              jobPostLimit: data.subscription.job_post_limit,
+              jobPostLimit: liveQuota.jobPostLimit ?? data.subscription.job_post_limit,
               jobsPosted: effectiveJobsPosted,
-              cvUnlockLimit: data.subscription.cv_unlock_limit ?? 3,
+              cvUnlockLimit: data.subscription.cv_unlock_limit ?? (data.subscription.plan_id === 'professional' ? 100 : 3),
               cvsUnlocked: data.subscription.cvs_unlocked ?? 0,
               startedAt: data.subscription.started_at,
               expiresAt: data.subscription.expires_at,

@@ -243,11 +243,80 @@ export async function fetchSavedTalentProfile(
 }
 
 /**
- * Uploads talent avatar image to public storage.
- * Falls back to base64 Data URL if storage bucket is not configured.
+ * Compresses an image file client-side using HTML5 canvas.
+ * Reduces raw 5-15MB phone camera captures down to lightweight <100KB web-optimized images.
  */
-export async function uploadTalentAvatar(userId: string, file: File): Promise<string> {
-  const fileExt = file.name.split('.').pop() || 'png'
+export async function compressAvatarImage(file: File, maxDim = 400, quality = 0.8): Promise<File> {
+  if (!file.type.startsWith('image/')) return file
+
+  return new Promise((resolve) => {
+    const img = new Image()
+    const objectUrl = URL.createObjectURL(file)
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl)
+      let { width, height } = img
+
+      if (width <= maxDim && height <= maxDim && file.size < 100 * 1024) {
+        resolve(file)
+        return
+      }
+
+      if (width > maxDim || height > maxDim) {
+        if (width > height) {
+          height = Math.round((height * maxDim) / width)
+          width = maxDim
+        } else {
+          width = Math.round((width * maxDim) / height)
+          height = maxDim
+        }
+      }
+
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+
+      if (!ctx) {
+        resolve(file)
+        return
+      }
+
+      ctx.drawImage(img, 0, 0, width, height)
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            resolve(file)
+            return
+          }
+          const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), {
+            type: 'image/jpeg',
+            lastModified: Date.now(),
+          })
+          resolve(compressedFile)
+        },
+        'image/jpeg',
+        quality
+      )
+    }
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      resolve(file)
+    }
+
+    img.src = objectUrl
+  })
+}
+
+/**
+ * Uploads talent avatar image to public storage.
+ * Compresses image client-side before upload to prevent multi-megabyte payloads.
+ * Falls back to compressed base64 Data URL if storage bucket is not configured.
+ */
+export async function uploadTalentAvatar(userId: string, rawFile: File): Promise<string> {
+  const file = await compressAvatarImage(rawFile)
+  const fileExt = file.name.split('.').pop() || 'jpg'
   const fileName = `profile_${Date.now()}.${fileExt}`
   const filePath = `profiles/${userId}/${fileName}`
 
@@ -257,6 +326,7 @@ export async function uploadTalentAvatar(userId: string, file: File): Promise<st
       .upload(filePath, file, {
         upsert: true,
         cacheControl: '3600',
+        contentType: file.type || 'image/jpeg',
       })
 
     if (!uploadError) {
@@ -267,7 +337,7 @@ export async function uploadTalentAvatar(userId: string, file: File): Promise<st
     // Bucket might not exist, proceed to fallback
   }
 
-  // Fallback: convert to base64 Data URL
+  // Fallback: convert compressed file to lightweight base64 Data URL (<50KB)
   return new Promise((resolve) => {
     const reader = new FileReader()
     reader.onloadend = () => resolve(reader.result as string)

@@ -135,9 +135,12 @@ BEGIN
                     'institution', COALESCE(sp.institution, 'Engineering Institute'),
                     'graduation_year', COALESCE(sp.graduation_year, '2025'),
                     'portfolio_url', sp.portfolio_url,
-                    'profile_image_url', sp.profile_image_url,
+                    'profile_image_url', CASE 
+                        WHEN sp.profile_image_url LIKE 'data:%' THEN NULL 
+                        ELSE sp.profile_image_url 
+                    END,
                     'resume_file_url', CASE 
-                        WHEN cu.student_id IS NOT NULL THEN sp.resume_file_url 
+                        WHEN cu.student_id IS NOT NULL AND sp.resume_file_url NOT LIKE 'data:%' THEN sp.resume_file_url 
                         ELSE NULL 
                     END,
                     'has_resume', (sp.resume_file_url IS NOT NULL AND sp.resume_file_url != ''),

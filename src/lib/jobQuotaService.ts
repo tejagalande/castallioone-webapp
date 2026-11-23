@@ -169,9 +169,24 @@ export async function getCompanyJobQuota(
     console.warn('Failed to count jobs in create_job_post:', err)
   }
 
-  // For free plan, evaluate strictly against current calendar month's published jobs
-  // so old jobs from previous months (or stale RPC lifetime counts) don't block the monthly allowance.
-  const totalJobsCount = planId === 'free' ? publishedCount : Math.max(publishedCount, trackedJobsPosted)
+  // Evaluate strictly against published non-draft jobs in current billing period
+  // so stale lifetime counters or pre-subscription jobs never block the plan allowance.
+  const totalJobsCount = publishedCount
+
+  // If the tracked jobs_posted count in company_subscriptions is out of sync, synchronize it
+  if (resolvedCompanyId && typeof trackedJobsPosted === 'number' && trackedJobsPosted !== publishedCount) {
+    void Promise.resolve(
+      supabase
+        .from('company_subscriptions')
+        .update({
+          jobs_posted: publishedCount,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('company_id', resolvedCompanyId)
+    ).catch((syncErr: unknown) => {
+      console.warn('Note synchronizing company_subscriptions jobs_posted:', syncErr)
+    })
+  }
 
   // Evaluation is based on TOTAL jobs posted against plan limit
   const isLimitReached = jobPostLimit !== null && totalJobsCount >= jobPostLimit
